@@ -8106,6 +8106,17 @@ impl Engine {
                     // Key up via the normal PTT path so the safety rails apply.
                     self.digi_tx = true;
                     self.state.tx.ptt = true;
+                    // **A transmitted over leaves a trace.** It did not before:
+                    // a burst that started, stopped after two seconds and
+                    // started again left nothing in the log at any level, so the
+                    // one thing that had gone wrong was the one thing nobody
+                    // could see (bench, 2026-11-01).
+                    info!(
+                        "digi TX: burst keyed, mode {:?} at {:.6} MHz, level {:.2} dB",
+                        self.state.rx[0].mode,
+                        self.state.tx_freq_hz() / 1e6,
+                        20.0 * self.digi_tx_audio_level().max(1e-6).log10(),
+                    );
                     self.sync_tx_state();
                     // If the rails refused, drop the burst so the QSO reverts.
                     if !self.tx_active {
@@ -8118,6 +8129,10 @@ impl Engine {
                     let _ = self.event_tx.send(RadioEvent::State(self.state.clone()));
                 }
                 DigiAction::UnkeyTx => {
+                    // Never constructed anywhere in the tree: a digital over is
+                    // ended by `fill_digi_tx_block` reporting done (see the TX
+                    // block above), not by this. Kept because the engine still
+                    // answers it if a controller ever sends one.
                     self.digi_tx = false;
                     self.state.tx.ptt = false;
                     self.sync_tx_state();
@@ -11613,8 +11628,19 @@ impl Engine {
                 // the radio running the configuration on disk, and the trim
                 // is corrected on the next reload either way.
                 self.drive_trim = cfg.tx_drive_trim.clone();
+                let was_confirmed = self.tx_bands_confirmed;
                 self.tx_band_enable = cfg.tx_band_enable.clone().unwrap_or_default();
                 self.tx_bands_confirmed = cfg.tx_bands_confirmed;
+                // **Two copies of one setting, and only one of them on screen.**
+                // A screen that says the band list is confirmed while this copy
+                // is not refuses every key-down and calls the operator's radio
+                // broken (bench, 2026-11-01). Whoever changes this, says so.
+                if was_confirmed != self.tx_bands_confirmed {
+                    info!(
+                        "TX band list, radio {}: confirmation is now {} (bands {:?})",
+                        self.instance, self.tx_bands_confirmed, self.tx_band_enable
+                    );
+                }
                 // And the ceiling beside it, live rather than at the next
                 // reopen: the operator setting one is very likely doing it
                 // because the radio is making too much power *now*.
@@ -16642,7 +16668,16 @@ impl Engine {
     /// (`RadioEvent::TxRefused`) instead of an English notice, so the screen
     /// words it in the operator's language; the log keeps an English line.
     fn deny_tx_band(&mut self, why: TxBlock, txf: f64) {
-        warn!("TX refused: {why:?} at {:.6} MHz", txf / 1e6);
+        // Names the radio and the list it refused under: a refusal quoted on
+        // the screen of a different radio reads as a broken transmitter
+        // (bench, 2026-11-01).
+        warn!(
+            "TX refused, radio {}: {why:?} at {:.6} MHz — confirmed={}, bands={:?}",
+            self.instance,
+            txf / 1e6,
+            self.tx_bands_confirmed,
+            self.tx_band_enable
+        );
         self.state.tx.ptt = false;
         self.state.tx.tune = false;
         self.release_tx_gate();
@@ -20055,6 +20090,12 @@ impl Engine {
         if done {
             // Burst finished: drain any queued audio, then unkey and let the QSO
             // machine advance.
+            //
+            // **This is where a digital over really ends.** `DigiAction::UnkeyTx`
+            // — which used to carry a log line — is never constructed anywhere in
+            // the tree, so a line there reported nothing and an over that ended
+            // and one that never ended looked exactly alike (bench, 2026-11-01).
+            info!("digi TX: the over finished, unkeying");
             self.source.tx_drain();
             self.tx_pace = None;
             self.digi_tx = false;

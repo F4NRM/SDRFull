@@ -363,11 +363,29 @@ fn spawn_input(
 ) -> Result<cpal::Stream, AudioError> {
     let channels = config.channels as usize;
     let log = Glitches::new(glitches, costs_a_decode);
+    // **A stream that never runs must say so.** The device accepts the
+    // configuration, the PCM goes to RUNNING, and if the callback never fires
+    // the program receives silence for ever without a single line in the log —
+    // a whole evening of "the radio does not transmit, the waterfall is dead"
+    // with nothing to read (bench, 2026-11-01). One line, once, if the first
+    // block has not arrived a second and a half after the stream was started.
+    let calls = Arc::new(AtomicU64::new(0));
+    let watched = calls.clone();
+    let watch_label = label.clone();
+    // **Samples dropped in the ring are the other silent failure.** The card
+    // delivers, this callback throws away whatever does not fit, and the reader
+    // upstream sees a period that is short without being able to say why: the
+    // modem reports "the period arrived 3.6 s short" and nobody can tell
+    // whether the card or the program lost it (bench, 2026-11-01). Counted in
+    // five-second windows, so the message is a rate and not a flood.
+    let dropped_watch = Arc::downgrade(&dropped);
+    let drop_label = label.clone();
     macro_rules! build {
         ($t:ty) => {
             device.build_input_stream(
                 config.clone(),
                 move |data: &[$t], _| {
+                    calls.fetch_add(1, Ordering::Relaxed);
                     let mut lost = 0u64;
                     for frame in data.chunks(channels) {
                         // Room for the whole frame or none of it. Half a frame
@@ -417,6 +435,37 @@ fn spawn_input(
     }
     .map_err(|e| AudioError::Build(e.to_string()))?;
     stream.play().map_err(|e| AudioError::Build(e.to_string()))?;
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        if watched.load(Ordering::Relaxed) == 0 {
+            warn!(
+                "{what}: \"{watch_label}\" accepted the stream and is running, but has \
+                 delivered no audio at all — the device is open and nothing is \
+                 coming out of it"
+            );
+        }
+    });
+    std::thread::spawn(move || {
+        let mut last = 0u64;
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(5));
+            // The counter lives in the stream's callback: when the stream is
+            // dropped the count is gone and so is this thread.
+            let Some(counter) = dropped_watch.upgrade() else { return };
+            let now = counter.load(Ordering::Relaxed);
+            drop(counter);
+            let lost = now.saturating_sub(last);
+            last = now;
+            if lost > 0 {
+                warn!(
+                    "{what}: {lost} samples dropped in 5 s ({:.0} ms of audio) — the \
+                     reader is not keeping up with \"{drop_label}\" and the audio \
+                     arrives short",
+                    lost as f64 * 1000.0 / 48_000.0
+                );
+            }
+        }
+    });
     Ok(stream)
 }
 
@@ -439,11 +488,24 @@ fn spawn_output(
     // capture end. Its count is not published — `underruns` above is the
     // figure that matters for playback, and it is ours rather than the host's.
     let log = Glitches::new(Arc::new(AtomicU64::new(0)), true);
+    // The same watchdog as the capture side, and needed for the same reason:
+    // a transmitter whose sound card never asks for a block is keyed, silent,
+    // and invisible (bench, 2026-11-01).
+    let calls = Arc::new(AtomicU64::new(0));
+    let watched = calls.clone();
+    let watch_label = label.clone();
+    // A transmitter fed short blocks is a transmitter that goes quiet mid-over
+    // and then comes back: the card asked, the modem had nothing, and the
+    // operator hears the carrier drop and rise with no explanation (bench,
+    // 2026-11-01). The count existed and was never read.
+    let under_watch = Arc::downgrade(&underruns);
+    let under_label = label.clone();
     macro_rules! build {
         ($t:ty) => {
             device.build_output_stream(
                 config.clone(),
                 move |data: &mut [$t], _| {
+                    calls.fetch_add(1, Ordering::Relaxed);
                     let mut short = false;
                     for frame in data.chunks_mut(channels) {
                         let (l, r) = match (consumer.pop(), consumer.pop()) {
@@ -489,6 +551,33 @@ fn spawn_output(
     }
     .map_err(|e| AudioError::Build(e.to_string()))?;
     stream.play().map_err(|e| AudioError::Build(e.to_string()))?;
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        if watched.load(Ordering::Relaxed) == 0 {
+            warn!(
+                "{what}: \"{watch_label}\" accepted the stream and is running, but has \
+                 asked for no audio at all — anything written to it goes nowhere"
+            );
+        }
+    });
+    std::thread::spawn(move || {
+        let mut last = 0u64;
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(5));
+            let Some(counter) = under_watch.upgrade() else { return };
+            let now = counter.load(Ordering::Relaxed);
+            drop(counter);
+            let short = now.saturating_sub(last);
+            last = now;
+            if short > 0 {
+                warn!(
+                    "{what}: {short} blocks went to \"{under_label}\" with nothing to \
+                     play in the last 5 s — the sound goes out of the transmitter \
+                     while it stays keyed"
+                );
+            }
+        }
+    });
     Ok(stream)
 }
 
