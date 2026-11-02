@@ -63,8 +63,7 @@ pub(crate) fn parse(rest: &[u8]) -> Result<Message> {
     // The addressee itself carries no colon, so the first colon in the field is
     // unambiguously the delimiter — even when the message text contains one
     // (a time, say) or an identifier.
-    let colon =
-        rest.iter().position(|&b| b == b':').ok_or(AprsError::Malformed("message addressee"))?;
+    let colon = rest.iter().position(|&b| b == b':').ok_or(AprsError::Malformed("message addressee"))?;
     if colon == 0 || colon > 9 {
         return Err(AprsError::Malformed("message addressee"));
     }

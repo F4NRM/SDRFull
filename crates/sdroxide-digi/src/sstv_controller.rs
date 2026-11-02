@@ -8,8 +8,8 @@ use std::time::SystemTime;
 use sdroxide_dsp::{SstvEvent, SstvRx, SstvTx};
 use sdroxide_types::{DigiConfig, DigiStatus, Mode, QsoStep, SstvMode, SstvStatus, TranscriptLine};
 
-use crate::DigiEngine;
 use crate::controller::DigiAction;
+use crate::DigiEngine;
 
 /// TX audio sample rate (injected as "mic", then USB-modulated).
 const OUT_RATE: f64 = 48_000.0;

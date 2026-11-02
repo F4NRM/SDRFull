@@ -155,10 +155,9 @@ impl SdroxideApp {
     /// The BANDS window: one row per band, forecast beside evidence.
     pub(in crate::app) fn bands_window(&mut self, ctx: &egui::Context) {
         let open = self.show_bands;
-        let show =
-            self.tool_window(ctx, "bands", &tr!("bands-bands"), [520.0, 460.0], open, |me, ui| {
-                me.bands_body(ui);
-            });
+        let show = self.tool_window(ctx, "bands", &tr!("bands-bands"), [520.0, 460.0], open, |me, ui| {
+            me.bands_body(ui);
+        });
         self.show_bands = show;
         if self.show_bands {
             // The IBP beacon and its countdown move every second; keep painting
@@ -240,11 +239,7 @@ impl SdroxideApp {
                                 };
                                 let resp = ui.label(t);
                                 if v.derived {
-                                    resp.on_hover_text(tr!(
-                                        "bands-derived-hover",
-                                        band = b.label(),
-                                        group = v.group
-                                    ));
+                                    resp.on_hover_text(tr!("bands-derived-hover", band = b.label(), group = v.group));
                                 }
                             }
                             None => {
@@ -305,7 +300,10 @@ impl SdroxideApp {
         });
 
         ui.add_space(6.0);
-        ui.label(dim(&tr!("bands-condx-global-forecast-rest-what")).italics());
+        ui.label(
+            dim(&tr!("bands-condx-global-forecast-rest-what"))
+            .italics(),
+        );
     }
 
     /// The meteor-shower list at the foot of the BANDS window.
@@ -356,16 +354,10 @@ impl SdroxideApp {
             ui.horizontal(|ui| {
                 ui.label(RichText::new(s.name).size(11.0).strong()).on_hover_text(&hover);
                 ui.label(dim(s.code)).on_hover_text(&hover);
-                ui.label(RichText::new(tr!("bands-zhr", zhr = s.zhr)).size(10.5))
-                    .on_hover_text(&hover);
+                ui.label(RichText::new(tr!("bands-zhr", zhr = s.zhr)).size(10.5)).on_hover_text(&hover);
                 if a.at_peak() {
-                    ui.label(
-                        RichText::new(tr!("bands-peak"))
-                            .size(9.5)
-                            .strong()
-                            .color(crate::theme::GREEN()),
-                    )
-                    .on_hover_text(&hover);
+                    ui.label(RichText::new(tr!("bands-peak")).size(9.5).strong().color(crate::theme::GREEN()))
+                        .on_hover_text(&hover);
                 }
                 if a.radiant_up() {
                     ui.label(
@@ -379,12 +371,9 @@ impl SdroxideApp {
                     .on_hover_text(&hover);
                 } else {
                     ui.label(
-                        RichText::new(tr!(
-                            "bands-radiant-down",
-                            alt_deg = format!("{:.0}", a.alt_deg)
-                        ))
-                        .size(10.5)
-                        .color(dim_ink()),
+                        RichText::new(tr!("bands-radiant-down", alt_deg = format!("{:.0}", a.alt_deg)))
+                            .size(10.5)
+                            .color(dim_ink()),
                     )
                     .on_hover_text(&hover);
                 }
@@ -405,17 +394,9 @@ impl SdroxideApp {
         let active = sdroxide_types::ibp_active_at(now, home);
         let dim = |s: &str| RichText::new(s.to_string()).size(9.5).color(dim_ink());
         ui.add_space(12.0);
-        ui.label(
-            RichText::new(tr!("bands-ibp-beacons"))
-                .size(10.0)
-                .strong()
-                .color(crate::theme::CYAN_DIM()),
-        );
+        ui.label(RichText::new(tr!("bands-ibp-beacons")).size(10.0).strong().color(crate::theme::CYAN_DIM()));
         ui.add_space(2.0);
-        ui.label(dim(&tr!(
-            "bands-ncdxf-iaru-next-beacon-s",
-            now = sdroxide_types::ibp_seconds_left(now)
-        )));
+        ui.label(dim(&tr!("bands-ncdxf-iaru-next-beacon-s", now = sdroxide_types::ibp_seconds_left(now))));
         ui.add_space(3.0);
         for a in &active {
             let hover = tr!(

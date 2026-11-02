@@ -248,19 +248,13 @@ impl SdroxideApp {
                     tr!("wspr-rx-count", n = self.wspr_spots.len())
                 };
                 ui.label(RichText::new(label).size(10.0).color(crate::theme::gray(120)));
-                if crate::chrome::chip(ui, false, RichText::new(tr!("wspr-clear-rx")).size(9.5))
-                    .clicked()
+                if crate::chrome::chip(ui, false, RichText::new(tr!("wspr-clear-rx")).size(9.5)).clicked()
                     && !self.wspr_spots.is_empty()
                 {
                     self.wspr_spots.clear();
                 }
-                for (mode, name) in [(1u8, tr!("wspr-sort-dist")), (2u8, tr!("wspr-sort-country"))]
-                {
-                    let resp = crate::chrome::chip(
-                        ui,
-                        self.wspr_sort == mode,
-                        RichText::new(&name).size(9.5),
-                    );
+                for (mode, name) in [(1u8, tr!("wspr-sort-dist")), (2u8, tr!("wspr-sort-country"))] {
+                    let resp = crate::chrome::chip(ui, self.wspr_sort == mode, RichText::new(&name).size(9.5));
                     if resp.clicked() {
                         self.wspr_sort = if self.wspr_sort == mode { 0 } else { mode };
                     }
@@ -316,10 +310,12 @@ impl SdroxideApp {
                     } else {
                         b.call.as_str()
                     };
-                    let ca =
-                        sdroxide_types::resolve_callsign(who_a).map(|e| e.name).unwrap_or_default();
-                    let cb =
-                        sdroxide_types::resolve_callsign(who_b).map(|e| e.name).unwrap_or_default();
+                    let ca = sdroxide_types::resolve_callsign(who_a)
+                        .map(|e| e.name)
+                        .unwrap_or_default();
+                    let cb = sdroxide_types::resolve_callsign(who_b)
+                        .map(|e| e.name)
+                        .unwrap_or_default();
                     ca.cmp(&cb)
                 });
             }
@@ -514,17 +510,9 @@ impl SdroxideApp {
         if !self.swl_mode() {
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing.x = 4.0;
-                ui.label(
-                    RichText::new(tr!("wspr-transmit")).size(9.5).color(crate::theme::CYAN_DIM()),
-                );
+                ui.label(RichText::new(tr!("wspr-transmit")).size(9.5).color(crate::theme::CYAN_DIM()));
                 let cur = self.digi_cfg_edit.wspr_tx_percent;
-                for (pct, label) in [
-                    (0u8, tr!("ism-off")),
-                    (10, "10%".to_string()),
-                    (20, "20%".to_string()),
-                    (33, "33%".to_string()),
-                    (50, "50%".to_string()),
-                ] {
+                for (pct, label) in [(0u8, tr!("ism-off")), (10, "10%".to_string()), (20, "20%".to_string()), (33, "33%".to_string()), (50, "50%".to_string())] {
                     // Off is the resting state and reads as one; anything else puts
                     // a carrier on the air, so it is accented like the other
                     // controls in this program that do.
@@ -577,17 +565,13 @@ impl SdroxideApp {
                     self.digi_cfg_edit.wspr_tx_percent = 20;
                     cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
                 }
-                let stop_resp = crate::chrome::chip(
-                    ui,
-                    cur == 0,
-                    RichText::new(tr!("wspr-stop-tx")).size(10.5),
-                );
+                let stop_resp = crate::chrome::chip(ui, cur == 0, RichText::new(tr!("wspr-stop-tx")).size(10.5));
                 if stop_resp.clicked() && cur > 0 && self.digi_cfg_seeded {
                     self.digi_cfg_edit.wspr_tx_percent = 0;
                     cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
                 }
             });
-
+            
             // Power, in the unit an operator sets their radio in.
             //
             // A picker rather than a free number: WSPR's fifty-bit message can name
@@ -598,9 +582,7 @@ impl SdroxideApp {
             ui.add_space(4.0);
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing.x = 4.0;
-                ui.label(
-                    RichText::new(tr!("wspr-power")).size(9.5).color(crate::theme::CYAN_DIM()),
-                );
+                ui.label(RichText::new(tr!("wspr-power")).size(9.5).color(crate::theme::CYAN_DIM()));
                 let cur = sdroxide_types::round_power_dbm(self.digi_cfg_edit.wspr_power_dbm);
                 let mut chosen = None;
                 egui::ComboBox::from_id_salt("wspr-power")
@@ -625,18 +607,21 @@ impl SdroxideApp {
                         .size(9.5)
                         .color(crate::theme::gray(110)),
                 )
-                .on_hover_text(tr!("wspr-goes-out-message-everyone-who"));
+                .on_hover_text(
+                    tr!("wspr-goes-out-message-everyone-who"),
+                );
 
                 // Moving inside the 200 Hz window is the WSPR convention, and it is
                 // the only other thing about a transmission worth a switch.
                 let auto = self.digi_cfg_edit.auto_tx_freq;
-                let resp =
-                    crate::chrome::chip(ui, auto, RichText::new(tr!("wspr-roam")).size(10.5));
+                let resp = crate::chrome::chip(ui, auto, RichText::new(tr!("wspr-roam")).size(10.5));
                 if resp.clicked() && self.digi_cfg_seeded {
                     self.digi_cfg_edit.auto_tx_freq = !auto;
                     cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
                 }
-                resp.on_hover_text(tr!("wspr-pick-different-offset-inside-200"));
+                resp.on_hover_text(
+                    tr!("wspr-pick-different-offset-inside-200"),
+                );
             });
         }
 
@@ -717,7 +702,8 @@ impl SdroxideApp {
             if self.swl_mode() {
                 tr!("wspr-set-callsign-grid-label-spots")
             } else {
-                tr!("wspr-set-your-callsign-grid-general").to_string()
+                tr!("wspr-set-your-callsign-grid-general")
+                    .to_string()
             }
         } else if self.swl_mode() {
             let sent = sdroxide_types::wspr_grid4(grid).unwrap_or_else(|| grid.to_string());

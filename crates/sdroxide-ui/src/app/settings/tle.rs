@@ -41,7 +41,10 @@ pub(in crate::app) fn settings_tle_tab(ui: &mut egui::Ui, io: &mut SettingsIo) {
         super::note(ui, &tr!("settings-tle-waiting-station-s-satellite-configuration"));
         return;
     }
-    super::note(ui, &tr!("settings-tle-tracker-already-fetches-celestrak-s"));
+    super::note(
+        ui,
+        &tr!("settings-tle-tracker-already-fetches-celestrak-s"),
+    );
     if !io.sat_ui.note.is_empty() {
         ui.add_space(4.0);
         ui.label(RichText::new(&io.sat_ui.note).color(theme::YELLOW()).size(11.0));
@@ -67,7 +70,11 @@ fn settings_tle_subscriptions(ui: &mut egui::Ui, io: &mut SettingsIo) {
 
     ui.label(RichText::new(tr!("settings-tle-subscriptions")).strong());
     ui.end_row();
-    super::note_at(ui, &tr!("settings-tle-listings-fetched-kept-current-same"), Some(11.0));
+    super::note_at(
+        ui,
+        &tr!("settings-tle-listings-fetched-kept-current-same"),
+        Some(11.0),
+    );
     ui.add_space(6.0);
 
     let mut remove = None;
@@ -211,7 +218,11 @@ fn settings_tle_pasted(ui: &mut egui::Ui, io: &mut SettingsIo) {
 
     ui.label(RichText::new(tr!("settings-tle-pasted-element-sets")).strong());
     ui.end_row();
-    super::note_at(ui, &tr!("settings-tle-one-off-these-do-not"), Some(11.0));
+    super::note_at(
+        ui,
+        &tr!("settings-tle-one-off-these-do-not"),
+        Some(11.0),
+    );
     ui.add_space(6.0);
 
     let now = now_unix();
@@ -223,9 +234,7 @@ fn settings_tle_pasted(ui: &mut egui::Ui, io: &mut SettingsIo) {
                     .on_hover_text(tr!("settings-tle-track-one"));
                 crate::chrome::field(
                     ui,
-                    egui::TextEdit::singleline(&mut t.name)
-                        .desired_width(180.0)
-                        .hint_text(tr!("settings-name")),
+                    egui::TextEdit::singleline(&mut t.name).desired_width(180.0).hint_text(tr!("settings-name")),
                 );
                 match t.problem() {
                     Some(p) => {
@@ -376,7 +385,11 @@ fn settings_tle_freqs(ui: &mut egui::Ui, io: &mut SettingsIo) {
 
     ui.label(RichText::new(tr!("settings-tle-frequencies")).strong());
     ui.end_row();
-    super::note_at(ui, &tr!("settings-tle-shown-under-pass-table-solar"), Some(11.0));
+    super::note_at(
+        ui,
+        &tr!("settings-tle-shown-under-pass-table-solar"),
+        Some(11.0),
+    );
     ui.add_space(6.0);
 
     let mut remove = None;
@@ -393,9 +406,7 @@ fn settings_tle_freqs(ui: &mut egui::Ui, io: &mut SettingsIo) {
                 );
                 crate::chrome::field(
                     ui,
-                    egui::TextEdit::singleline(&mut f.name)
-                        .desired_width(180.0)
-                        .hint_text(tr!("settings-name")),
+                    egui::TextEdit::singleline(&mut f.name).desired_width(180.0).hint_text(tr!("settings-name")),
                 );
                 ui.label(
                     RichText::new(tr!("settings-tle-links", n = f.links.len()))
@@ -419,14 +430,7 @@ fn settings_tle_freqs(ui: &mut egui::Ui, io: &mut SettingsIo) {
                 .spacing([8.0, 4.0])
                 .min_row_height(ui.spacing().interact_size.y)
                 .show(ui, |ui| {
-                    for h in [
-                        tr!("settings-tle-link"),
-                        tr!("settings-tle-downlink"),
-                        tr!("settings-tle-uplink"),
-                        tr!("settings-tle-mode"),
-                        tr!("settings-tle-note"),
-                        "".to_string(),
-                    ] {
+                    for h in [tr!("settings-tle-link"), tr!("settings-tle-downlink"), tr!("settings-tle-uplink"), tr!("settings-tle-mode"), tr!("settings-tle-note"), "".to_string()] {
                         ui.label(RichText::new(h).color(theme::CYAN_DIM()).size(9.5).strong());
                     }
                     ui.end_row();
@@ -481,7 +485,11 @@ fn settings_tle_freqs(ui: &mut egui::Ui, io: &mut SettingsIo) {
                 }
             });
             ui.add_space(4.0);
-            super::note_at(ui, &tr!("settings-tle-frequency-either-one-number-145"), Some(10.0));
+            super::note_at(
+                ui,
+                &tr!("settings-tle-frequency-either-one-number-145"),
+                Some(10.0),
+            );
         });
         ui.add_space(2.0);
     }

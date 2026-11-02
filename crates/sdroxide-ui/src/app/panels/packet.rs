@@ -66,7 +66,9 @@ pub(super) fn packet_monitor_header(
                 *detach = true;
             }
             if crate::chrome::chip(ui, setup_open, RichText::new("⚙").size(9.5))
-                .on_hover_text(tr!("packet-station-callsign-speed-tx-delay"))
+                .on_hover_text(
+                    tr!("packet-station-callsign-speed-tx-delay"),
+                )
                 .clicked()
             {
                 setup = true;
@@ -274,7 +276,9 @@ impl SdroxideApp {
                             .desired_width(120.0)
                             .hint_text(tr!("packet-via-hint")),
                     )
-                    .on_hover_text(tr!("packet-digipeaters-nearest-first-separated-commas"));
+                    .on_hover_text(
+                        tr!("packet-digipeaters-nearest-first-separated-commas"),
+                    );
                     if resp.changed() {
                         self.packet_via = self.packet_via.to_uppercase();
                     }
@@ -291,7 +295,9 @@ impl SdroxideApp {
                             theme::ALERT(),
                             theme::INK_ON_CYAN(),
                         )
-                        .on_hover_text(tr!("packet-hang-up-properly-wait-far"))
+                        .on_hover_text(
+                            tr!("packet-hang-up-properly-wait-far"),
+                        )
                     })
                     .clicked()
                     {
@@ -322,7 +328,9 @@ impl SdroxideApp {
 
                 crate::chrome::row_tail(ui, |ui| {
                     if crate::chrome::chip(ui, false, RichText::new(tr!("packet-clear")).size(10.5))
-                        .on_hover_text(tr!("packet-empty-transcript-link-untouched-connected"))
+                        .on_hover_text(
+                            tr!("packet-empty-transcript-link-untouched-connected"),
+                        )
                         .clicked()
                     {
                         cmds.push(Command::PacketTermClear);
@@ -382,11 +390,7 @@ impl SdroxideApp {
                     let resp = ui.add(
                         egui::TextEdit::singleline(&mut self.packet_draft)
                             .desired_width(room)
-                            .hint_text(if connected {
-                                tr!("packet-type-here")
-                            } else {
-                                tr!("packet-not-connected")
-                            }),
+                            .hint_text(if connected { tr!("packet-type-here") } else { tr!("packet-not-connected") }),
                     );
                     if resp.has_focus() {
                         self.packet_recall(ui, &resp);

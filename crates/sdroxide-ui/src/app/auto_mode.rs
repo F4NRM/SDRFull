@@ -141,8 +141,7 @@ impl SdroxideApp {
             let now_unix = crate::time::now_unix() as f64;
             let key = t.call.to_ascii_uppercase();
             let rec = me.auto_attempts.get(&key).copied().unwrap_or((0, 0.0));
-            me.auto_attempts
-                .insert(key, auto::after_call(rec, me.digi_cfg_edit.auto_call_retries, now_unix));
+            me.auto_attempts.insert(key, auto::after_call(rec, me.digi_cfg_edit.auto_call_retries, now_unix));
             let label = me.auto_role.map_or("auto", |r| r.label());
             me.auto_note = tr!("auto-answering", role = label, call = &t.call);
             cmds.push(Command::DigiStartQso {
@@ -176,7 +175,8 @@ impl SdroxideApp {
                     let limit = self.digi_cfg_edit.auto_cq_repeats;
                     self.auto_role = Some(auto::AutoRole::Rx);
                     self.auto_cq = auto::CqCounter::default();
-                    self.auto_note = tr!("auto-cq-no-answer", limit = limit);
+                    self.auto_note =
+                        tr!("auto-cq-no-answer", limit = limit);
                 } else {
                     self.auto_note = tr!("auto-listening", role = role.label());
                 }
@@ -184,13 +184,12 @@ impl SdroxideApp {
             auto::AutoStep::Stop(reason) => {
                 let limit = match reason {
                     auto::StopReason::CqLimit => u32::from(self.digi_cfg_edit.auto_cq_repeats),
-                    auto::StopReason::Session => u32::from(self.digi_cfg_edit.auto_session_min),
+                    auto::StopReason::Session => {
+                        u32::from(self.digi_cfg_edit.auto_session_min)
+                    }
                 };
                 let sentence = reason.sentence(limit);
-                self.stop_auto(
-                    tr!("auto-role-stopped", role = role.label(), sentence = sentence),
-                    cmds,
-                );
+                self.stop_auto(tr!("auto-role-stopped", role = role.label(), sentence = sentence), cmds);
                 return;
             }
         }
@@ -288,7 +287,8 @@ impl SdroxideApp {
         // over — and becomes eligible again when that traffic goes stale.
         let ignored = &self.session_ignored;
         auto::pick_cq(&self.digi_decodes, ix, my_call, my_grid, &self.auto_tried, |d| {
-            busy_or_exhausted(d) || crate::app::ignore::is_ignored(ignored, d.from.as_deref())
+            busy_or_exhausted(d)
+                || crate::app::ignore::is_ignored(ignored, d.from.as_deref())
         })
     }
 

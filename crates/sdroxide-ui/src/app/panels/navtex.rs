@@ -127,29 +127,19 @@ impl SdroxideApp {
                 }
             }
             ui.add_space(8.0);
-            if crate::chrome::chip(
-                ui,
-                self.digi_cfg_edit.navtex_reverse,
-                RichText::new("REV").size(10.5),
-            )
-            .on_hover_text(tr!("navtex-swap-mark-space-tones-signal"))
-            .clicked()
+            if crate::chrome::chip(ui, self.digi_cfg_edit.navtex_reverse, RichText::new("REV").size(10.5))
+                .on_hover_text(tr!("navtex-swap-mark-space-tones-signal"))
+                .clicked()
             {
                 self.digi_cfg_edit.navtex_reverse = !self.digi_cfg_edit.navtex_reverse;
-                if self.digi_cfg_seeded {
-                    cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
-                }
+                if self.digi_cfg_seeded { cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone())); }
             }
         });
 
         // REV / save / clear RX on the next line
         ui.horizontal_wrapped(|ui| {
             crate::chrome::row_tail(ui, |ui| {
-                crate::app::panels::clear_rx_chip_at(
-                    ui,
-                    cmds,
-                    !st.messages.is_empty() || st.live.is_some(),
-                );
+                crate::app::panels::clear_rx_chip_at(ui, cmds, !st.messages.is_empty() || st.live.is_some());
                 crate::app::panels::save_rx_chip_for(ui, self.digi_status.as_ref());
             });
         });
@@ -160,55 +150,48 @@ impl SdroxideApp {
         ui.allocate_ui(egui::vec2(ui.available_width(), h), |ui| {
             ui.set_min_height(h);
             ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.set_width(160.0);
-                    ui.set_min_height(h);
+            ui.vertical(|ui| {
+                ui.set_width(160.0);
+                ui.set_min_height(h);
 
-                    ui.label(RichText::new(tr!("panels-sensitivity")).size(10.0).weak());
-                    let mut v = self.digi_cfg_edit.navtex_rx_sensitivity;
-                    let resp = crate::chrome::slider(
-                        ui,
-                        egui::Slider::new(&mut v, -5..=5).fixed_decimals(0),
-                    )
+                ui.label(RichText::new(tr!("panels-sensitivity")).size(10.0).weak());
+                let mut v = self.digi_cfg_edit.navtex_rx_sensitivity;
+                let resp = crate::chrome::slider(ui, egui::Slider::new(&mut v, -5..=5).fixed_decimals(0))
                     .on_hover_text(tr!("navtex-sensitivity-hint"));
-                    if resp.changed() {
-                        self.digi_cfg_edit.navtex_rx_sensitivity = v;
-                        self.digi_cfg_edit.navtex_rx_auto = v == 0;
-                        if self.digi_cfg_seeded {
-                            cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
-                        }
-                    }
-                    if crate::chrome::chip(ui, self.digi_cfg_edit.navtex_rx_auto, tr!("sstv-auto"))
-                        .on_hover_text(tr!("navtex-auto-hint"))
-                        .clicked()
-                    {
-                        self.digi_cfg_edit.navtex_rx_auto = true;
-                        self.digi_cfg_edit.navtex_rx_sensitivity = 0;
-                        if self.digi_cfg_seeded {
-                            cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
-                        }
-                    }
-                });
-                ui.separator();
-                if pane.is_none_or(|p| p == 0) {
-                    ui.vertical(|ui| {
-                        ui.set_min_height(h);
-                        if pane.is_none() {
-                            ui.set_width(ui.available_width() * 0.46);
-                        }
-                        self.navtex_list(ui, cmds, &st, panel_h);
-                    });
+                if resp.changed() {
+                    self.digi_cfg_edit.navtex_rx_sensitivity = v;
+                    self.digi_cfg_edit.navtex_rx_auto = v == 0;
+                    if self.digi_cfg_seeded { cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone())); }
                 }
-                if pane.is_none() {
-                    ui.separator();
-                }
-                if pane.is_none_or(|p| p == 1) {
-                    ui.vertical(|ui| {
-                        ui.set_min_height(h);
-                        self.navtex_reading(ui, &st, panel_h);
-                    });
+                if crate::chrome::chip(ui, self.digi_cfg_edit.navtex_rx_auto, tr!("sstv-auto"))
+                    .on_hover_text(tr!("navtex-auto-hint"))
+                    .clicked()
+                {
+                    self.digi_cfg_edit.navtex_rx_auto = true;
+                    self.digi_cfg_edit.navtex_rx_sensitivity = 0;
+                    if self.digi_cfg_seeded { cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone())); }
                 }
             });
+            ui.separator();
+            if pane.is_none_or(|p| p == 0) {
+                ui.vertical(|ui| {
+                    ui.set_min_height(h);
+                    if pane.is_none() {
+                        ui.set_width(ui.available_width() * 0.46);
+                    }
+                    self.navtex_list(ui, cmds, &st, panel_h);
+                });
+            }
+            if pane.is_none() {
+                ui.separator();
+            }
+            if pane.is_none_or(|p| p == 1) {
+                ui.vertical(|ui| {
+                    ui.set_min_height(h);
+                    self.navtex_reading(ui, &st, panel_h);
+                });
+            }
+        });
         });
     }
 

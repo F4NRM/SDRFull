@@ -1,11 +1,11 @@
 //! Cyberpunk chrome: cut-corner panel frames, angled chip buttons, and
 //! corner accents — the shapes egui's rounded-rect widgets can't draw.
 
-use crate::i18n::tr;
 use eframe::egui::{
     self, Color32, CornerRadius, FontSelection, Mesh, Painter, Pos2, Rect, Response, RichText,
     Sense, Shape, Stroke, StrokeKind, TextStyle, Ui, WidgetText, layers::ShapeIdx, pos2, vec2,
 };
+use crate::i18n::tr;
 use sdroxide_types::ChromeStyle;
 
 use crate::theme::{self, ThemedScroll};
@@ -138,7 +138,12 @@ pub fn advisory(
         if !dismissible {
             return;
         }
-        dismiss = ui.small_button("✕").on_hover_text(tr!("chrome-hide-message-hover")).clicked();
+        dismiss = ui
+            .small_button("✕")
+            .on_hover_text(
+                tr!("chrome-hide-message-hover"),
+            )
+            .clicked();
     });
     if dismiss {
         settings.dismiss_advisory(key);
@@ -170,8 +175,10 @@ pub fn ribbon(ui: &mut egui::Ui, text: &str, colour: Color32) -> bool {
         .show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.add(egui::Label::new(egui::RichText::new(text).color(colour).size(11.0)).wrap());
-                dismissed =
-                    ui.small_button("✕").on_hover_text(tr!("chrome-close-message-hover")).clicked();
+                dismissed = ui
+                    .small_button("✕")
+                    .on_hover_text(tr!("chrome-close-message-hover"))
+                    .clicked();
             });
         });
     dismissed

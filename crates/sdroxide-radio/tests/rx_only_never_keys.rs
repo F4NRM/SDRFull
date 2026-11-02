@@ -11,7 +11,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use sdroxide_radio::{Complex32, EngineConfig, IqSource, Result, start_engine};
+use sdroxide_radio::{start_engine, Complex32, EngineConfig, IqSource, Result};
 use sdroxide_types::{Command, DeviceCaps, Mode, RxId};
 
 #[derive(Default)]
@@ -74,8 +74,7 @@ fn engine() -> (sdroxide_radio::EngineHandles, Arc<Mutex<Log>>, Option<std::thre
 {
     let log = Arc::new(Mutex::new(Log::default()));
     let (producer, _consumer) = sdroxide_radio::rtrb::RingBuffer::<f32>::new(48_000);
-    let cfg = EngineConfig {
-        tx_bands_open: true,
+    let cfg = EngineConfig { tx_bands_open: true,
         tx_ham_only: false,
         audio: Some(sdroxide_radio::AudioParams { producer, out_rate: 48_000.0 }),
         ..Default::default()

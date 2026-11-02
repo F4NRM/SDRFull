@@ -34,14 +34,12 @@ pub(in crate::app) fn settings_remote_tab(
     can_connect: bool,
     status: Option<&Result<String, String>>,
 ) {
-    ui.label(
-        RichText::new(tr!("settings-remote-connect-server"))
-            .size(14.0)
-            .strong()
-            .color(crate::theme::CYAN()),
-    );
+    ui.label(RichText::new(tr!("settings-remote-connect-server")).size(14.0).strong().color(crate::theme::CYAN()));
     ui.add_space(4.0);
-    super::note(ui, &tr!("settings-remote-drive-sdroxide-running-somewhere-else"));
+    super::note(
+        ui,
+        &tr!("settings-remote-drive-sdroxide-running-somewhere-else"),
+    );
     ui.add_space(4.0);
     ui.label(RichText::new(tr!("settings-remote-drive-sdroxide-running-somewhere-else")).weak());
     ui.add_space(8.0);
@@ -64,8 +62,9 @@ pub(in crate::app) fn settings_remote_tab(
                     .desired_width(240.0)
                     .hint_text(tr!("settings-remote-host-name-ip")),
             );
-            let addr =
-                addr.on_hover_text(tr!("settings-remote-machine-running-sdroxide-server-host"));
+            let addr = addr.on_hover_text(
+                tr!("settings-remote-machine-running-sdroxide-server-host"),
+            );
             // Enter in the address box is the same as pressing CONNECT: an address
             // box is a thing one types into and presses return on.
             entered = addr.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
@@ -74,8 +73,9 @@ pub(in crate::app) fn settings_remote_tab(
             ui.label(RichText::new(tr!("settings-remote-port")).strong());
             ui.end_row();
             ui.add_enabled_ui(!typed_url, |ui| {
-                ui.add(egui::DragValue::new(&mut cfg.port).range(1..=65535))
-                    .on_hover_text(tr!("settings-remote-port-server-listens-server-port"));
+                ui.add(egui::DragValue::new(&mut cfg.port).range(1..=65535)).on_hover_text(
+                    tr!("settings-remote-port-server-listens-server-port"),
+                );
             });
             ui.end_row();
 
@@ -88,8 +88,9 @@ pub(in crate::app) fn settings_remote_tab(
             ui.label(RichText::new(tr!("settings-remote-secure")).strong());
             ui.end_row();
             ui.add_enabled_ui(!typed_url, |ui| {
-                ui.checkbox(&mut cfg.tls, tr!("settings-remote-wss-tls"))
-                    .on_hover_text(tr!("settings-remote-tick-where-server-sits-behind"));
+                ui.checkbox(&mut cfg.tls, tr!("settings-remote-wss-tls")).on_hover_text(
+                tr!("settings-remote-tick-where-server-sits-behind"),
+            );
             });
             ui.end_row();
         });
@@ -144,5 +145,8 @@ pub(in crate::app) fn settings_remote_tab(
     ui.separator();
     ui.end_row();
     ui.add_space(6.0);
-    super::note(ui, &tr!("settings-remote-tab-note"));
+    super::note(
+        ui,
+        &tr!("settings-remote-tab-note"),
+    );
 }

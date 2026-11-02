@@ -113,8 +113,9 @@ pub fn extra_device_names(output: bool) -> Vec<String> {
 }
 
 /// Last answer per direction, with when it was taken. See [`extra_device_names`].
-static EXTRA_CACHE: std::sync::Mutex<Option<(std::time::Instant, bool, Vec<String>)>> =
-    std::sync::Mutex::new(None);
+static EXTRA_CACHE: std::sync::Mutex<
+    Option<(std::time::Instant, bool, Vec<String>)>,
+> = std::sync::Mutex::new(None);
 
 /// Whether `name` is a sound-server graph node rather than an ALSA card.
 pub fn is_graph_node_name(name: &str) -> bool {
@@ -209,7 +210,10 @@ mod tests {
         // The whole point: this name has never once appeared in the list,
         // because ALSA cannot see it.
         let extra = extra_device_names_from(
-            parse_pactl_short(REAL).into_iter().filter(|n| !n.name.starts_with("alsa_")).collect(),
+            parse_pactl_short(REAL)
+                .into_iter()
+                .filter(|n| !n.name.starts_with("alsa_"))
+                .collect(),
         );
         assert_eq!(extra, ["bluez_input.54:7A:52:00:3B:17"]);
     }
@@ -267,8 +271,9 @@ mod hardware {
     #[test]
     #[ignore = "needs a Bluetooth microphone connected"]
     fn a_connected_bluetooth_microphone_is_listed_and_can_be_picked() {
-        let name = std::env::var("SDROXIDE_BT_MIC")
-            .unwrap_or_else(|_| "bluez_input.54:7A:52:00:3B:17".to_string());
+        let name = std::env::var("SDROXIDE_BT_MIC").unwrap_or_else(|_| {
+            "bluez_input.54:7A:52:00:3B:17".to_string()
+        });
         let listed = extra_device_names(false);
         assert!(
             listed.contains(&name),

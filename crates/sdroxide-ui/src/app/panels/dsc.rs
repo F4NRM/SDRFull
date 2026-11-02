@@ -90,8 +90,8 @@ impl SdroxideApp {
                     n = st.sequences,
                     pct = format!("{:.0}", st.separation * 100.0)
                 ))
-                .size(10.0)
-                .color(theme::CYAN_DIM()),
+                    .size(10.0)
+                    .color(theme::CYAN_DIM()),
             )
             .on_hover_text(tr!("dsc-seq-tone-hint"));
             self.clear_rx_chip(ui, cmds);
@@ -117,7 +117,10 @@ impl SdroxideApp {
             .max_height((panel_h - 60.0).max(60.0))
             .show(ui, |ui| {
                 if st.messages.is_empty() {
-                    ui.label(RichText::new(tr!("dsc-nothing-yet")).weak());
+                    ui.label(
+                        RichText::new(tr!("dsc-nothing-yet"))
+                        .weak(),
+                    );
                     return;
                 }
                 let mut pick: Option<usize> = None;
@@ -146,12 +149,8 @@ impl SdroxideApp {
                             }
                         }
                         if !h.message.clean {
-                            ui.label(
-                                RichText::new(tr!("panels-marginal"))
-                                    .size(9.5)
-                                    .color(theme::YELLOW()),
-                            )
-                            .on_hover_text(tr!("dsc-marginal-hint"));
+                            ui.label(RichText::new(tr!("panels-marginal")).size(9.5).color(theme::YELLOW()))
+                                .on_hover_text(tr!("dsc-marginal-hint"));
                         }
                     });
                     if resp.response.interact(egui::Sense::click()).clicked() {
@@ -183,10 +182,8 @@ impl SdroxideApp {
                 theme::YELLOW()
             }));
             if !m.clean {
-                ui.label(
-                    RichText::new(tr!("panels-marginal-caps")).size(10.0).color(theme::YELLOW()),
-                )
-                .on_hover_text(tr!("dsc-marginal-caps-hint"));
+                ui.label(RichText::new(tr!("panels-marginal-caps")).size(10.0).color(theme::YELLOW()))
+                    .on_hover_text(tr!("dsc-marginal-caps-hint"));
             }
         });
 

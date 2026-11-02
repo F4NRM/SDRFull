@@ -96,15 +96,13 @@ fn iq_over(cmds: Vec<Command>) -> Vec<Complex32> {
         ..DeviceCaps::default()
     };
     let (producer, _consumer) = rtrb::RingBuffer::<f32>::new(48_000);
-    let cfg = EngineConfig {
-        tx_bands_open: true,
+    let cfg = EngineConfig { tx_bands_open: true,
         tx_ham_only: false,
         remember_session: false,
         audio: Some(AudioParams { producer, out_rate: 48_000.0 }),
         ..Default::default()
     };
-    let mut h =
-        start_engine(Box::new(Sdr { sent: Arc::clone(&sent), rng: 0x1234_5678 }), caps, cfg);
+    let mut h = start_engine(Box::new(Sdr { sent: Arc::clone(&sent), rng: 0x1234_5678 }), caps, cfg);
     let thread = h.thread.take();
     std::thread::sleep(Duration::from_millis(200));
     for c in cmds {

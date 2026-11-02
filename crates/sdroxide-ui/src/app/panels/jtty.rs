@@ -76,7 +76,11 @@ impl SdroxideApp {
         ui.separator();
 
         if st.messages.is_empty() {
-            ui.label(RichText::new(tr!("jtty-listening-note")).size(10.0).weak());
+            ui.label(
+                RichText::new(tr!("jtty-listening-note"))
+                .size(10.0)
+                .weak(),
+            );
             return;
         }
 
@@ -169,6 +173,10 @@ impl SdroxideApp {
                 cmds.push(Command::DigiTxActive(true));
             }
         });
-        ui.label(RichText::new(tr!("jtty-sent-once-note")).size(9.5).color(theme::CYAN_DIM()));
+        ui.label(
+            RichText::new(tr!("jtty-sent-once-note"))
+            .size(9.5)
+            .color(theme::CYAN_DIM()),
+        );
     }
 }

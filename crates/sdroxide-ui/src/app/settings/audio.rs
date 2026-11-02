@@ -24,8 +24,8 @@ use eframe::egui::{self, ComboBox, RichText};
 
 use super::general::{device_field, settings_rx_audio_gain};
 use crate::app::SdroxideApp;
-use crate::chrome::StyledCombo as _;
 use crate::i18n::{Tr as _, tr};
+use crate::chrome::StyledCombo as _;
 use crate::theme::gray;
 
 /// Whether this device belongs to the machine's sound server rather than to a
@@ -180,7 +180,11 @@ impl SdroxideApp {
         audio_pick: &mut Option<(bool, Option<String>)>,
         routing_pick: &mut Option<sdroxide_types::AudioRouting>,
     ) {
-        section(ui, &tr!("settings-audio-your-audio"), &tr!("settings-audio-your-audio-why"));
+        section(
+            ui,
+            &tr!("settings-audio-your-audio"),
+            &tr!("settings-audio-your-audio-why"),
+        );
 
         let Some(devs) = &self.audio_devices else {
             // The browser client has no device list to offer — the page plays
@@ -188,7 +192,10 @@ impl SdroxideApp {
             // browser's own site settings. Saying so is the whole of the job
             // here: a row that renders nothing is a control that silently does
             // nothing.
-            note(ui, &tr!("settings-audio-browser-note"));
+            note(
+                ui,
+                &tr!("settings-audio-browser-note"),
+            );
             return;
         };
 
@@ -217,7 +224,9 @@ impl SdroxideApp {
                     }
                 })
                 .response
-                .on_hover_text(tr!("settings-audio-channels-hint"));
+                .on_hover_text(
+                    tr!("settings-audio-channels-hint"),
+                );
             if routing != devs.routing {
                 *routing_pick = Some(routing);
             }
@@ -237,7 +246,10 @@ impl SdroxideApp {
             }
         }
 
-        note(ui, &tr!("settings-audio-microphone-note"));
+        note(
+            ui,
+            &tr!("settings-audio-microphone-note"),
+        );
     }
 
     /// **The received audio, streamed out to another program.**
@@ -258,7 +270,11 @@ impl SdroxideApp {
         radio_edit: &mut Option<sdroxide_types::RadioConfig>,
     ) {
         let Some(cfg) = radio_edit.as_mut() else { return };
-        section(ui, &tr!("settings-audio-stream-out"), &tr!("settings-audio-stream-out-why"));
+        section(
+            ui,
+            &tr!("settings-audio-stream-out"),
+            &tr!("settings-audio-stream-out-why"),
+        );
         ui.horizontal(|ui| {
             ui.label(RichText::new(tr!("settings-servers-send")).strong());
             ui.end_row();
@@ -268,9 +284,14 @@ impl SdroxideApp {
                     .desired_width(150.0)
                     .hint_text(tr!("topbar-off")),
             )
-            .on_hover_text(tr!("settings-audio-send-to-hint"));
+            .on_hover_text(
+                tr!("settings-audio-send-to-hint"),
+            );
         });
-        note(ui, &tr!("settings-audio-send-to-note"));
+        note(
+            ui,
+            &tr!("settings-audio-send-to-note"),
+        );
     }
 
     /// This radio's sound card: what comes in from the rig, what goes out to it.
@@ -286,7 +307,11 @@ impl SdroxideApp {
             return;
         };
 
-        section(ui, &tr!("settings-audio-radio-audio"), &tr!("settings-audio-radio-audio-why"));
+        section(
+            ui,
+            &tr!("settings-audio-radio-audio"),
+            &tr!("settings-audio-radio-audio-why"),
+        );
 
         let cards = self
             .radio_audio_devices
@@ -294,7 +319,12 @@ impl SdroxideApp {
             .map(|(inputs, outputs)| (inputs.as_slice(), outputs.as_slice()));
 
         if cards.is_none() {
-            super::note_rich(ui, &tr!("settings-audio-no-cards-yet"), Some(10.5), None);
+            super::note_rich(
+                ui,
+                &tr!("settings-audio-no-cards-yet"),
+                Some(10.5),
+                None,
+            );
         }
         let (inputs, outputs) = cards.unwrap_or((&[], &[]));
 
@@ -305,7 +335,9 @@ impl SdroxideApp {
         crate::app::settings::radio::probe_only(ui, can_probe, |ui| {
             if ui
                 .button(tr!("settings-audio-rescan"))
-                .on_hover_text(tr!("settings-audio-rescan-hint"))
+                .on_hover_text(
+                    tr!("settings-audio-rescan-hint"),
+                )
                 .clicked()
             {
                 *rescan = true;
@@ -335,7 +367,10 @@ impl SdroxideApp {
             settings_rx_audio_gain(ui, cfg);
         }
 
-        note(ui, &tr!("settings-audio-radio-note"));
+        note(
+            ui,
+            &tr!("settings-audio-radio-note"),
+        );
     }
 
     /// Where recordings are written.
@@ -348,7 +383,11 @@ impl SdroxideApp {
         // The section heading is this one; the folder row underneath brings its
         // own, which would otherwise read "Recording" and then "Recordings" two
         // lines apart.
-        section(ui, &tr!("settings-audio-recording"), &tr!("settings-audio-recording-why"));
+        section(
+            ui,
+            &tr!("settings-audio-recording"),
+            &tr!("settings-audio-recording-why"),
+        );
         self.settings_recordings_dir(ui, choose, reset);
     }
 }

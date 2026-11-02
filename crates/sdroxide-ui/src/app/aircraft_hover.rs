@@ -252,11 +252,7 @@ fn draw_inner(
         });
         for r in &card.lines {
             ui.horizontal(|ui| {
-                cell(
-                    ui,
-                    COL_LABEL,
-                    RichText::new(aircraft_card::field_label(r.label)).size(10.5).color(gray),
-                );
+                cell(ui, COL_LABEL, RichText::new(aircraft_card::field_label(r.label)).size(10.5).color(gray));
                 ui.allocate_ui_with_layout(
                     egui::vec2(COL_BADGE, LINE_H),
                     egui::Layout::left_to_right(egui::Align::Center),
@@ -318,8 +314,7 @@ fn draw_inner(
             match offer {
                 LookupOffer::Button => {
                     ui.add_space(4.0);
-                    let r = ui
-                        .small_button(tr!("aircraft-hover-lookup"))
+                    let r = ui.small_button(tr!("aircraft-hover-lookup"))
                         .on_hover_text(tr!("aircraft-hover-lookup-hint"));
                     if r.clicked() {
                         out.actions.push(PinAction::Lookup);
@@ -333,8 +328,7 @@ fn draw_inner(
                             .size(10.0)
                             .weak(),
                     );
-                    let r = ui
-                        .small_button(tr!("aircraft-hover-lookup"))
+                    let r = ui.small_button(tr!("aircraft-hover-lookup"))
                         .on_hover_text(tr!("aircraft-hover-lookup-hint"));
                     if r.clicked() {
                         out.actions.push(PinAction::Lookup);
@@ -347,15 +341,17 @@ fn draw_inner(
                 }
                 LookupOffer::Waiting => {
                     ui.add_space(4.0);
-                    ui.label(RichText::new(tr!("aircraft-hover-lookup-waiting")).size(10.0).weak());
+                    ui.label(
+                        RichText::new(tr!("aircraft-hover-lookup-waiting"))
+                            .size(10.0)
+                            .weak(),
+                    );
                 }
                 LookupOffer::None => {}
             }
             if history != HistoryOffer::Hidden {
                 ui.add_space(4.0);
-                let r = ui
-                    .small_button(history.label())
-                    .on_hover_text(tr!("aircraft-hover-history-hint"));
+                let r = ui.small_button(history.label()).on_hover_text(tr!("aircraft-hover-history-hint"));
                 if r.clicked() {
                     out.actions.push(PinAction::History);
                 }
@@ -954,8 +950,11 @@ mod tests {
                 egui::Color32::from_rgb(x, y, 200 - y / 2)
             })
             .collect();
-        let tex =
-            ctx.load_texture("thumb", egui::ColorImage::new([280, 187], px), Default::default());
+        let tex = ctx.load_texture(
+            "thumb",
+            egui::ColorImage::new([280, 187], px),
+            Default::default(),
+        );
         let c = card_with(Some(&heard()), &ready(info()), ThumbStatus::Ready);
         let mut tx = crate::test_raster::Textures::default();
         let mut last = None;
@@ -1105,11 +1104,7 @@ mod tests {
         for o in [None, Asking, Waiting] {
             assert!(!o.pressable(), "{o:?}");
         }
-        assert_eq!(
-            lookup_offer(&OnlineState::Idle, false, false, Option::None),
-            None,
-            "no station"
-        );
+        assert_eq!(lookup_offer(&OnlineState::Idle, false, false, Option::None), None, "no station");
         let off = OnlineState::Unavailable(Reason::NoStation);
         assert_eq!(lookup_offer(&off, false, false, Some(3)), None, "no station");
     }

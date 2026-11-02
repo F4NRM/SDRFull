@@ -113,16 +113,7 @@ impl SdroxideApp {
                     "BACKUP" => theme::YELLOW(),
                     _ => theme::gray(140),
                 };
-                ui.label(
-                    RichText::new(match role.as_str() {
-                        "MASTER" => tr!("atchat-role-master"),
-                        "BACKUP" => tr!("atchat-role-backup"),
-                        other => other.to_string(),
-                    })
-                    .size(10.5)
-                    .strong()
-                    .color(colour),
-                );
+                ui.label(RichText::new(match role.as_str() { "MASTER" => tr!("atchat-role-master"), "BACKUP" => tr!("atchat-role-backup"), other => other.to_string() }).size(10.5).strong().color(colour));
             }
             if let Some(m) = &st.master {
                 ui.label(

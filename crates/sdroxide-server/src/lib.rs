@@ -19,11 +19,11 @@ mod aircraft;
 mod auth;
 mod history;
 mod probe;
-mod programs_state;
 mod session;
 mod session_cookie;
 mod signin;
 mod solar;
+mod programs_state;
 mod watchlist;
 
 use std::net::SocketAddr;

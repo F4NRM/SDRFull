@@ -47,8 +47,7 @@ pub use ephem::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use feed::{
-    FeedCmd, RawUpdate, SolarFeed, band_activity_cached, band_conditions_cached,
-    psk_activity_cached,
+    FeedCmd, RawUpdate, SolarFeed, band_activity_cached, band_conditions_cached, psk_activity_cached,
 };
 pub use imagery::{SdoChannel, SunImage};
 pub use impact::{Impact, earth_impact};

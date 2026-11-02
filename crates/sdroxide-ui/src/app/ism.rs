@@ -57,16 +57,9 @@ impl SdroxideApp {
         // scanner's are; the engine persists it and echoes it back, so there is
         // no apply step to get wrong.
         let mut cfg = self.state.ism;
-        let show = self.tool_window(
-            ctx,
-            "ism",
-            &tr!("ism-ism-devices"),
-            [760.0, 420.0],
-            true,
-            |me, ui| {
-                me.ism_body(ui, &mut cfg, cmds);
-            },
-        );
+        let show = self.tool_window(ctx, "ism", &tr!("ism-ism-devices"), [760.0, 420.0], true, |me, ui| {
+            me.ism_body(ui, &mut cfg, cmds);
+        });
         if cfg != self.state.ism {
             cmds.push(Command::SetIsmConfig(cfg));
         }
@@ -154,9 +147,7 @@ impl SdroxideApp {
         wideband: bool,
     ) {
         ui.horizontal_wrapped(|ui| {
-            ui.label(
-                RichText::new(tr!("ism-band-label")).size(10.0).color(crate::theme::CYAN_DIM()),
-            );
+            ui.label(RichText::new(tr!("ism-band-label")).size(10.0).color(crate::theme::CYAN_DIM()));
             for (bit, label, center_hz) in sdroxide_types::RTL433_BAND_LABELS {
                 let selected = cfg.rtl433.band_enabled(bit);
                 let chip = crate::chrome::chip_enabled(ui, wideband, selected, label);

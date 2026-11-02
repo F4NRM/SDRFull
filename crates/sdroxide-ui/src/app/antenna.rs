@@ -171,7 +171,11 @@ fn surface_plot(
         let y2a = y1 * cp;
         ground_pts.push(center + egui::vec2(x1, -y2a));
     }
-    painter.add(egui::Shape::convex_polygon(ground_pts.clone(), ground_fill, ground_stroke));
+    painter.add(egui::Shape::convex_polygon(
+        ground_pts.clone(),
+        ground_fill,
+        ground_stroke,
+    ));
     // Outline ring
     let mut ring = ground_pts.clone();
     if let Some(first) = ring.first().copied() {
@@ -190,10 +194,16 @@ fn surface_plot(
     let wire_scale = if extent > 0.0 { 0.25 / extent } else { 1.0 };
     let wire_stroke = egui::Stroke::new(2.5, egui::Color32::from_rgb(255, 40, 40));
     for w in wires {
-        let a =
-            [w.0[0] * wire_scale, w.0[1] * wire_scale, w.0[2] * wire_scale + height_scaled as f64];
-        let b =
-            [w.1[0] * wire_scale, w.1[1] * wire_scale, w.1[2] * wire_scale + height_scaled as f64];
+        let a = [
+            w.0[0] * wire_scale,
+            w.0[1] * wire_scale,
+            w.0[2] * wire_scale + height_scaled as f64,
+        ];
+        let b = [
+            w.1[0] * wire_scale,
+            w.1[1] * wire_scale,
+            w.1[2] * wire_scale + height_scaled as f64,
+        ];
         let pa = proj(a);
         let pb = proj(b);
         painter.line_segment([pa, pb], wire_stroke);
@@ -273,16 +283,9 @@ impl super::SdroxideApp {
             return;
         }
         self.antenna_poll();
-        let show = self.tool_window(
-            ctx,
-            "antenna",
-            &tr!("antenna-antenna"),
-            [560.0, 720.0],
-            true,
-            |me, ui| {
-                me.antenna_body(ui);
-            },
-        );
+        let show = self.tool_window(ctx, "antenna", &tr!("antenna-antenna"), [560.0, 720.0], true, |me, ui| {
+            me.antenna_body(ui);
+        });
         self.show_antenna = show;
     }
 
@@ -338,7 +341,11 @@ impl super::SdroxideApp {
         });
 
         ui.horizontal(|ui| {
-            if ui.button(tr!("antenna-apply")).on_hover_text(tr!("antenna-apply-hint")).clicked() {
+            if ui
+                .button(tr!("antenna-apply"))
+                .on_hover_text(tr!("antenna-apply-hint"))
+                .clicked()
+            {
                 self.antenna_solve();
             }
             if self.antenna_solved.is_none() {
@@ -379,7 +386,9 @@ impl super::SdroxideApp {
                 ui.label(egui::RichText::new(tr!("antenna-optimizing")).italics());
             } else if ui
                 .button(tr!("antenna-optimize"))
-                .on_hover_text(tr!("antenna-tune-the-yagi-s-element-lengths"))
+                .on_hover_text(
+                    tr!("antenna-tune-the-yagi-s-element-lengths"),
+                )
                 .clicked()
             {
                 self.antenna_optimize();
@@ -406,10 +415,7 @@ impl super::SdroxideApp {
                                     ui.add_space(8.0);
                                     ui.monospace(tr!(
                                         "antenna-swr-value",
-                                        v = format!(
-                                            "{:.2}",
-                                            antenna_model::swr((r, x), self.antenna_z0)
-                                        )
+                                        v = format!("{:.2}", antenna_model::swr((r, x), self.antenna_z0))
                                     ));
                                 });
                             }
@@ -421,51 +427,47 @@ impl super::SdroxideApp {
                     if let Some(rows) = &self.antenna_solved {
                         crate::chrome::menu_caption(ui, &tr!("antenna-solved"));
                         for row in rows {
-                            ui.group(|ui| {
-                                ui.label(egui::RichText::new(&row.name).strong());
-                                ui.horizontal(|ui| {
-                                    ui.label(format!("Zin {:.1}{:+.1}j Ω", row.r, row.x));
-                                    ui.add_space(8.0);
-                                    let swr_c = if row.swr >= 2.0 {
-                                        egui::Color32::from_rgb(255, 80, 80)
-                                    } else if row.swr >= 1.5 {
-                                        egui::Color32::from_rgb(255, 200, 80)
-                                    } else {
-                                        egui::Color32::from_rgb(120, 220, 120)
-                                    };
-                                    ui.monospace(
-                                        egui::RichText::new(tr!(
-                                            "antenna-swr-ref",
-                                            v = format!("{:.2}", row.swr),
-                                            z = format!("{:.0}", self.antenna_z0)
-                                        ))
-                                        .color(swr_c),
-                                    );
-                                    if row.swr >= 2.0 {
-                                        ui.label(
-                                            egui::RichText::new("(!)")
-                                                .color(egui::Color32::from_rgb(255, 80, 80))
-                                                .small(),
-                                        );
-                                    }
-                                    ui.add_space(8.0);
-                                    ui.monospace(format!("{:.1} dBi", row.gain));
-                                    ui.add_space(8.0);
-                                    ui.monospace(
-                                        egui::RichText::new(tr!(
-                                            "antenna-takeoff",
-                                            deg = format!("{:.0}", row.takeoff)
-                                        ))
-                                        .weak(),
-                                    );
-                                });
-                            });
-                            ui.add_space(4.0);
-                        }
-                        ui.separator();
-                    }
-                });
+                    ui.group(|ui| {
+                        ui.label(egui::RichText::new(&row.name).strong());
+                        ui.horizontal(|ui| {
+                            ui.label(format!("Zin {:.1}{:+.1}j Ω", row.r, row.x));
+                            ui.add_space(8.0);
+                            let swr_c = if row.swr >= 2.0 {
+                                egui::Color32::from_rgb(255, 80, 80)
+                            } else if row.swr >= 1.5 {
+                                egui::Color32::from_rgb(255, 200, 80)
+                            } else {
+                                egui::Color32::from_rgb(120, 220, 120)
+                            };
+                            ui.monospace(
+                                egui::RichText::new(tr!(
+                                    "antenna-swr-ref",
+                                    v = format!("{:.2}", row.swr),
+                                    z = format!("{:.0}", self.antenna_z0)
+                                ))
+                                .color(swr_c),
+                            );
+                            if row.swr >= 2.0 {
+                                ui.label(
+                                    egui::RichText::new("(!)")
+                                        .color(egui::Color32::from_rgb(255, 80, 80))
+                                        .small(),
+                                );
+                            }
+                            ui.add_space(8.0);
+                            ui.monospace(format!("{:.1} dBi", row.gain));
+                            ui.add_space(8.0);
+                            ui.monospace(
+                                egui::RichText::new(tr!("antenna-takeoff", deg = format!("{:.0}", row.takeoff))).weak(),
+                            );
+                        });
+                    });
+                    ui.add_space(4.0);
+                }
+                ui.separator();
+            }
             });
+        });
 
             if !self.antenna_patterns.is_empty() {
                 ui.horizontal(|ui| {
@@ -494,21 +496,9 @@ impl super::SdroxideApp {
                                 _ => tr!("antenna-view-top"),
                             })
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(
-                                    &mut self.antenna_pattern_view,
-                                    0,
-                                    tr!("antenna-view-top"),
-                                );
-                                ui.selectable_value(
-                                    &mut self.antenna_pattern_view,
-                                    1,
-                                    tr!("antenna-view-front"),
-                                );
-                                ui.selectable_value(
-                                    &mut self.antenna_pattern_view,
-                                    2,
-                                    tr!("antenna-view-side"),
-                                );
+                                ui.selectable_value(&mut self.antenna_pattern_view, 0, tr!("antenna-view-top"));
+                                ui.selectable_value(&mut self.antenna_pattern_view, 1, tr!("antenna-view-front"));
+                                ui.selectable_value(&mut self.antenna_pattern_view, 2, tr!("antenna-view-side"));
                             });
                         if self.antenna_pattern_view != view_before {
                             match self.antenna_pattern_view {
@@ -529,8 +519,7 @@ impl super::SdroxideApp {
                     });
                 });
                 ui.horizontal(|ui| {
-                    if let Some((name, cuts)) = self.antenna_patterns.get(self.antenna_pattern_sel)
-                    {
+                    if let Some((name, cuts)) = self.antenna_patterns.get(self.antenna_pattern_sel) {
                         let cut = &cuts[self.antenna_pattern_view.min(2)];
                         pattern_plot(ui, name, cut);
                     }
@@ -554,7 +543,9 @@ impl super::SdroxideApp {
                         );
                     }
                 });
-                ui.label(egui::RichText::new(tr!("antenna-3d-hint")).small().weak());
+                ui.label(
+                    egui::RichText::new(tr!("antenna-3d-hint")).small().weak(),
+                );
                 ui.separator();
             }
 
@@ -580,13 +571,7 @@ impl super::SdroxideApp {
                         ui.add_space(8.0);
                         ui.monospace(format!("{len:.2} m"));
                         if i > 0 {
-                            ui.monospace(
-                                egui::RichText::new(format!(
-                                    "  {}",
-                                    tr!("antenna-gap", v = format!("{gap:.2}"))
-                                ))
-                                .weak(),
-                            );
+                            ui.monospace(egui::RichText::new(format!("  {}", tr!("antenna-gap", v = format!("{gap:.2}")))).weak());
                         }
                     });
                     y = w.from[1];
@@ -604,17 +589,9 @@ impl super::SdroxideApp {
                     self.antenna_trees = if on { Some((0.0, 40.0, true)) } else { None };
                 }
                 if let Some((az, depth, leaf)) = &mut self.antenna_trees {
+                    ui.add(egui::DragValue::new(az).speed(1.0).range(0.0..=359.0).prefix(tr!("antenna-az") + " "));
                     ui.add(
-                        egui::DragValue::new(az)
-                            .speed(1.0)
-                            .range(0.0..=359.0)
-                            .prefix(tr!("antenna-az") + " "),
-                    );
-                    ui.add(
-                        egui::DragValue::new(depth)
-                            .speed(1.0)
-                            .range(0.0..=400.0)
-                            .prefix(tr!("antenna-depth") + " "),
+                        egui::DragValue::new(depth).speed(1.0).range(0.0..=400.0).prefix(tr!("antenna-depth") + " "),
                     );
                     ui.checkbox(leaf, tr!("antenna-in-leaf"));
                 }
@@ -634,12 +611,7 @@ impl super::SdroxideApp {
                     self.antenna_ridge = if on { Some((0.0, 50.0)) } else { None };
                 }
                 if let Some((az, height)) = &mut self.antenna_ridge {
-                    ui.add(
-                        egui::DragValue::new(az)
-                            .speed(1.0)
-                            .range(0.0..=359.0)
-                            .prefix(tr!("antenna-az") + " "),
-                    );
+                    ui.add(egui::DragValue::new(az).speed(1.0).range(0.0..=359.0).prefix(tr!("antenna-az") + " "));
                     ui.add(
                         egui::DragValue::new(height)
                             .speed(1.0)

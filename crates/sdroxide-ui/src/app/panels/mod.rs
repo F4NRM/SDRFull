@@ -361,13 +361,11 @@ impl SdroxideApp {
     /// chip row (ADS-B, AIS, APRS, HFDL). Same switch as the operating panels'
     /// NIGHT chip, so turning it on anywhere turns it on everywhere.
     pub(in crate::app) fn night_chip(&mut self, ui: &mut egui::Ui) {
-        if crate::chrome::chip(
-            ui,
-            self.view.map_night,
-            RichText::new(tr!("panels-night")).size(9.5),
-        )
-        .on_hover_text(tr!("panels-shade-where-sun-down-twilight"))
-        .clicked()
+        if crate::chrome::chip(ui, self.view.map_night, RichText::new(tr!("panels-night")).size(9.5))
+            .on_hover_text(
+                tr!("panels-shade-where-sun-down-twilight"),
+            )
+            .clicked()
         {
             self.view.map_night = !self.view.map_night;
         }
@@ -402,19 +400,17 @@ impl SdroxideApp {
             if resp.clicked() {
                 self.view.prop_on_map = !on;
             }
-            resp.on_hover_text(tr!("panels-shade-map-where-signals-are"));
+            resp.on_hover_text(
+                tr!("panels-shade-map-where-signals-are"),
+            );
             // "Who heard me": the reporters that heard this callsign on the
             // current band, from PSK Reporter, drawn as rings at their own
             // grids. Its own chip, independent of the heat above — it stays
             // useful with PROP off, and it is the inverse of the PSK spots
             // (which are what *we* are hearing, not who heard us).
-            if crate::chrome::chip(
-                ui,
-                self.view.psk_heard_me,
-                RichText::new(tr!("panels-heard-me-chip")).size(9.5),
-            )
-            .on_hover_text(tr!("panels-heard-me-hint"))
-            .clicked()
+            if crate::chrome::chip(ui, self.view.psk_heard_me, RichText::new(tr!("panels-heard-me-chip")).size(9.5))
+                .on_hover_text(tr!("panels-heard-me-hint"))
+                .clicked()
             {
                 self.view.psk_heard_me = !self.view.psk_heard_me;
             }
@@ -1096,9 +1092,11 @@ impl SdroxideApp {
             }
         });
         ui.label(
-            RichText::new(tr!("panels-message-repeats-long-transmit-held"))
-                .size(9.5)
-                .color(crate::theme::CYAN_DIM()),
+            RichText::new(
+                tr!("panels-message-repeats-long-transmit-held"),
+            )
+            .size(9.5)
+            .color(crate::theme::CYAN_DIM()),
         );
     }
 
@@ -1573,8 +1571,7 @@ impl SdroxideApp {
         // say — a quiet band, QRM through the gap — the clock's bar carries on.
         if !transmitting && matches!(self.state.rx[0].mode, Mode::Ft8 | Mode::Ft4 | Mode::Ft2) {
             if let Some(followed) = self.slot_follow.view(&t, now) {
-                widgets::slot_bar_heard(ui, t, followed)
-                    .on_hover_text(tr!("panels-slot-bar-heard-hint"));
+                widgets::slot_bar_heard(ui, t, followed).on_hover_text(tr!("panels-slot-bar-heard-hint"));
                 return;
             }
         }

@@ -5,8 +5,8 @@
 //! tested. Nothing here reads the network: a field nobody has heard is shown as
 //! "—" with the reason, so an empty line is never a silent one.
 
-use super::aircraft_registry::{AircraftCard, AircraftRegistry, FallbackKey, Source, Stamped};
 use crate::i18n::tr;
+use super::aircraft_registry::{AircraftCard, AircraftRegistry, FallbackKey, Source, Stamped};
 
 /// Which card is meant: an ICAO address, or an HFDL aircraft that never gave one.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -213,7 +213,13 @@ pub(in crate::app) fn lines(card: &AircraftCard, now: i64) -> Vec<Line> {
             |v| sdroxide_types::AirUnits::current().speed(*v),
             &tr!("aircraft-missing-adsb"),
         ),
-        line("Track", &card.track_deg, now, |v| format!("{v:.0}°"), &tr!("aircraft-missing-adsb")),
+        line(
+            "Track",
+            &card.track_deg,
+            now,
+            |v| format!("{v:.0}°"),
+            &tr!("aircraft-missing-adsb"),
+        ),
         line(
             "Last message",
             &card.last_message,

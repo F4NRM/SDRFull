@@ -72,7 +72,7 @@ use std::sync::Arc;
 use num_complex::Complex32;
 use realfft::{RealFftPlanner, RealToComplex};
 
-use crate::fir::{ComplexFir, bandpass_taps};
+use crate::fir::{bandpass_taps, ComplexFir};
 
 /// Subcarrier centre, Hz. Black is 400 Hz below it and white 400 Hz above.
 pub const CENTRE_HZ: f64 = 1900.0;
@@ -1846,7 +1846,11 @@ mod tests {
         let levels: Vec<f32> = (0..n)
             .map(|i| {
                 let t = i as f64 / RATE;
-                if (t * alt_hz).fract() < 0.5 { 1.0 } else { 0.0 }
+                if (t * alt_hz).fract() < 0.5 {
+                    1.0
+                } else {
+                    0.0
+                }
             })
             .collect();
         modulate(&levels)
@@ -2034,8 +2038,10 @@ mod tests {
         let ev = drain(&mut rx, &audio);
 
         let starts = ev.iter().filter(|e| matches!(e, WefaxEvent::Start { .. })).count();
-        let complete =
-            ev.iter().filter(|e| matches!(e, WefaxEvent::Complete { by_tone: false, .. })).count();
+        let complete = ev
+            .iter()
+            .filter(|e| matches!(e, WefaxEvent::Complete { by_tone: false, .. }))
+            .count();
         assert!(
             complete >= 1,
             "the noisy phasing never ended the page: {starts} start(s), no complete"
@@ -2365,7 +2371,11 @@ mod tests {
         let levels: Vec<f32> = (0..n)
             .map(|i| {
                 let t = i as f64 / RATE;
-                if fade && t % 10.0 > 8.5 { 0.0 } else { 1.0 }
+                if fade && t % 10.0 > 8.5 {
+                    0.0
+                } else {
+                    1.0
+                }
             })
             .collect();
         modulate(&levels)

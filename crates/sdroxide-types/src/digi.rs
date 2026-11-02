@@ -5052,12 +5052,8 @@ mod tests {
 }
 
 /// `#[serde(default)]` helper: a bool that defaults to true.
-fn navtex_loss_limit_default() -> u8 {
-    48
-}
-fn navtex_disagree_limit_default() -> u8 {
-    6
-}
+fn navtex_loss_limit_default() -> u8 { 48 }
+fn navtex_disagree_limit_default() -> u8 { 6 }
 fn yes() -> bool {
     true
 }

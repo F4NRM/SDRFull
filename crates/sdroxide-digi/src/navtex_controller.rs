@@ -27,12 +27,12 @@ use std::time::SystemTime;
 
 use sdroxide_dsp::NavtexRx;
 use sdroxide_types::{
-    DigiConfig, DigiStatus, Mode, NAVTEX_MESSAGE_MAX, NavtexMessage, NavtexStatus, QsoStep,
-    TranscriptLine,
+    DigiConfig, DigiStatus, Mode, NavtexMessage, NavtexStatus, QsoStep, TranscriptLine,
+    NAVTEX_MESSAGE_MAX,
 };
 
-use crate::DigiEngine;
 use crate::controller::DigiAction;
+use crate::DigiEngine;
 
 /// Characters of loose text kept — what was decoded outside any message.
 const TEXT_CAP: usize = 8_000;
@@ -45,7 +45,11 @@ const TEXT_CAP: usize = 8_000;
 const BODY_CAP: usize = 20_000;
 
 fn sensitivity(cfg: &DigiConfig) -> i8 {
-    if cfg.navtex_rx_auto { 0 } else { cfg.navtex_rx_sensitivity }
+    if cfg.navtex_rx_auto {
+        0
+    } else {
+        cfg.navtex_rx_sensitivity
+    }
 }
 
 pub struct NavtexController {

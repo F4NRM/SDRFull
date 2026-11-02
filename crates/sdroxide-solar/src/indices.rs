@@ -655,7 +655,8 @@ pub fn parse_band_activity(json: &str, observed_unix: i64) -> Option<BandActivit
     let v: serde_json::Value = serde_json::from_str(json).ok()?;
     let rows = v.get("data")?.as_array()?;
     let num = |v: Option<&serde_json::Value>| -> u64 {
-        v.and_then(|v| v.as_u64().or_else(|| v.as_str().and_then(|s| s.parse().ok()))).unwrap_or(0)
+        v.and_then(|v| v.as_u64().or_else(|| v.as_str().and_then(|s| s.parse().ok())))
+            .unwrap_or(0)
     };
     let mut bands = Vec::new();
     for row in rows {
@@ -674,7 +675,8 @@ pub fn parse_band_activity(json: &str, observed_unix: i64) -> Option<BandActivit
 /// minutes on 160 m–10 m. `rronly=1` keeps the answer to the report list, which
 /// is the small form; the frequency in whole MHz is the band code, the same
 /// convention wspr.live uses, so the two columns share a type.
-pub const PSK_ACTIVITY_URL: &str = "https://retrieve.pskreporter.info/query?flowStartSeconds=-900&rronly=1&frange=1800000-30000000";
+pub const PSK_ACTIVITY_URL: &str =
+    "https://retrieve.pskreporter.info/query?flowStartSeconds=-900&rronly=1&frange=1800000-30000000";
 
 /// The band code for a PSK Reporter reception frequency: whole MHz — 14.074 is
 /// band 14, 3.5 is band 3 — the same convention the WSPR table uses, so the
@@ -683,7 +685,11 @@ pub const PSK_ACTIVITY_URL: &str = "https://retrieve.pskreporter.info/query?flow
 /// anywhere in it counts as code 27, the code [`Band::M11`] reads. A frequency
 /// with no band code behind it (out-of-band spots) is simply never looked up.
 fn psk_band_code(hz: f64) -> i16 {
-    if (26_965_000.0..27_860_000.0).contains(&hz) { 27 } else { (hz / 1_000_000.0) as i16 }
+    if (26_965_000.0..27_860_000.0).contains(&hz) {
+        27
+    } else {
+        (hz / 1_000_000.0) as i16
+    }
 }
 
 /// Parse PSK Reporter's reception-report XML into per-band activity.

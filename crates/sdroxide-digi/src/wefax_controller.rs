@@ -17,8 +17,8 @@ use sdroxide_types::{
     DigiConfig, DigiStatus, Mode, QsoStep, TranscriptLine, WefaxIoc, WefaxLpm, WefaxStatus,
 };
 
-use crate::DigiEngine;
 use crate::controller::DigiAction;
+use crate::DigiEngine;
 
 /// Rows accumulated before the picture is grown. A chart is 1809 pixels wide,
 /// so each block is a couple of hundred kilobytes; growing by one row at a time
@@ -86,7 +86,11 @@ fn from_lpm(v: Lpm) -> WefaxLpm {
 /// and a slider value behind it — from another client, or from a file edited by
 /// hand — and then the chip would say Auto while the decoder was still scaling.
 fn sensitivity(cfg: &DigiConfig) -> i8 {
-    if cfg.wefax_rx_auto { 0 } else { cfg.wefax_rx_sensitivity }
+    if cfg.wefax_rx_auto {
+        0
+    } else {
+        cfg.wefax_rx_sensitivity
+    }
 }
 
 impl WefaxController {
@@ -470,7 +474,7 @@ mod tests {
         c.wefax_start();
         let w = c.width as usize;
         c.on_rx_audio(&[]); // no-op, but exercises the empty path
-        // Feed rows straight through the event handler's own logic.
+                            // Feed rows straight through the event handler's own logic.
         for y in 0..3u16 {
             let gray = vec![y as u8; w];
             let mut ev = vec![WefaxEvent::Line { y, gray }];

@@ -157,16 +157,9 @@ impl SdroxideApp {
         if !self.enigma.show {
             return;
         }
-        let show = self.tool_window(
-            ctx,
-            "enigma",
-            &tr!("enigma-title"),
-            [460.0, 640.0],
-            true,
-            |me, ui| {
-                me.enigma_body(ui);
-            },
-        );
+        let show = self.tool_window(ctx, "enigma", &tr!("enigma-title"), [460.0, 640.0], true, |me, ui| {
+            me.enigma_body(ui);
+        });
         self.enigma.show = show;
     }
 
@@ -388,7 +381,11 @@ impl SdroxideApp {
 
         ui.add_space(8.0);
         ui.separator();
-        ui.label(RichText::new(tr!("enigma-solve-note")).size(10.5).color(LEGEND_DIM));
+        ui.label(
+            RichText::new(tr!("enigma-solve-note"))
+            .size(10.5)
+            .color(LEGEND_DIM),
+        );
         ui.horizontal(|ui| {
             ui.label(RichText::new(tr!("enigma-crib")).size(11.0).color(LEGEND_DIM));
             ui.add(
@@ -406,6 +403,10 @@ impl SdroxideApp {
 
         // The machine's own weakness, said out loud because it is the point.
         ui.add_space(4.0);
-        ui.label(RichText::new(tr!("enigma-flaw")).size(10.0).color(LEGEND_DIM));
+        ui.label(
+            RichText::new(tr!("enigma-flaw"))
+            .size(10.0)
+            .color(LEGEND_DIM),
+        );
     }
 }

@@ -159,10 +159,7 @@ impl SdroxideApp {
         egui::ScrollArea::vertical().auto_shrink([false, false]).show_themed(ui, |ui| {
             // WAS state grid.
             ui.label(
-                RichText::new(tr!("awards-worked-all-states"))
-                    .size(12.0)
-                    .strong()
-                    .color(crate::theme::CYAN()),
+                RichText::new(tr!("awards-worked-all-states")).size(12.0).strong().color(crate::theme::CYAN()),
             );
             award_cell_grid(
                 ui,
@@ -174,10 +171,7 @@ impl SdroxideApp {
             ui.add_space(8.0);
             // WAZ zone grid (1..40).
             ui.label(
-                RichText::new(tr!("awards-cq-zones-waz"))
-                    .size(12.0)
-                    .strong()
-                    .color(crate::theme::CYAN()),
+                RichText::new(tr!("awards-cq-zones-waz")).size(12.0).strong().color(crate::theme::CYAN()),
             );
             award_cell_grid(
                 ui,
@@ -188,10 +182,7 @@ impl SdroxideApp {
             ui.add_space(8.0);
             // DXCC worked list (confirmed marked).
             ui.label(
-                RichText::new(tr!("awards-dxcc-entities"))
-                    .size(12.0)
-                    .strong()
-                    .color(crate::theme::CYAN()),
+                RichText::new(tr!("awards-dxcc-entities")).size(12.0).strong().color(crate::theme::CYAN()),
             );
             for (name, st) in &awards.dxcc {
                 let col = if st.confirmed { crate::theme::GREEN() } else { crate::theme::YELLOW() };

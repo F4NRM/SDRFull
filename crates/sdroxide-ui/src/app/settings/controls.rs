@@ -139,26 +139,22 @@ fn action_combo(
 ) -> bool {
     use sdroxide_types::Action;
     let mut changed = false;
-    ComboBox::from_id_salt(id).width(210.0).selected_text(action_label(*action)).show_styled(
-        ui,
-        |ui| {
-            let mut group = "";
-            let all = Action::all()
-                .into_iter()
-                .chain(memories.iter().map(|m| Action::MemoryRecall(m.id)));
-            for a in all {
-                if a.group() != group {
-                    group = a.group();
-                    ui.add_space(4.0);
-                    ui.label(RichText::new(action_group_label(group)).small().weak());
-                }
-                if ui.selectable_label(*action == a, action_label(a)).clicked() {
-                    *action = a;
-                    changed = true;
-                }
+    ComboBox::from_id_salt(id).width(210.0).selected_text(action_label(*action)).show_styled(ui, |ui| {
+        let mut group = "";
+        let all =
+            Action::all().into_iter().chain(memories.iter().map(|m| Action::MemoryRecall(m.id)));
+        for a in all {
+            if a.group() != group {
+                group = a.group();
+                ui.add_space(4.0);
+                ui.label(RichText::new(action_group_label(group)).small().weak());
             }
-        },
-    );
+            if ui.selectable_label(*action == a, action_label(a)).clicked() {
+                *action = a;
+                changed = true;
+            }
+        }
+    });
     changed
 }
 
@@ -183,14 +179,12 @@ pub(in crate::app) fn settings_controls_tab(
     let cfg = &mut *io.input_edit;
     let key_capture = &mut *io.key_capture;
 
-    ui.label(
-        RichText::new(tr!("settings-controls-keyboard"))
-            .size(14.0)
-            .strong()
-            .color(crate::theme::CYAN()),
-    );
+    ui.label(RichText::new(tr!("settings-controls-keyboard")).size(14.0).strong().color(crate::theme::CYAN()));
     ui.add_space(4.0);
-    super::note(ui, &tr!("settings-controls-click-shortcut-rebind-then-press"));
+    super::note(
+        ui,
+        &tr!("settings-controls-click-shortcut-rebind-then-press"),
+    );
     ui.add_space(4.0);
     ui.label(RichText::new(tr!("settings-controls-click-shortcut-rebind-then-press")).weak());
     ui.add_space(6.0);
@@ -212,11 +206,7 @@ pub(in crate::app) fn settings_controls_tab(
 
             for (i, b) in cfg.keys.iter_mut().enumerate() {
                 let capturing = *key_capture == Some(i);
-                let label = if capturing {
-                    tr!("settings-controls-press-key").to_string()
-                } else {
-                    b.chord.label()
-                };
+                let label = if capturing { tr!("settings-controls-press-key").to_string() } else { b.chord.label() };
                 if crate::chrome::chip(ui, capturing, RichText::new(label).monospace()).clicked() {
                     *key_capture = if capturing { None } else { Some(i) };
                 }
@@ -236,9 +226,7 @@ pub(in crate::app) fn settings_controls_tab(
                             // The sign of `value` is the direction, so one
                             // action can have an up key and a down key.
                             let mut down = b.value < 0.0;
-                            if crate::chrome::checkbox(ui, &mut down, tr!("settings-controls-down"))
-                                .changed()
-                            {
+                            if crate::chrome::checkbox(ui, &mut down, tr!("settings-controls-down")).changed() {
                                 b.value = if down { -1.0 } else { 1.0 };
                             }
                         });
@@ -259,11 +247,7 @@ pub(in crate::app) fn settings_controls_tab(
                 }
 
                 crate::chrome::checkbox(ui, &mut b.enabled, "");
-                if ui
-                    .small_button("✕")
-                    .on_hover_text(tr!("settings-controls-remove-binding"))
-                    .clicked()
-                {
+                if ui.small_button("✕").on_hover_text(tr!("settings-controls-remove-binding")).clicked() {
                     remove = Some(i);
                 }
                 ui.end_row();
@@ -391,14 +375,12 @@ pub(in crate::app) fn settings_controls_tab(
     ui.separator();
     ui.end_row();
     ui.add_space(6.0);
-    ui.label(
-        RichText::new(tr!("settings-controls-mouse-buttons"))
-            .size(14.0)
-            .strong()
-            .color(crate::theme::CYAN()),
-    );
+    ui.label(RichText::new(tr!("settings-controls-mouse-buttons")).size(14.0).strong().color(crate::theme::CYAN()));
     ui.add_space(4.0);
-    super::note(ui, &tr!("settings-controls-left-right-buttons-are-reserved"));
+    super::note(
+        ui,
+        &tr!("settings-controls-left-right-buttons-are-reserved"),
+    );
     ui.add_space(4.0);
     ui.label(RichText::new(tr!("settings-controls-left-right-buttons-are-reserved")).weak());
     ui.add_space(6.0);
@@ -488,10 +470,16 @@ fn settings_midi_section(
     );
     ui.add_space(4.0);
     if !status.supported {
-        super::note(ui, &tr!("settings-controls-midi-controllers-need-native-app"));
+        super::note(
+            ui,
+            &tr!("settings-controls-midi-controllers-need-native-app"),
+        );
         return;
     }
-    super::note(ui, &tr!("settings-controls-any-class-compliant-midi-surface"));
+    super::note(
+        ui,
+        &tr!("settings-controls-any-class-compliant-midi-surface"),
+    );
     ui.add_space(6.0);
     crate::chrome::checkbox(ui, &mut cfg.midi.enabled, tr!("settings-controls-enable"));
     ui.add_space(6.0);
@@ -542,10 +530,7 @@ fn settings_midi_section(
         // Naming the control that just moved is what makes an unlabelled
         // surface bindable at all.
         match last_midi {
-            Some((msg, v)) => super::note(
-                ui,
-                &tr!("settings-controls-last-midi", message = midi_msg_label(&msg), value = v),
-            ),
+            Some((msg, v)) => super::note(ui, &tr!("settings-controls-last-midi", message = midi_msg_label(&msg), value = v)),
             None => super::note(ui, &tr!("settings-controls-move-control-see-here")),
         };
     });
@@ -569,11 +554,7 @@ fn settings_midi_section(
 
             for (i, b) in cfg.midi.bindings.iter_mut().enumerate() {
                 let learning = learn.map(|l| l.row) == Some(i);
-                let label = if learning {
-                    tr!("settings-controls-move").to_string()
-                } else {
-                    midi_msg_label(&b.msg)
-                };
+                let label = if learning { tr!("settings-controls-move").to_string() } else { midi_msg_label(&b.msg) };
                 if crate::chrome::chip(ui, learning, RichText::new(label).monospace())
                     .on_hover_text(tr!("settings-controls-click-then-move-control-you"))
                     .clicked()
@@ -609,24 +590,19 @@ fn settings_midi_section(
                                     .range(0.0..=4.0)
                                     .prefix("×"),
                             )
-                            .on_hover_text(tr!(
-                                "settings-controls-speed-sensitivity-spin-faster-tune"
-                            ));
+                            .on_hover_text(tr!("settings-controls-speed-sensitivity-spin-faster-tune"));
                             // Sign/magnitude and 64-centred encoders are
                             // indistinguishable from small movements, so a wrong
                             // guess shows up as a knob that turns the wrong way.
-                            crate::chrome::checkbox(
-                                ui,
-                                &mut b.tuning.invert,
-                                tr!("settings-controls-rev"),
-                            );
+                            crate::chrome::checkbox(ui, &mut b.tuning.invert, tr!("settings-controls-rev"));
                         });
                     }
                     ActionKind::Momentary => {
                         ui.label("");
                         ui.horizontal(|ui| {
                             for m in ButtonMode::ALL {
-                                if crate::chrome::chip(ui, b.button_mode == m, m.tr()).clicked() {
+                                if crate::chrome::chip(ui, b.button_mode == m, m.tr()).clicked()
+                                {
                                     b.button_mode = m;
                                 }
                             }
@@ -665,7 +641,10 @@ fn settings_midi_section(
     });
 
     ui.add_space(8.0);
-    super::note(ui, &tr!("settings-controls-endless-jog-encoders-send-relative"));
+    super::note(
+        ui,
+        &tr!("settings-controls-endless-jog-encoders-send-relative"),
+    );
 }
 
 /// Port dropdown that keeps both the stable id and the human name — the id

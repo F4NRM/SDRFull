@@ -119,11 +119,7 @@ pub fn show(ui: &mut Ui, area: Rect, view: &mut ViewState) -> bool {
     if resp.hovered() || resp.dragged() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
     }
-    resp.on_hover_text(tr!(
-        "levelslider-hover",
-        floor = format!("{:.0}", view.db_floor),
-        ceil = format!("{:.0}", view.db_ceil)
-    ));
+    resp.on_hover_text(tr!("levelslider-hover", floor = format!("{:.0}", view.db_floor), ceil = format!("{:.0}", view.db_ceil)));
     changed
 }
 

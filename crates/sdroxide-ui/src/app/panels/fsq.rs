@@ -423,10 +423,8 @@ impl SdroxideApp {
                         });
                         // Row 2: CQ / ? heard / CLEAR.
                         ui.horizontal(|ui| {
-                            if tx_gated(ui, tx_ok, |ui| {
-                                crate::chrome::chip(ui, false, tr!("fsq-call-cq"))
-                            })
-                            .clicked()
+                            if tx_gated(ui, tx_ok, |ui| crate::chrome::chip(ui, false, tr!("fsq-call-cq")))
+                                .clicked()
                             {
                                 cmds.push(Command::DigiCallCq);
                             }

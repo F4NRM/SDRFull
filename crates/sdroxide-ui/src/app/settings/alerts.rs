@@ -73,70 +73,67 @@ pub(in crate::app) fn alerts_settings(
         });
 
         ui.add_space(4.0);
-        egui::CollapsingHeader::new(tr!("settings-alerts-what-sound")).default_open(true).show(
-            ui,
-            |ui| {
-                ui.add_space(4.0);
-                // One row per event: what it is, whether it rings, and with
-                // which of the sounds. The rows are shared with the decode
-                // list's badges, so "A station is calling me" here is "badge
-                // yellow on the list" there.
-                for event in AlertEvent::ALL {
-                    let rule = event.rule_mut(&mut cfg.events);
-                    let tone = rule.reply.plays_tone();
-                    let speaks = rule.reply.speaks();
-                    // Wrapped: a checkbox and two combos are wider than a phone.
-                    ui.horizontal_wrapped(|ui| {
-                        crate::chrome::checkbox(ui, &mut rule.enabled, event.tr());
-                        // The sound only matters when the reply makes one; a
-                        // voice-only rule greys it rather than hiding it, so the
-                        // row keeps its shape.
-                        ui.add_enabled_ui(tone, |ui| {
-                            enum_combo(
-                                ui,
-                                &format!("alert-reply-{}", event.as_str()),
-                                &mut rule.reply,
-                                &AlertReply::ALL,
-                                AlertReply::tr,
-                            );
-                        });
+        egui::CollapsingHeader::new(tr!("settings-alerts-what-sound")).default_open(true).show(ui, |ui| {
+            ui.add_space(4.0);
+            // One row per event: what it is, whether it rings, and with
+            // which of the sounds. The rows are shared with the decode
+            // list's badges, so "A station is calling me" here is "badge
+            // yellow on the list" there.
+            for event in AlertEvent::ALL {
+                let rule = event.rule_mut(&mut cfg.events);
+                let tone = rule.reply.plays_tone();
+                let speaks = rule.reply.speaks();
+                // Wrapped: a checkbox and two combos are wider than a phone.
+                ui.horizontal_wrapped(|ui| {
+                    crate::chrome::checkbox(ui, &mut rule.enabled, event.tr());
+                    // The sound only matters when the reply makes one; a
+                    // voice-only rule greys it rather than hiding it, so the
+                    // row keeps its shape.
+                    ui.add_enabled_ui(tone, |ui| {
                         enum_combo(
                             ui,
                             &format!("alert-reply-{}", event.as_str()),
                             &mut rule.reply,
                             &AlertReply::ALL,
-                            AlertReply::label,
+                            AlertReply::tr,
                         );
-                        // Hear the phrase without waiting for the band to produce
-                        // one. Offered only when the voice is on, and it says why
-                        // when it is not rather than doing nothing.
-                        let can_say = speaks && speech_on;
-                        let resp = ui
-                            .add_enabled(can_say, egui::Button::new(tr!("settings-alerts-say")))
-                            .on_hover_text(if can_say {
-                                tr!("settings-alerts-say-hint")
-                            } else if !speaks {
-                                tr!("settings-alerts-say-need-voice")
-                            } else {
-                                tr!("settings-alerts-say-voice-off")
-                            });
-                        if resp.clicked() {
-                            *say = Some(event);
-                        }
                     });
-                    // The words it will speak, so the choice is not a guess.
-                    if speaks {
-                        super::note_small(
-                            ui,
-                            &tr!("settings-alerts-speaks", text = spoken_example(event)),
-                        );
+                    enum_combo(
+                        ui,
+                        &format!("alert-reply-{}", event.as_str()),
+                        &mut rule.reply,
+                        &AlertReply::ALL,
+                        AlertReply::label,
+                    );
+                    // Hear the phrase without waiting for the band to produce
+                    // one. Offered only when the voice is on, and it says why
+                    // when it is not rather than doing nothing.
+                    let can_say = speaks && speech_on;
+                    let resp = ui.add_enabled(can_say, egui::Button::new(tr!("settings-alerts-say"))).on_hover_text(
+                        if can_say {
+                            tr!("settings-alerts-say-hint")
+                        } else if !speaks {
+                            tr!("settings-alerts-say-need-voice")
+                        } else {
+                            tr!("settings-alerts-say-voice-off")
+                        },
+                    );
+                    if resp.clicked() {
+                        *say = Some(event);
                     }
-                    ui.add_space(2.0);
+                });
+                // The words it will speak, so the choice is not a guess.
+                if speaks {
+                    super::note_small(ui, &tr!("settings-alerts-speaks", text = spoken_example(event)));
                 }
-                ui.add_space(4.0);
-                super::note_small(ui, &tr!("settings-alerts-each-station-quiet-while-after"));
-            },
-        );
+                ui.add_space(2.0);
+            }
+            ui.add_space(4.0);
+            super::note_small(
+                ui,
+                &tr!("settings-alerts-each-station-quiet-while-after"),
+            );
+        });
     });
 }
 

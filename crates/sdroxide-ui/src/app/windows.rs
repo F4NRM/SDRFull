@@ -243,9 +243,7 @@ fn memory_edit_row(
     ui.horizontal_wrapped(|ui| {
         let name = crate::chrome::field(
             ui,
-            egui::TextEdit::singleline(&mut e.name)
-                .hint_text(tr!("windows-name-hint"))
-                .desired_width(110.0),
+            egui::TextEdit::singleline(&mut e.name).hint_text(tr!("windows-name-hint")).desired_width(110.0),
         );
         if *focus {
             name.request_focus();
@@ -616,10 +614,7 @@ impl SdroxideApp {
                 self.ui_settings.memory_waterfall_lanes = n.clamp(1, 12) as usize;
             }
             if ui
-                .checkbox(
-                    &mut self.ui_settings.memory_waterfall_show_folder,
-                    tr!("windows-folder-name"),
-                )
+                .checkbox(&mut self.ui_settings.memory_waterfall_show_folder, tr!("windows-folder-name"))
                 .changed()
             {
                 // nothing else to do; the mark text is rebuilt each frame
@@ -752,8 +747,7 @@ impl SdroxideApp {
             {
                 desc = !desc;
             }
-            let color_changed =
-                framed_colour_edit(ui, &mut self.ui_settings.memory_waterfall_color);
+            let color_changed = framed_colour_edit(ui, &mut self.ui_settings.memory_waterfall_color);
             if color_changed {
                 crate::app::persist::persist_ui_settings(&self.ui_settings);
             }
@@ -823,13 +817,9 @@ impl SdroxideApp {
                         {
                             cmds.push(Command::DeleteMemoryFolder(f.id));
                         }
-                        if crate::chrome::chip(
-                            ui,
-                            false,
-                            RichText::new(tr!("windows-chip-ren")).size(11.0),
-                        )
-                        .on_hover_text(tr!("windows-rename-folder"))
-                        .clicked()
+                        if crate::chrome::chip(ui, false, RichText::new(tr!("windows-chip-ren")).size(11.0))
+                            .on_hover_text(tr!("windows-rename-folder"))
+                            .clicked()
                         {
                             self.mem_folder_edit = Some((f.id, f.name.clone()));
                             self.mem_folder_focus = true;
@@ -910,7 +900,13 @@ impl SdroxideApp {
         let tuning = self.state.tx.tune;
         let slots: Vec<sdroxide_types::VoiceSlotInfo> = self.voice.slots.clone();
 
-        ui.label(RichText::new(tr!("windows-rec-records-your-microphone-play")).weak().size(11.5));
+        ui.label(
+            RichText::new(
+                tr!("windows-rec-records-your-microphone-play"),
+            )
+            .weak()
+            .size(11.5),
+        );
         ui.add_space(6.0);
         egui::Grid::new("voice-grid").num_columns(6).spacing([8.0, 6.0]).striped(true).show(
             ui,
@@ -939,8 +935,7 @@ impl SdroxideApp {
                     let edit = crate::chrome::field_sized(
                         ui,
                         [190.0, 20.0],
-                        egui::TextEdit::singleline(&mut text)
-                            .hint_text(tr!("windows-slot-n", n = i + 1)),
+                        egui::TextEdit::singleline(&mut text).hint_text(tr!("windows-slot-n", n = i + 1)),
                     );
                     if edit.changed() {
                         self.voice_name_edit = Some((i, text.clone()));
@@ -992,12 +987,7 @@ impl SdroxideApp {
                             crate::chrome::chip(
                                 ui,
                                 is_prev,
-                                RichText::new(if is_prev {
-                                    tr!("windows-stop")
-                                } else {
-                                    tr!("windows-play")
-                                })
-                                .size(11.5),
+                                RichText::new(if is_prev { tr!("windows-stop") } else { tr!("windows-play") }).size(11.5),
                             )
                         })
                         .inner
@@ -1028,12 +1018,7 @@ impl SdroxideApp {
                             crate::chrome::chip_accent(
                                 ui,
                                 is_play,
-                                RichText::new(if is_play {
-                                    tr!("windows-stop")
-                                } else {
-                                    "TX".to_string()
-                                })
-                                .size(11.5),
+                                RichText::new(if is_play { tr!("windows-stop") } else { "TX".to_string() }).size(11.5),
                                 crate::theme::ALERT(),
                                 Color32::WHITE,
                             )
@@ -1103,7 +1088,11 @@ impl SdroxideApp {
         if self.state.rx[0].mode.is_rade() {
             ui.add_space(4.0);
             ui.label(
-                RichText::new(tr!("windows-rade-message-encoded-digital-voice")).weak().size(11.0),
+                RichText::new(
+                    tr!("windows-rade-message-encoded-digital-voice"),
+                )
+                .weak()
+                .size(11.0),
             );
         }
     }

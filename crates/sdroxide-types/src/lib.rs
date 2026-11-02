@@ -185,8 +185,8 @@ pub use digi::{
     WsprRadio, adif_band, adif_records, adif_to_qso_log, adif_to_qso_log_counting_swl,
     clock_health, cq_is_for_us, digi_decode_to_adif_record, digi_decodes_to_adif,
     digi_decodes_to_csv, eu_vhf_rs, fmt_report, next_contest_serial, qso_log_to_adif,
-    qso_log_to_csv, qso_log_to_text, qso_to_adif_record, tx_level_db, tx_level_from_db,
-    utc_ymd_hms, worked_before, ymd_hms_to_unix,
+    qso_log_to_csv, qso_log_to_text, qso_to_adif_record, tx_level_db, tx_level_from_db, utc_ymd_hms, worked_before,
+    ymd_hms_to_unix,
 };
 pub use drm::{
     DrmChannel, DrmCodec, DrmConstellation, DrmRobustness, DrmService, DrmStatus, DrmSync, DrmTime,
@@ -277,7 +277,7 @@ pub use publicsdr::{PublicSdrDirectory, PublicSdrEntry, PublicSdrNetwork};
 pub use q65::Q65Mode;
 pub use qo100::{QO100_BEACON_HZ, Qo100Settings, Qo100Status};
 pub use radio::{
-    AirspyConfig, AirspyDevice, AirspyGain, AirspyHfConfig, AirspyHfDevice, AirspyHfModel,
+    TxBlock, AirspyConfig, AirspyDevice, AirspyGain, AirspyHfConfig, AirspyHfDevice, AirspyHfModel,
     AtsMiniConfig, Backend, BandDriveTrim, CAT_IQ_DC_BLOCK_MAX_HZ, CAT_IQ_RATES,
     CAT_SCOPE_MIN_BAUD, CONVERTER_OFFSET_MAX_HZ, CONVERTER_PRESETS, CatConfig, CatFamily,
     ConverterTx, CwKeying, DB_PER_S_UNIT, DIV_FREEZE_ELEMENT, DIV_MODE_ELEMENT, DIV_RATE_ELEMENT,
@@ -297,7 +297,7 @@ pub use radio::{
     SoapyConfig, SoapyDeviceInfo, SoundFormat, SpyServerConfig, SpyServerFormat, StopBits,
     TRUSDX_NG_RX_RATE_CW_HZ, TRUSDX_NG_TX_RATE_HZ, TRUSDX_NG_TX_START_BYTE, TRUSDX_RX_RATE_HZ,
     TRUSDX_TX_ESCAPE_TO, TRUSDX_TX_RATE_HZ, TciConfig, TrUsdxAudio, TrUsdxNgAgc, Transverter,
-    TxBlock, cat_iq_offset_max_hz, converter_preset_name, diversity_cost_note, elad_cat_baud,
+    cat_iq_offset_max_hz, converter_preset_name, diversity_cost_note, elad_cat_baud,
     format_freq_ranges, hackrf_serial_matches, hpsdr_alex_oc, hpsdr_n2adr_oc, parse_freq_ranges,
 };
 pub use rds::{
@@ -363,9 +363,9 @@ pub use tciserver::TciServerConfig;
 pub use tone::{CTCSS_TONES, SubTone};
 pub use ui::{
     BandplanKind, BroadcastScope, ChromeStyle, ClassicSection, ClientAcks, ClientScreen,
-    DetachableModule, DetachedState, DetachedWindow, FontSize, LayoutMode, MapStyle,
-    ProgramsFilters, ProgramsSort, ProgramsState, SmeterStyle, Solar3dWindow, SpectrumDetail,
-    SpectrumFillStyle, Speed, UiLanguage, UiSettings, UiTheme, WORKSPACE_MAX, Workspace,
+    DetachableModule, DetachedState, DetachedWindow, FontSize, LayoutMode, MapStyle, ProgramsFilters, ProgramsState,
+    ProgramsSort, SmeterStyle, Solar3dWindow, SpectrumDetail, SpectrumFillStyle, Speed, UiLanguage, UiSettings, UiTheme,
+    WORKSPACE_MAX, Workspace,
 };
 pub use ui::{force_swl, set_force_swl};
 pub use uvpacket::{

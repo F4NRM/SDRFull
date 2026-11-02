@@ -711,8 +711,7 @@ fn a_retune_hands_the_next_station_a_fresh_decoder() {
 #[test]
 fn a_decoder_left_without_sync_finds_a_station_that_arrives_later() {
     let rate = 240_000.0;
-    let station =
-        broadcast(rate, 10.0, &programme(), &Station { noise: 0.05, ..Default::default() });
+    let station = broadcast(rate, 10.0, &programme(), &Station { noise: 0.05, ..Default::default() });
     let mut demod = make_demod(Mode::Wfm, rate).expect("WFM has a demodulator");
     run_on(&mut demod, &dead_air(rate));
     run_on(&mut demod, &dead_air(rate));

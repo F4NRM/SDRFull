@@ -110,7 +110,11 @@ impl super::SdroxideApp {
     }
 
     fn known_calls_body(&mut self, ui: &mut egui::Ui) {
-        ui.label(RichText::new(tr!("knowncalls-intro")).size(11.0).color(crate::theme::gray(160)));
+        ui.label(
+            RichText::new(tr!("knowncalls-intro"))
+            .size(11.0)
+            .color(crate::theme::gray(160)),
+        );
         ui.add_space(6.0);
 
         ui.horizontal(|ui| {
@@ -137,7 +141,7 @@ impl super::SdroxideApp {
         let capped = shown < self.known_calls.total;
         ui.label(
             RichText::new(if capped {
-                tr!("knowncalls-capped", shown = shown, total = self.known_calls.total)
+tr!("knowncalls-capped", shown = shown, total = self.known_calls.total)
             } else {
                 tr!("knowncalls-known", shown = shown)
             })

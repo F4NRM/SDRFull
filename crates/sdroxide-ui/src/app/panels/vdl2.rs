@@ -434,7 +434,13 @@ impl SdroxideApp {
     fn vdl2_setup_body(&mut self, ui: &mut egui::Ui, cfg: &mut sdroxide_types::Vdl2Settings) {
         crate::chrome::window_body_bg(ui);
         ui.label(RichText::new(tr!("vdl2-channels")).strong());
-        ui.label(RichText::new(tr!("vdl2-every-25-khz-slot-136")).size(10.0).weak());
+        ui.label(
+            RichText::new(
+                tr!("vdl2-every-25-khz-slot-136"),
+            )
+            .size(10.0)
+            .weak(),
+        );
         ui.horizontal_wrapped(|ui| {
             for (i, &hz) in sdroxide_types::VDL2_CHANNELS_HZ.iter().enumerate() {
                 let mut on = cfg.channel_enabled(i);
@@ -465,9 +471,11 @@ impl SdroxideApp {
             ui.end_row();
             ui.label("");
             ui.label(
-                RichText::new(tr!("vdl2-lower-catches-weaker-transmissions-costs"))
-                    .size(10.0)
-                    .weak(),
+                RichText::new(
+                    tr!("vdl2-lower-catches-weaker-transmissions-costs"),
+                )
+                .size(10.0)
+                .weak(),
             );
             ui.end_row();
 
@@ -505,7 +513,13 @@ impl SdroxideApp {
             });
             ui.end_row();
             ui.label("");
-            ui.label(RichText::new(tr!("vdl2-frames-carrying-x-25-clnp")).size(10.0).weak());
+            ui.label(
+                RichText::new(
+                    tr!("vdl2-frames-carrying-x-25-clnp"),
+                )
+                .size(10.0)
+                .weak(),
+            );
             ui.end_row();
         });
     }
@@ -616,13 +630,7 @@ fn vdl2_card(ui: &mut egui::Ui, m: &Vdl2Message, h: f32) {
                 );
                 ui.label(RichText::new(m.frame.label()).monospace().size(10.5));
                 ui.label(
-                    RichText::new(if m.command {
-                        tr!("vdl2-command")
-                    } else {
-                        tr!("vdl2-response")
-                    })
-                    .size(10.0)
-                    .weak(),
+                    RichText::new(if m.command { tr!("vdl2-command") } else { tr!("vdl2-response") }).size(10.0).weak(),
                 );
             });
             ui.label(

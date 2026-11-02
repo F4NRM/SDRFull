@@ -424,10 +424,9 @@ impl super::SdroxideApp {
         if !self.morse.show {
             return;
         }
-        let show =
-            self.tool_window(ctx, "morse", &tr!("morse-morse"), [520.0, 430.0], true, |me, ui| {
-                me.morse_body(ui);
-            });
+        let show = self.tool_window(ctx, "morse", &tr!("morse-morse"), [520.0, 430.0], true, |me, ui| {
+            me.morse_body(ui);
+        });
         self.morse.show = show;
     }
 
@@ -492,7 +491,11 @@ impl super::SdroxideApp {
         if self.morse.key_devices.is_empty() {
             ui.add_space(4.0);
             ui.label(
-                RichText::new(tr!("morse-no-paddle-found-in-dev-input-by-id")).size(10.0).weak(),
+                RichText::new(
+                    tr!("morse-no-paddle-found-in-dev-input-by-id"),
+                )
+                .size(10.0)
+                .weak(),
             );
             return;
         }
@@ -519,9 +522,9 @@ impl super::SdroxideApp {
                         }
                     }
                 });
-            if crate::chrome::chip(ui, self.morse.key_reverse, tr!("morse-reverse"))
-                .on_hover_text(tr!("morse-swap-dit-and-dah-the-switch-on"))
-                .clicked()
+            if crate::chrome::chip(ui, self.morse.key_reverse, tr!("morse-reverse")).on_hover_text(
+                tr!("morse-swap-dit-and-dah-the-switch-on"),
+            ).clicked()
             {
                 self.morse.key_reverse = !self.morse.key_reverse;
                 self.morse.stop_key();
@@ -531,12 +534,8 @@ impl super::SdroxideApp {
         ui.add_space(4.0);
         let running = self.morse.key_source.is_some();
         ui.horizontal_wrapped(|ui| {
-            if crate::chrome::chip(
-                ui,
-                running,
-                if running { tr!("morse-stop-key") } else { tr!("morse-start-key") },
-            )
-            .clicked()
+            if crate::chrome::chip(ui, running, if running { tr!("morse-stop-key") } else { tr!("morse-start-key") })
+                .clicked()
             {
                 if running {
                     self.morse.stop_key();
@@ -586,17 +585,25 @@ impl super::SdroxideApp {
                 ui.label(RichText::new(text).size(12.0).color(color));
             }
         });
-        ui.label(RichText::new(tr!("morse-key-the-character-above-the-keyer")).size(10.0).weak());
+        ui.label(
+            RichText::new(
+                tr!("morse-key-the-character-above-the-keyer"),
+            )
+            .size(10.0)
+            .weak(),
+        );
         if !self.morse.send_last.is_empty() {
-            ui.label(
-                RichText::new(tr!("morse-send-received", text = &self.morse.send_last)).size(12.0),
-            );
+            ui.label(RichText::new(tr!("morse-send-received", text = &self.morse.send_last)).size(12.0));
         }
     }
 
     #[cfg(not(all(not(target_arch = "wasm32"), target_os = "linux")))]
     fn morse_send(&mut self, ui: &mut egui::Ui) {
-        ui.label(RichText::new(tr!("morse-the-sending-drill-needs-a-linux")).size(11.0).weak());
+        ui.label(
+            RichText::new(tr!("morse-the-sending-drill-needs-a-linux"))
+                .size(11.0)
+                .weak(),
+        );
     }
 
     #[cfg(not(target_arch = "wasm32"))]

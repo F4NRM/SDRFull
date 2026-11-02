@@ -25,8 +25,9 @@ pub(in crate::app) fn rbn_block(
     cmds: &mut String,
 ) {
     net_heading(ui, title);
-    crate::chrome::checkbox(ui, &mut cfg.enabled, tr!("settings-enabled"))
-        .on_hover_text(tr!("settings-net-rbn-enabled-hint"));
+    crate::chrome::checkbox(ui, &mut cfg.enabled, tr!("settings-enabled")).on_hover_text(
+        tr!("settings-net-rbn-enabled-hint"),
+    );
     net_row(ui, &tr!("settings-host"), &mut cfg.host, 220.0);
     ui.horizontal(|ui| {
         ui.add_sized([96.0, 22.0], egui::Label::new(tr!("settings-port")));
@@ -43,7 +44,9 @@ pub(in crate::app) fn rbn_block(
                 .hint_text(tr!("settings-one-per-line-e-g-2"))
                 .desired_width(220.0),
         )
-        .on_hover_text(tr!("settings-sent-after-login-place-narrow"));
+        .on_hover_text(
+            tr!("settings-sent-after-login-place-narrow"),
+        );
     });
 }
 
@@ -73,18 +76,27 @@ pub(in crate::app) fn wavelog_section(
     cmds: &mut Vec<sdroxide_types::Command>,
     cfg: &mut sdroxide_types::WavelogConfig,
 ) {
-    super::note_rich(ui, &tr!("settings-net-wavelog-intro"), Some(11.0), None);
+    super::note_rich(
+        ui,
+        &tr!("settings-net-wavelog-intro"),
+        Some(11.0),
+        None,
+    );
     net_row(ui, &tr!("settings-wavelog-address"), &mut cfg.url, 300.0);
     ui.label(
-        RichText::new(tr!("settings-net-wavelog-address-hint"))
-            .size(10.5)
-            .color(crate::theme::gray(140)),
+        RichText::new(
+            tr!("settings-net-wavelog-address-hint"),
+        )
+        .size(10.5)
+        .color(crate::theme::gray(140)),
     );
     net_secret(ui, &tr!("settings-wavelog-api-key"), &mut cfg.api_key, 220.0);
     ui.label(
-        RichText::new(tr!("settings-net-wavelog-key-hint"))
-            .size(10.5)
-            .color(crate::theme::gray(140)),
+        RichText::new(
+            tr!("settings-net-wavelog-key-hint"),
+        )
+        .size(10.5)
+        .color(crate::theme::gray(140)),
     );
 
     // The station location, once the server has said which ones it has. Until
@@ -127,7 +139,9 @@ pub(in crate::app) fn wavelog_section(
                     .color(crate::theme::YELLOW()),
             );
             if crate::chrome::chip(ui, !cfg.cert_sha256.is_empty(), tr!("settings-net-trust"))
-                .on_hover_text(tr!("settings-net-trust-hint"))
+                .on_hover_text(
+                    tr!("settings-net-trust-hint"),
+                )
                 .clicked()
             {
                 cfg.cert_sha256 = pin;
@@ -139,7 +153,9 @@ pub(in crate::app) fn wavelog_section(
         let pending = app.login_tests_pending.contains(&sdroxide_types::LoginTarget::Wavelog);
         if ui
             .add_enabled(!pending, egui::Button::new(tr!("settings-net-test-wavelog")))
-            .on_hover_text(tr!("settings-net-test-wavelog-hint"))
+            .on_hover_text(
+                tr!("settings-net-test-wavelog-hint"),
+            )
             .clicked()
         {
             // The edited copy, not the applied one: the engine tests what it
@@ -198,7 +214,9 @@ pub(in crate::app) fn wavelog_section(
                 cfg.is_configured() && !app.wavelog_sync_running,
                 egui::Button::new(tr!("settings-net-download-now")),
             )
-            .on_hover_text(tr!("settings-net-download-now-hint"))
+            .on_hover_text(
+                tr!("settings-net-download-now-hint"),
+            )
             .clicked()
         {
             app.wavelog_sync_request.set(true);
@@ -207,7 +225,11 @@ pub(in crate::app) fn wavelog_section(
             ui.label(RichText::new(s).size(11.0).color(crate::theme::gray(170)));
         }
     });
-    super::note_at(ui, &tr!("settings-net-wavelog-upload-note"), Some(10.5));
+    super::note_at(
+        ui,
+        &tr!("settings-net-wavelog-upload-note"),
+        Some(10.5),
+    );
 }
 
 /// A whole-number field for the network settings tabs.
@@ -377,7 +399,10 @@ pub(in crate::app) fn broadcast_stations_settings(
     status: Option<&Result<String, String>>,
 ) {
     let (season, cached) = sdroxide_config::broadcast_schedule_status();
-    super::note(ui, &tr!("settings-net-broadcast-note"));
+    super::note(
+        ui,
+        &tr!("settings-net-broadcast-note"),
+    );
     ui.horizontal(|ui| {
         ui.label(
             RichText::new(tr!("settings-net-season")).size(11.0).color(crate::theme::gray(150)),
@@ -408,7 +433,10 @@ pub(in crate::app) fn broadcast_stations_settings(
     }
 
     ui.add_space(4.0);
-    super::note(ui, &tr!("settings-net-your-own-stations-corrections-go"));
+    super::note(
+        ui,
+        &tr!("settings-net-your-own-stations-corrections-go"),
+    );
     if let Ok(p) = sdroxide_config::broadcast_stations_path() {
         ui.add(
             egui::Label::new(
@@ -512,17 +540,25 @@ pub(in crate::app) fn broadcast_stations_settings(
         }
         if ui
             .add_enabled(!fetching, egui::Button::new(tr!("settings-net-download-all")))
-            .on_hover_text(tr!("settings-net-download-all-hint"))
+            .on_hover_text(
+                tr!("settings-net-download-all-hint"),
+            )
             .clicked()
         {
             *refetch = true;
         }
     });
-    super::note_at(ui, &tr!("settings-net-own-list-note"), Some(11.0));
+    super::note_at(
+        ui,
+        &tr!("settings-net-own-list-note"),
+        Some(11.0),
+    );
     ui.horizontal(|ui| {
         if ui
             .add_enabled(!fetching, egui::Button::new(tr!("settings-net-import-list")))
-            .on_hover_text(tr!("settings-net-import-list-hint"))
+            .on_hover_text(
+                tr!("settings-net-import-list-hint"),
+            )
             .clicked()
         {
             if let Some(path) = rfd::FileDialog::new()
@@ -558,7 +594,10 @@ pub(in crate::app) fn broadcast_stations_settings(
     _fetching: bool,
     _status: Option<&Result<String, String>>,
 ) {
-    super::note(ui, &tr!("settings-net-broadcast-stations-labelled-waterfall-come"));
+    super::note(
+        ui,
+        &tr!("settings-net-broadcast-stations-labelled-waterfall-come"),
+    );
 }
 
 impl crate::app::SdroxideApp {

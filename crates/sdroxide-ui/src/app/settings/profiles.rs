@@ -34,7 +34,10 @@ pub(in crate::app) fn settings_profiles_tab(
             .color(theme::CYAN()),
     );
     ui.add_space(4.0);
-    super::note(ui, &tr!("settings-profiles-profile-captures-whole-working-setup"));
+    super::note(
+        ui,
+        &tr!("settings-profiles-profile-captures-whole-working-setup"),
+    );
     ui.add_space(10.0);
 
     ui.label(RichText::new(tr!("settings-profiles-save-current-setup")).strong());
@@ -51,7 +54,10 @@ pub(in crate::app) fn settings_profiles_tab(
             io.profile_name.clear();
         }
     });
-    super::note(ui, &tr!("settings-profiles-applies-whatever-sdroxide-attached-dials"));
+    super::note(
+        ui,
+        &tr!("settings-profiles-applies-whatever-sdroxide-attached-dials"),
+    );
     ui.add_space(12.0);
 
     if profiles.is_empty() {

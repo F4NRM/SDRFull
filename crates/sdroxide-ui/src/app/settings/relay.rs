@@ -51,7 +51,10 @@ pub(in crate::app) fn settings_relay_tab(
         super::note(ui, &tr!("settings-relay-waiting-station-s-t-r"));
         return;
     }
-    super::note(ui, &tr!("settings-relay-closes-contact-while-station-transmits"));
+    super::note(
+        ui,
+        &tr!("settings-relay-closes-contact-while-station-transmits"),
+    );
     ui.add_space(8.0);
 
     // ── the link ────────────────────────────────────────────────────────────
@@ -95,7 +98,9 @@ pub(in crate::app) fn settings_relay_tab(
                         }
                     })
                     .response
-                    .on_hover_text(tr!("settings-relay-lcus-four-byte-a0-command"));
+                    .on_hover_text(
+                        tr!("settings-relay-lcus-four-byte-a0-command"),
+                    );
                 ui.end_row();
             }
 
@@ -148,8 +153,9 @@ pub(in crate::app) fn settings_relay_tab(
 
             if cfg.link == RelayLink::Cm108 {
                 ui.label(tr!("settings-relay-gpio-pin"));
-                ui.add(egui::DragValue::new(&mut cfg.cm108_pin).range(1..=8))
-                    .on_hover_text(tr!("settings-relay-pin-3-every-homebrew-plan"));
+                ui.add(egui::DragValue::new(&mut cfg.cm108_pin).range(1..=8)).on_hover_text(
+                tr!("settings-relay-pin-3-every-homebrew-plan"),
+            );
                 ui.end_row();
             }
 
@@ -195,7 +201,10 @@ pub(in crate::app) fn settings_relay_tab(
 
     if cfg.link == RelayLink::Command {
         ui.add_space(4.0);
-        super::note(ui, &tr!("settings-relay-starting-program-costs-unpredictable-amount"));
+        super::note(
+            ui,
+            &tr!("settings-relay-starting-program-costs-unpredictable-amount"),
+        );
     }
 
     // ── the channels ────────────────────────────────────────────────────────
@@ -371,7 +380,9 @@ pub(in crate::app) fn settings_relay_tab(
                     }
                 })
                 .response
-                .on_hover_text(tr!("settings-relay-switch-exists-protect-receiver-not"));
+                .on_hover_text(
+                    tr!("settings-relay-switch-exists-protect-receiver-not"),
+                );
             ui.end_row();
         });
 
@@ -379,7 +390,10 @@ pub(in crate::app) fn settings_relay_tab(
     ui.add_space(10.0);
     ui.label(RichText::new(cfg.sequence_note()).color(crate::theme::CYAN()));
     ui.add_space(4.0);
-    super::note(ui, &tr!("settings-relay-order-timings-longest-lead-closes"));
+    super::note(
+        ui,
+        &tr!("settings-relay-order-timings-longest-lead-closes"),
+    );
 
     relay_band_table(ui, cfg);
 
@@ -388,7 +402,10 @@ pub(in crate::app) fn settings_relay_tab(
     ui.label(RichText::new(tr!("settings-relay-transmit-sense-input")).strong());
     ui.end_row();
     ui.add_space(4.0);
-    super::note(ui, &tr!("settings-relay-when-transceiver-keys-itself-own"));
+    super::note(
+        ui,
+        &tr!("settings-relay-when-transceiver-keys-itself-own"),
+    );
     ui.add_space(6.0);
     ui.add_enabled_ui(cfg.link.uses_serial_port(), |ui| {
         egui::Grid::new("relay-sense")
@@ -413,21 +430,25 @@ pub(in crate::app) fn settings_relay_tab(
                     ui.label(tr!("settings-relay-transmitting"));
                     let mut high = cfg.sense.active_high;
                     if ui
-                        .checkbox(&mut high, tr!("settings-relay-high-line"))
-                        .on_hover_text(tr!("settings-relay-most-opto-isolated-interfaces-pull"))
-                        .changed()
-                    {
-                        cfg.sense.active_high = high;
-                    }
+                    .checkbox(&mut high, tr!("settings-relay-high-line"))
+                    .on_hover_text(
+                        tr!("settings-relay-most-opto-isolated-interfaces-pull"),
+                    )
+                    .changed()
+                {
+                    cfg.sense.active_high = high;
+                }
                     ui.end_row();
 
                     ui.label(tr!("settings-relay-belongs-radio"));
                     ui.add(
-                        egui::DragValue::new(&mut cfg.sense.radio)
-                            .range(0..=15)
-                            .custom_formatter(|n, _| format!("{}", n as u32 + 1)),
-                    )
-                    .on_hover_text(tr!("settings-relay-which-radio-tab-sensed-transceiver"));
+                    egui::DragValue::new(&mut cfg.sense.radio)
+                        .range(0..=15)
+                        .custom_formatter(|n, _| format!("{}", n as u32 + 1)),
+                )
+                .on_hover_text(
+                    tr!("settings-relay-which-radio-tab-sensed-transceiver"),
+                );
                     ui.end_row();
                 }
             });
@@ -439,12 +460,20 @@ pub(in crate::app) fn settings_relay_tab(
     // ── the two things that are not settings ────────────────────────────────
     ui.add_space(12.0);
     ui.label(
-        RichText::new(tr!("settings-relay-wiring-only-fail-safe-survives")).strong().color(WARN),
+        RichText::new(tr!("settings-relay-wiring-only-fail-safe-survives"))
+            .strong()
+            .color(WARN),
     );
-    super::note(ui, &tr!("settings-relay-choose-tx-closes-so-de"));
+    super::note(
+        ui,
+        &tr!("settings-relay-choose-tx-closes-so-de"),
+    );
     ui.label(RichText::new(tr!("settings-relay-choose-tx-closes-so-de")).weak());
     ui.add_space(6.0);
-    super::note(ui, &tr!("settings-relay-cannot-protect-first-instant-over"));
+    super::note(
+        ui,
+        &tr!("settings-relay-cannot-protect-first-instant-over"),
+    );
 
     // ── status and apply ────────────────────────────────────────────────────
     ui.add_space(10.0);
@@ -504,14 +533,12 @@ fn relay_band_table(ui: &mut egui::Ui, cfg: &mut RelayConfig) {
     ui.separator();
     ui.end_row();
     ui.add_space(4.0);
-    ui.label(
-        RichText::new(tr!("settings-relay-band-decoder-outputs"))
-            .size(14.0)
-            .strong()
-            .color(crate::theme::CYAN()),
-    );
+    ui.label(RichText::new(tr!("settings-relay-band-decoder-outputs")).size(14.0).strong().color(crate::theme::CYAN()));
     ui.add_space(2.0);
-    super::note(ui, &tr!("settings-relay-one-control-word-per-band"));
+    super::note(
+        ui,
+        &tr!("settings-relay-one-control-word-per-band"),
+    );
     ui.add_space(2.0);
     ui.label(RichText::new(tr!("settings-relay-one-control-word-per-band")).weak());
     ui.add_space(6.0);
@@ -527,12 +554,7 @@ fn relay_band_table(ui: &mut egui::Ui, cfg: &mut RelayConfig) {
         .min_row_height(ui.spacing().interact_size.y)
         .striped(true)
         .show(ui, |ui| {
-            for h in [
-                tr!("settings-relay-band"),
-                tr!("settings-relay-rx"),
-                tr!("settings-relay-tx"),
-                tr!("settings-relay-outputs-asserted"),
-            ] {
+            for h in [tr!("settings-relay-band"), tr!("settings-relay-rx"), tr!("settings-relay-tx"), tr!("settings-relay-outputs-asserted")] {
                 ui.label(RichText::new(h).weak().size(10.0));
             }
             ui.end_row();

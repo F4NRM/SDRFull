@@ -133,8 +133,7 @@ pub(in crate::app) fn worked_before_line(
     novelty: sdroxide_types::Novelty,
     band: &str,
 ) -> (String, egui::Color32) {
-    let band_label =
-        if band.is_empty() { tr!("widgets-band").to_string() } else { band.to_string() };
+    let band_label = if band.is_empty() { tr!("widgets-band").to_string() } else { band.to_string() };
     if novelty.new_dxcc {
         (tr!("widgets-new-entity-never-worked-any").to_string(), crate::theme::PINK())
     } else if novelty.new_dxcc_band {

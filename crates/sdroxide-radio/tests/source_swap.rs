@@ -10,7 +10,7 @@
 use std::time::{Duration, Instant};
 
 use sdroxide_radio::{
-    Complex32, EngineConfig, EngineHandles, EngineSwap, IqSource, Result, start_engine,
+    start_engine, Complex32, EngineConfig, EngineHandles, EngineSwap, IqSource, Result,
 };
 use sdroxide_types::{DeviceCaps, RadioEvent, RadioState};
 

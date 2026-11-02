@@ -34,14 +34,11 @@ pub(crate) fn font(face: Face) -> Option<FontRef<'static>> {
         Face::Chakra => PLAIN,
         Face::Mono => MONO,
     };
-    debug_assert_eq!(
-        face.file(),
-        match face {
-            Face::ChakraBold => "ChakraPetch-SemiBold.ttf",
-            Face::Chakra => "ChakraPetch-Regular.ttf",
-            Face::Mono => "ShareTechMono-Regular.ttf",
-        }
-    );
+    debug_assert_eq!(face.file(), match face {
+        Face::ChakraBold => "ChakraPetch-SemiBold.ttf",
+        Face::Chakra => "ChakraPetch-Regular.ttf",
+        Face::Mono => "ShareTechMono-Regular.ttf",
+    });
     FontRef::try_from_slice(raw).ok()
 }
 
@@ -114,7 +111,11 @@ pub(crate) fn grid_for(n: usize) -> (u16, u16) {
 /// fits inside its cell and the difference is black, so a portrait shot is not
 /// squeezed into a landscape half. The cells are centred, and the originals are
 /// only read — nothing in the received store is touched.
-pub(crate) fn mosaic(w: u16, h: u16, cells: &[(&[u8], u16, u16)]) -> (Vec<u8>, u16, u16) {
+pub(crate) fn mosaic(
+    w: u16,
+    h: u16,
+    cells: &[(&[u8], u16, u16)],
+) -> (Vec<u8>, u16, u16) {
     let mut img = vec![0u8; usize::from(w) * usize::from(h) * 3];
     let n = cells.len().min(MOSAIC_MAX);
     if n == 0 {
@@ -381,7 +382,11 @@ pub(crate) type Edit = Option<(usize, Composer)>;
 
 /// The document to draw for `slot`: what is being edited if it is this slot,
 /// otherwise what the engine says.
-pub(crate) fn shown<'a>(edit: &'a Edit, presets: &'a ImagePresets, slot: usize) -> &'a Composer {
+pub(crate) fn shown<'a>(
+    edit: &'a Edit,
+    presets: &'a ImagePresets,
+    slot: usize,
+) -> &'a Composer {
     match edit {
         Some((i, doc)) if *i == slot => doc,
         _ => presets.slots.get(slot).map(|s| &s.composer).unwrap_or(&EMPTY),
@@ -733,9 +738,7 @@ mod tests {
             d.layers[0].text = "new".into();
         }
         let cmd = pending(&edit, &p, &sent).expect("the change is written");
-        assert!(
-            matches!(&cmd, Command::ImageSetComposer { slot: 0, composer } if composer.layers[0].text == "new")
-        );
+        assert!(matches!(&cmd, Command::ImageSetComposer { slot: 0, composer } if composer.layers[0].text == "new"));
         sent = edit.clone();
         assert_eq!(pending(&edit, &p, &sent), None, "not repeated before the echo");
 
@@ -748,9 +751,7 @@ mod tests {
             d.layers[0].text = "final".into();
         }
         let cmd = release(&mut edit, &echoed, &sent).expect("the last edit is written");
-        assert!(
-            matches!(&cmd, Command::ImageSetComposer { slot: 0, composer } if composer.layers[0].text == "final")
-        );
+        assert!(matches!(&cmd, Command::ImageSetComposer { slot: 0, composer } if composer.layers[0].text == "final"));
         assert!(edit.is_none(), "the claim is released");
     }
 

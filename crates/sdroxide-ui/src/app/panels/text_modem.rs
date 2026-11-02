@@ -45,8 +45,8 @@ impl SdroxideApp {
                     sync = format!("{:.2}", s.sync),
                     null = format!("{:.2}", s.sync_null)
                 ))
-                .size(10.5)
-                .color(dim),
+                    .size(10.5)
+                    .color(dim),
             )
             .on_hover_text(tr!("textmodem-sync-hint"));
             ui.label(
@@ -62,20 +62,19 @@ impl SdroxideApp {
                     b = format!("{:.2}", r[1]),
                     c = format!("{:.2}", r[2])
                 ))
-                .size(10.5)
-                .color(dim),
+                    .size(10.5)
+                    .color(dim),
             )
             .on_hover_text(tr!("textmodem-refs-hint"));
-            ui.label(RichText::new(&s.rate).size(10.5).color(dim))
-                .on_hover_text(tr!("textmodem-rate-hint"));
+            ui.label(RichText::new(&s.rate).size(10.5).color(dim)).on_hover_text(tr!("textmodem-rate-hint"));
             ui.label(
                 RichText::new(tr!(
                     "textmodem-offset-frames",
                     offset = format!("{:+.0}", s.offset_hz),
                     n = s.frames
                 ))
-                .size(10.5)
-                .color(dim),
+                    .size(10.5)
+                    .color(dim),
             )
             .on_hover_text(tr!("textmodem-offset-frames-hint"));
             ui.label(
@@ -1050,15 +1049,9 @@ impl SdroxideApp {
                             // think the band was dead.
                             let hint = match sp {
                                 PskSpeed::Bps1000 => {
-                                    tr!(
-                                        "textmodem-psk-baud-fast-hint",
-                                        baud = format!("{:.0}", sp.baud())
-                                    )
+                                    tr!("textmodem-psk-baud-fast-hint", baud = format!("{:.0}", sp.baud()))
                                 }
-                                _ => tr!(
-                                    "textmodem-psk-baud-hint",
-                                    baud = format!("{:.1}", sp.baud())
-                                ),
+                                _ => tr!("textmodem-psk-baud-hint", baud = format!("{:.1}", sp.baud())),
                             };
                             if ui.selectable_label(sel, sp.label()).on_hover_text(hint).clicked()
                                 && !sel
@@ -1093,11 +1086,7 @@ impl SdroxideApp {
                         cap(ui, &tr!("textmodem-mode"));
                         for v in PskCoded::in_family(cfg.psk_coded.family()) {
                             let sel = cfg.psk_coded == v;
-                            let code = if v.fec() {
-                                tr!("textmodem-psk-coded")
-                            } else {
-                                tr!("textmodem-psk-no-code")
-                            };
+                            let code = if v.fec() { tr!("textmodem-psk-coded") } else { tr!("textmodem-psk-no-code") };
                             // **The four widest banks do not decode yet**, and the chip
                             // says so rather than doing nothing when it is picked. The
                             // fault is the multi-carrier front end's chain order, not the
@@ -1185,12 +1174,7 @@ impl SdroxideApp {
         // reason.
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 3.0;
-            ui.label(
-                RichText::new(tr!("textmodem-hell-slant"))
-                    .size(10.5)
-                    .strong()
-                    .color(crate::theme::CYAN_DIM()),
-            );
+            ui.label(RichText::new(tr!("textmodem-hell-slant")).size(10.5).strong().color(crate::theme::CYAN_DIM()));
             let mut ppm = self.digi_cfg_edit.hell_slant_ppm;
             if ui
                 .add(
