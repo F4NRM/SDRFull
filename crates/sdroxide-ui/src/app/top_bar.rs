@@ -172,6 +172,11 @@ const RX_DB_RAIL_COMPACT_W: f32 = 26.0;
 /// Side padding of the RX box's chips on the RSP, instead of the style's 7 pt:
 /// the room that pays for the second gain rail. RSP only.
 const RSP_CHIP_PAD_X: f32 = 2.0;
+/// How much of the width the RSP's box has to spare (against what the same box
+/// is on any other rig) goes to its Vol, Gain and Man rails, and the most each
+/// of them takes. Under 1/3 each, so the three together never pass the spare.
+const RSP_RAIL_EXTRA_SHARE: f32 = 0.3;
+const RSP_RAIL_EXTRA_MAX: f32 = 40.0;
 /// The RSP's Vol rail: shorter than [`STRIP_RAIL_W`]; the box's stretch is still added.
 const RX_VOL_RAIL_RSP_W: f32 = 26.0;
 /// The LNA step rail beside the linear Gain rail. It counts a handful of
@@ -3496,7 +3501,10 @@ impl SdroxideApp {
         // A menu column wraps its rows and is as wide as the menu around it,
         // so there is nothing to balance there: the run stays whole, under the
         // squelch rail, in the order it has always had.
-        let lifted = if narrow { 0 } else { self.rx_rows(ui).lifted };
+        let rows = if narrow { None } else { Some(self.rx_rows(ui)) };
+        let lifted = rows.map_or(0, |r| r.lifted);
+        // What the RSP's rails are given out of the width the box has to spare.
+        let rail_extra = rows.map_or(0.0, |r| r.rail_extra);
         // Receiver: volume, RF gain, AGC and the manual gain it falls back to,
         // then as much of the chip run as this row has been given.
         crate::chrome::control_row(ui, narrow, |ui| {
@@ -3510,7 +3518,7 @@ impl SdroxideApp {
                 if ui
                     .scope(|ui| {
                         if !narrow {
-                            let w = ui.spacing().slider_width - (STRIP_RAIL_W - RX_VOL_RAIL_RSP_W);
+                            let w = ui.spacing().slider_width - (STRIP_RAIL_W - RX_VOL_RAIL_RSP_W) + rail_extra;
                             ui.spacing_mut().slider_width = w.max(RX_VOL_RAIL_RSP_W);
                         }
                         crate::chrome::slider_readout_tight(
@@ -3583,7 +3591,7 @@ impl SdroxideApp {
                     .scope(|ui| {
                         if !narrow {
                             ui.spacing_mut().slider_width = match (rsp_stage, stage_idx) {
-                                (true, 0) => RX_DB_RAIL_COMPACT_W,
+                                (true, 0) => RX_DB_RAIL_COMPACT_W + rail_extra,
                                 (true, _) => RX_LNA_RAIL_W,
                                 _ => RX_DB_RAIL_W,
                             };
@@ -3671,7 +3679,7 @@ impl SdroxideApp {
                         .scope(|ui| {
                             if !narrow {
                                 ui.spacing_mut().slider_width = if linear.is_some() {
-                                    RX_DB_RAIL_COMPACT_W
+                                    RX_DB_RAIL_COMPACT_W + rail_extra
                                 } else {
                                     RX_DB_RAIL_W
                                 };
@@ -8143,6 +8151,9 @@ struct RxRows {
     lifted: usize,
     receive: f32,
     noise: f32,
+    /// Extra length, in points, the RSP's Vol, Gain and Man rails are given out
+    /// of the width the box would otherwise have to spare (zero everywhere else).
+    rail_extra: f32,
 }
 
 impl RxRows {
@@ -8185,8 +8196,6 @@ fn rx_rows(
     rx_rows_with(ui, gain, false, decim, agc_off, mode, listener)
 }
 
-/// [`rx_rows`] for a front end with a second, stepped gain control beside the
-/// linear one (`lna`): the RSP. The dB rails shorten so the row is no wider.
 fn rx_rows_with(
     ui: &egui::Ui,
     gain: bool,
@@ -8196,8 +8205,34 @@ fn rx_rows_with(
     mode: Mode,
     listener: bool,
 ) -> RxRows {
+    let base = rx_rows_core(ui, gain, lna, decim, agc_off, mode, listener, 0.0);
+    if !(gain && lna) {
+        return base;
+    }
+    // What the same box is on any other rig is the most the RSP's may be: the
+    // panel keeps its size. What the RSP has under that goes to its rails.
+    let budget = rx_rows_core(ui, gain, false, decim, agc_off, mode, listener, 0.0).w();
+    let spare = (budget - base.w()).max(0.0);
+    let extra = (spare * RSP_RAIL_EXTRA_SHARE).min(RSP_RAIL_EXTRA_MAX);
+    rx_rows_core(ui, gain, lna, decim, agc_off, mode, listener, extra)
+}
+
+/// [`rx_rows`] for a front end with a second, stepped gain control beside the
+/// linear one (`lna`): the RSP. The dB rails shorten so the row is no wider.
+fn rx_rows_core(
+    ui: &egui::Ui,
+    gain: bool,
+    lna: bool,
+    decim: bool,
+    agc_off: bool,
+    mode: Mode,
+    listener: bool,
+    rail_extra: f32,
+) -> RxRows {
     let g = MODULE_ROW_SPACING;
-    let db_rail = |ui: &egui::Ui| if lna { db_rail_compact_w(ui) } else { db_rail_w(ui) };
+    let db_rail = |ui: &egui::Ui| {
+        if lna { db_rail_compact_w(ui) + rail_extra } else { db_rail_w(ui) }
+    };
     // The Vol and SQL rails, which is what the box's stretch lengthens — so
     // they are priced at the floor they fall back to, not the style width.
     let rail = STRIP_RAIL_W;
@@ -8210,7 +8245,7 @@ fn rx_rows_with(
     // decimation chip, the AGC chip, and the manual rail behind it.
     let mut receive = label(&tr!("topbar-vol"))
         + g
-        + if lna { rail - (STRIP_RAIL_W - RX_VOL_RAIL_RSP_W) } else { rail }
+        + if lna { rail - (STRIP_RAIL_W - RX_VOL_RAIL_RSP_W) + rail_extra } else { rail }
         + if lna { g + tight_field_w(ui, VOL_READOUT_SAMPLE) } else { 0.0 };
     if gain {
         receive += g + label(&tr!("topbar-gain")) + g + db_rail(ui);
@@ -8235,7 +8270,7 @@ fn rx_rows_with(
             receive += g + label(&tr!("topbar-man")) + g;
             // The RSP's Man rail is the short one, with its own readout.
             receive += if lna {
-                RX_DB_RAIL_COMPACT_W + g + tight_field_w(ui, MAN_READOUT_SAMPLE)
+                RX_DB_RAIL_COMPACT_W + rail_extra + g + tight_field_w(ui, MAN_READOUT_SAMPLE)
             } else {
                 db_rail(ui)
             };
@@ -8263,11 +8298,11 @@ fn rx_rows_with(
     // Ties keep a chip where it is, so the layout every rig has always had —
     // the whole run under the SQL rail — is what comes back unless lifting a
     // chip out of it genuinely buys width.
-    let mut best = RxRows { lifted: 0, receive, noise: noise + all };
+    let mut best = RxRows { lifted: 0, receive, noise: noise + all, rail_extra };
     let mut up = 0.0;
     for (i, w) in chips.iter().enumerate() {
         up += w;
-        let cand = RxRows { lifted: i + 1, receive: receive + up, noise: noise + all - up };
+        let cand = RxRows { lifted: i + 1, receive: receive + up, noise: noise + all - up, rail_extra };
         if cand.w() < best.w() {
             best = cand;
         }
