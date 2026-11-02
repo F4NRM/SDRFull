@@ -8940,6 +8940,25 @@ mod tests {
         assert_eq!(ext.if_gr_min(), 0);
     }
 
+    /// Frozen on purpose: the two RSP gain elements keep their names and
+    /// their limits, whatever is added beside them. Saved profiles, the
+    /// Settings sliders and the wire all address them by these strings, so
+    /// a change here is a break for the reference radio.
+    #[test]
+    fn the_rsp_gain_elements_keep_their_names_and_limits() {
+        assert_eq!(SdrPlayConfig::LNA_ELEMENT, "LNA");
+        assert_eq!(SdrPlayConfig::IF_GAIN_ELEMENT, "IF");
+        assert_eq!(SdrPlayConfig::AGC_ELEMENT, "AGC");
+        assert_eq!(SdrPlayConfig::AGC_SETPOINT_ELEMENT, "AGCSP");
+        assert_eq!(SdrPlayConfig::IF_GR_MIN, 20);
+        assert_eq!(SdrPlayConfig::IF_GR_MAX, 59);
+        assert_eq!(SdrPlayConfig::IF_GR_MIN_EXTENDED, 0);
+        // The IF reduction is 40 one-dB positions without the extended range
+        // and 60 with it.
+        assert_eq!(SdrPlayConfig::IF_GR_MAX - SdrPlayConfig::IF_GR_MIN + 1, 40);
+        assert_eq!(SdrPlayConfig::IF_GR_MAX - SdrPlayConfig::IF_GR_MIN_EXTENDED + 1, 60);
+    }
+
     /// A Hi-Z input has fewer front-end states than the 50 Ω socket beside it,
     /// and only two models have one at all.
     #[test]
