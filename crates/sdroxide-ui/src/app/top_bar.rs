@@ -149,7 +149,11 @@ const VOL_FLOOR_DB: f32 = -60.0;
 const VOL_STEP_DB: f32 = 0.5;
 const MAN_STEP_DB: f32 = 0.5;
 /// What the volume readout is priced at.
-const VOL_READOUT_SAMPLE: &str = "-60.0 dB";
+const VOL_READOUT_SAMPLE: &str = "-60.0";
+/// What the manual-gain readout is priced at on the RSP row.
+const MAN_READOUT_SAMPLE: &str = "88.8 dB";
+/// The SQL rail, as a share of the strip rail: shorter than Vol, which needs the length.
+const SQL_RAIL_SHARE: f32 = 0.5;
 
 /// A volume (amplitude, 0..1) as its rail position in dB. Zero is the floor.
 pub(crate) fn volume_to_db(v: f32) -> f32 {
@@ -164,10 +168,12 @@ pub(crate) fn db_to_volume(db: f32) -> f32 {
 /// The Gain and Man rails when the RSP's second gain control (the LNA step
 /// rail) shares the receive row: the same row, the same box, so the two dB
 /// rails give up the width the LNA rail takes.
-const RX_DB_RAIL_COMPACT_W: f32 = 48.0;
+const RX_DB_RAIL_COMPACT_W: f32 = 22.0;
+/// The RSP's Vol rail: shorter than [`STRIP_RAIL_W`]; the box's stretch is still added.
+const RX_VOL_RAIL_RSP_W: f32 = 16.0;
 /// The LNA step rail beside the linear Gain rail. It counts a handful of
 /// states, so it needs no length.
-const RX_LNA_RAIL_W: f32 = 24.0;
+const RX_LNA_RAIL_W: f32 = 10.0;
 /// Text size of the band/mode chip's label.
 const BAND_MODE_TEXT: f32 = 14.0;
 /// How much taller the band/mode chip stands than a plain one. Band and mode
@@ -1183,8 +1189,7 @@ impl SdroxideApp {
                         |ui| {
                             let hover = tr!(
                                 "topbar-smeter-hover",
-                                reading =
-                                    smeter::hover_text(self.meters.as_ref(), self.meter_is_audio()),
+                                reading = smeter::hover_text(self.meters.as_ref(), self.meter_is_audio()),
                                 faces = tr!("topbar-bar-trace")
                             );
                             let resp =
@@ -1256,12 +1261,7 @@ impl SdroxideApp {
                     self.disp_menu(ui, btn, cmds);
                     let btn = crate::chrome::chip_sized(ui, false, "SYS", cell2);
                     self.sys_menu(ui, btn, cmds);
-                    let btn = crate::chrome::chip_sized(
-                        ui,
-                        self.show_memories,
-                        tr!("topbar-chip-mem"),
-                        cell2,
-                    );
+                    let btn = crate::chrome::chip_sized(ui, self.show_memories, tr!("topbar-chip-mem"), cell2);
                     self.mem_chip(btn);
                     crate::touch_lock::padlock(ui, cell2);
                 });
@@ -1732,8 +1732,7 @@ impl SdroxideApp {
                     }
                     #[cfg(not(target_arch = "wasm32"))]
                     {
-                        let resp = crate::chrome::chip(ui, self.show_windows, "▣")
-                            .on_hover_text(tr!("topbar-windows-chip-hint"));
+                        let resp = crate::chrome::chip(ui, self.show_windows, "▣").on_hover_text(tr!("topbar-windows-chip-hint"));
                         if resp.clicked() {
                             self.dock_all_windows();
                         } else if resp.secondary_clicked() {
@@ -1883,11 +1882,8 @@ impl SdroxideApp {
                             ui.add_space(crate::chrome::window_icon_width(ui));
                             continue;
                         }
-                        let tip = if lit {
-                            tr!("topbar-wstate-here-now", name = module_window_name(m))
-                        } else {
-                            tip
-                        };
+                        let tip =
+                            if lit { tr!("topbar-wstate-here-now", name = module_window_name(m)) } else { tip };
                         let resp =
                             crate::chrome::chip_window_icon_lit(ui, icon, lit).on_hover_text(&tip);
                         // A press on the state it is already in is a no-op
@@ -2482,8 +2478,7 @@ impl SdroxideApp {
             let hover = tr!(
                 "topbar-smeter-hover",
                 reading = smeter::hover_text(self.meters.as_ref(), self.meter_is_audio()),
-                faces =
-                    if compact { tr!("topbar-bar-trace") } else { tr!("topbar-needle-bar-trace") }
+                faces = if compact { tr!("topbar-bar-trace") } else { tr!("topbar-needle-bar-trace") }
             );
             let resp = smeter::show(ui, self.meters.as_ref(), shown, outline).on_hover_text(hover);
             if resp.clicked() {
@@ -3272,10 +3267,7 @@ impl SdroxideApp {
             .show(ui, |ui| {
                 ui.set_min_size(ui.available_size());
                 ui.label(
-                    RichText::new(tr!("topbar-band-mode"))
-                        .size(12.0)
-                        .strong()
-                        .color(crate::theme::CYAN()),
+                    RichText::new(tr!("topbar-band-mode")).size(12.0).strong().color(crate::theme::CYAN()),
                 );
                 ui.separator();
                 egui::ScrollArea::vertical()
@@ -3505,23 +3497,40 @@ impl SdroxideApp {
         // Receiver: volume, RF gain, AGC and the manual gain it falls back to,
         // then as much of the chip run as this row has been given.
         crate::chrome::control_row(ui, narrow, |ui| {
-            // The volume is an amplitude on the wire (0..1) but the rail is in
-            // decibels: equal steps are equal steps of loudness, where a linear
-            // amplitude rail spends nearly all its length on the top few dB.
-            let mut vol_db = volume_to_db(self.state.rx[0].volume);
+            let mut vol = self.state.rx[0].volume;
             ui.label(tr!("topbar-vol"));
-            if crate::chrome::slider_readout(
-                ui,
-                value_field_w(ui, VOL_READOUT_SAMPLE),
-                Slider::new(&mut vol_db, VOL_FLOOR_DB..=0.0)
-                    .step_by(f64::from(VOL_STEP_DB))
-                    .fixed_decimals(1)
-                    .suffix(" dB"),
-            )
-            .on_hover_text(tr!("topbar-vol-db-hint"))
-            .changed()
+            if linear.is_some() {
+                // The RSP only: the rail is in decibels (equal steps are equal
+                // steps of loudness) with its readout. The wire stays an
+                // amplitude, 0..1. Every other rig keeps the plain rail below.
+                let mut vol_db = volume_to_db(vol);
+                if ui
+                    .scope(|ui| {
+                        if !narrow {
+                            let w = ui.spacing().slider_width - (STRIP_RAIL_W - RX_VOL_RAIL_RSP_W);
+                            ui.spacing_mut().slider_width = w.max(RX_VOL_RAIL_RSP_W);
+                        }
+                        crate::chrome::slider_readout_tight(
+                            ui,
+                            tight_field_w(ui, VOL_READOUT_SAMPLE),
+                            Slider::new(&mut vol_db, VOL_FLOOR_DB..=0.0)
+                                .step_by(f64::from(VOL_STEP_DB))
+                                // No unit on the rail: the width is not there to
+                                // spare, and the hover text says decibels.
+                                .fixed_decimals(1),
+                        )
+                    })
+                    .inner
+                    .on_hover_text(tr!("topbar-vol-db-hint"))
+                    .changed()
+                {
+                    vol = db_to_volume(vol_db);
+                    self.state.rx[0].volume = vol; // optimistic echo
+                    cmds.push(Command::SetVolume { rx: RxId::Main, v: vol });
+                }
+            } else if crate::chrome::slider(ui, Slider::new(&mut vol, 0.0..=1.0).show_value(false))
+                .changed()
             {
-                let vol = db_to_volume(vol_db);
                 self.state.rx[0].volume = vol; // optimistic echo
                 cmds.push(Command::SetVolume { rx: RxId::Main, v: vol });
             }
@@ -3545,11 +3554,6 @@ impl SdroxideApp {
                 }
                 if rx_gains.len() > 1 && !rsp_stage {
                     hint.push_str(&tr!("topbar-rx-gain-stages", n = rx_gains.len()));
-                }
-                // A little air before the second stage's word, so "dBFS" and
-                // "LNA" do not read as one thing.
-                if stage_idx > 0 {
-                    ui.add_space(9.0);
                 }
                 ui.label(if stage_idx == 0 { tr!("topbar-gain") } else { tr!("topbar-lna") })
                     .on_hover_text(&hint);
@@ -3583,17 +3587,17 @@ impl SdroxideApp {
                             };
                         }
                         let readout_w = match (rsp_stage, stage_idx) {
-                            (true, 0) => value_field_w(ui, "-88.8 dB"),
+                            (true, 0) => tight_field_w(ui, "-100"),
                             (true, _) => lna_field_w(ui),
                             _ => value_field_w(ui, "-888.8 dB"),
                         };
-                        if rsp_stage && stage_idx > 0 {
-                            // A step count of one or two figures: the style's
-                            // minimum field would be wider than the number.
-                            ui.spacing_mut().interact_size.x = readout_w;
-                        }
                         ui.add_enabled_ui(!hardware_agc, |ui| {
-                            crate::chrome::slider_readout(
+                            let readout = if rsp_stage {
+                                crate::chrome::slider_readout_tight
+                            } else {
+                                crate::chrome::slider_readout
+                            };
+                            readout(
                                 ui,
                                 readout_w,
                                 Slider::new(&mut db, g.min_db..=g.max_db)
@@ -3602,7 +3606,11 @@ impl SdroxideApp {
                                     // in. Labelling a step index "dB" reported a
                                     // number three times too small, in a unit it
                                     // was not.
-                                    .suffix(g.suffix()),
+                                    .suffix(if rsp_stage && stage_idx == 0 {
+                                        ""
+                                    } else {
+                                        g.suffix()
+                                    }),
                             )
                         })
                         .inner
@@ -3654,17 +3662,31 @@ impl SdroxideApp {
                                     RX_DB_RAIL_W
                                 };
                             }
-                            crate::chrome::slider_readout(
+                            let readout = if linear.is_some() {
+                                crate::chrome::slider_readout_tight
+                            } else {
+                                crate::chrome::slider_readout
+                            };
+                            readout(
                                 ui,
                                 if linear.is_some() {
-                                    value_field_w(ui, "-88.8 dB")
+                                    tight_field_w(ui, MAN_READOUT_SAMPLE)
                                 } else {
                                     value_field_w(ui, "-888.8 dB")
                                 },
-                                Slider::new(&mut db, 0.0..=sdroxide_types::MAX_MANUAL_GAIN_DB)
-                                    .step_by(f64::from(MAN_STEP_DB))
-                                    .fixed_decimals(1)
-                                    .suffix(" dB"),
+                                {
+                                    let sl = Slider::new(
+                                        &mut db,
+                                        0.0..=sdroxide_types::MAX_MANUAL_GAIN_DB,
+                                    )
+                                    .suffix(" dB");
+                                    // Half-dB steps on the RSP only.
+                                    if linear.is_some() {
+                                        sl.step_by(f64::from(MAN_STEP_DB)).fixed_decimals(1)
+                                    } else {
+                                        sl.step_by(1.0)
+                                    }
+                                },
                             )
                         })
                         .inner
@@ -3720,8 +3742,9 @@ impl SdroxideApp {
                     }
                 }
                 let mut sql = self.state.rig_squelch;
-                if crate::chrome::slider_readout(
+                if sql_rail(
                     ui,
+                    linear.is_some(),
                     sql_readout_w(ui),
                     Slider::new(&mut sql, 0.0..=1.0).show_value(true).custom_formatter(|v, _| {
                         if v <= 0.001 {
@@ -3767,8 +3790,9 @@ impl SdroxideApp {
                     }
                     _ => String::new(),
                 };
-                if crate::chrome::slider_readout(
+                if sql_rail(
                     ui,
+                    linear.is_some(),
                     sql_readout_w(ui),
                     Slider::new(
                         &mut sql,
@@ -3968,7 +3992,8 @@ impl SdroxideApp {
                     } else if cw {
                         tr!("topbar-binaural-cw-spread-passband-across")
                     } else {
-                        tr!("topbar-binaural-audio-spread-passband-across").to_string()
+                        tr!("topbar-binaural-audio-spread-passband-across")
+                            .to_string()
                     },
                 );
                 if chip.clicked() {
@@ -4312,11 +4337,7 @@ impl SdroxideApp {
                             hi = format!("{phi:.0}")
                         )
                     } else {
-                        tr!(
-                            "topbar-preset-edges",
-                            lo = format!("{plo:.0}"),
-                            hi = format!("{phi:.0}")
-                        )
+                        tr!("topbar-preset-edges", lo = format!("{plo:.0}"), hi = format!("{phi:.0}"))
                     };
                     let hint = format!("{hint}\n{}", tr!("topbar-preset-right-click"));
                     let resp = crate::chrome::chip(ui, on, label.as_str()).on_hover_text(hint);
@@ -4657,8 +4678,8 @@ impl SdroxideApp {
         // not a surprise: both are per-mode settings, like BIN.
         ui.label(
             RichText::new(tr!("topbar-eq-remembered", mode = self.state.rx[0].mode.label()))
-                .size(10.5)
-                .color(crate::theme::gray(140)),
+            .size(10.5)
+            .color(crate::theme::gray(140)),
         );
     }
 
@@ -4742,8 +4763,8 @@ impl SdroxideApp {
             // Channel layout is a property of the *next* recording — the
             // writer is initialised with it — so it greys out while one runs.
             let mono = self.state.recording_mono;
-            let mono_chip = crate::chrome::chip_enabled(ui, !audio, mono, &tr!("topbar-mono"))
-                .on_hover_text(if mono {
+            let mono_chip =
+                crate::chrome::chip_enabled(ui, !audio, mono, &tr!("topbar-mono")).on_hover_text(if mono {
                     tr!("topbar-mixed-one-channel-click-two").to_string()
                 } else {
                     tr!("topbar-two-channels-rx-left-tx")
@@ -5277,8 +5298,7 @@ impl SdroxideApp {
         // owns the other.
         if !ants.is_empty() || rx_ant.is_some() {
             crate::chrome::control_row(ui, narrow, |ui| {
-                ui.label(tr!("topbar-ant-label"))
-                    .on_hover_text(tr!("topbar-which-socket-back-radio-receiving"));
+                ui.label(tr!("topbar-ant-label")).on_hover_text(tr!("topbar-which-socket-back-radio-receiving"));
                 if !ants.is_empty() {
                     let here = ants.iter().position(|a| *a == self.state.antenna_rx);
                     // The socket's own name, whole: a front end that spells its
@@ -5318,8 +5338,7 @@ impl SdroxideApp {
         }
         if self.rig_power() {
             crate::chrome::control_row(ui, narrow, |ui| {
-                ui.label(tr!("topbar-pwr-label"))
-                    .on_hover_text(tr!("topbar-radio-s-own-power-switch"));
+                ui.label(tr!("topbar-pwr-label")).on_hover_text(tr!("topbar-radio-s-own-power-switch"));
                 if crate::chrome::chip(ui, false, "ON")
                     .on_hover_text(tr!("topbar-switch-radio"))
                     .clicked()
@@ -6415,13 +6434,17 @@ impl SdroxideApp {
             ui.horizontal_wrapped(|ui| {
                 let on = self.view.spectrum_visible();
                 if crate::chrome::chip(ui, on, tr!("topbar-show-spectrum"))
-                    .on_hover_text(tr!("topbar-draw-spectrum-line-across-top"))
+                    .on_hover_text(
+                        tr!("topbar-draw-spectrum-line-across-top"),
+                    )
                     .clicked()
                 {
                     self.view.set_spectrum_visible(!on);
                 }
                 if crate::chrome::chip(ui, self.view.peak_hold, tr!("topbar-peak-hold"))
-                    .on_hover_text(tr!("topbar-trace-highest-level-each-column"))
+                    .on_hover_text(
+                        tr!("topbar-trace-highest-level-each-column"),
+                    )
                     .clicked()
                 {
                     self.view.peak_hold = !self.view.peak_hold;
@@ -6433,7 +6456,9 @@ impl SdroxideApp {
                     cfg.spectrum_fill = !cfg.spectrum_fill;
                 }
                 if crate::chrome::chip(ui, self.view.spectrum_3d, "3D")
-                    .on_hover_text(tr!("topbar-draw-spectrum-receding-surface-instead"))
+                    .on_hover_text(
+                        tr!("topbar-draw-spectrum-receding-surface-instead"),
+                    )
                     .clicked()
                 {
                     self.view.spectrum_3d = !self.view.spectrum_3d;
@@ -6453,7 +6478,9 @@ impl SdroxideApp {
         crate::chrome::menu_group(ui, &tr!("topbar-group-waterfall"), w, |ui| {
             let on = self.view.waterfall_visible();
             if crate::chrome::chip(ui, on, tr!("topbar-show-waterfall"))
-                .on_hover_text(tr!("topbar-draw-scrolling-waterfall-below-spectrum"))
+                .on_hover_text(
+                    tr!("topbar-draw-scrolling-waterfall-below-spectrum"),
+                )
                 .clicked()
             {
                 self.view.set_waterfall_visible(!on);
@@ -6630,7 +6657,9 @@ impl SdroxideApp {
         // asked for: click it on, and off again if you would rather pan freely.
         if !simple
             && chip_stretched(ui, self.view.center_on_vfo, ctr, extra)
-                .on_hover_text(tr!("topbar-keep-tuned-frequency-middle-panadapter"))
+                .on_hover_text(
+                    tr!("topbar-keep-tuned-frequency-middle-panadapter"),
+                )
                 .clicked()
         {
             self.view.center_on_vfo = !self.view.center_on_vfo;
@@ -6650,8 +6679,8 @@ impl SdroxideApp {
         // off this button. "FFT" not "VIEW": the box has to fit the desktop
         // strip — "VIEW" measures ten points wider and was what pushed the
         // display box, and with it the strip, onto a third row.
-        let fft_btn =
-            chip_stretched(ui, false, view, extra).on_hover_text(tr!("topbar-fft-chip-hint"));
+        let fft_btn = chip_stretched(ui, false, view, extra)
+            .on_hover_text(tr!("topbar-fft-chip-hint"));
         let fft_id = egui::Popup::default_response_id(&fft_btn);
         let now = ui.input(|i| i.time);
         let alpha =
@@ -6901,7 +6930,9 @@ impl SdroxideApp {
                 .on_hover_text(match (&self.sat_track, qo100_running) {
                     (Some(t), _) => tr!("topbar-sat-locked", name = t.name.clone()),
                     (None, true) => tr!("topbar-satellite-qo-100-beacon-calibration").into(),
-                    (None, false) => tr!("topbar-satellite-doppler-tracking-qo-100").into(),
+                    (None, false) => {
+                        tr!("topbar-satellite-doppler-tracking-qo-100").into()
+                    }
                 })
                 .clicked()
             {
@@ -7005,7 +7036,9 @@ impl SdroxideApp {
         // does want to see who hears them.
         if !self.swl_mode()
             && chip_stretched(ui, self.show_grid, grid_label, extra)
-                .on_hover_text(tr!("topbar-grid-tracker-worked-maidenhead-squares"))
+                .on_hover_text(
+                    tr!("topbar-grid-tracker-worked-maidenhead-squares"),
+                )
                 .clicked()
         {
             self.show_grid = !self.show_grid;
@@ -7031,7 +7064,9 @@ impl SdroxideApp {
         // nor a machine-readable directory. "WEB SDR" on the chip had operators
         // looking for websdr.org's list behind it (issue #254).
         if chip_stretched(ui, self.show_public_sdrs, public_sdrs, extra)
-            .on_hover_text(tr!("topbar-public-sdrs-internet-browse-kiwisdr"))
+            .on_hover_text(
+                tr!("topbar-public-sdrs-internet-browse-kiwisdr"),
+            )
             .clicked()
         {
             self.show_public_sdrs = !self.show_public_sdrs;
@@ -7570,6 +7605,22 @@ fn sql_readout_w(ui: &egui::Ui) -> f32 {
     value_field_w(ui, &sql_readout).max(value_field_w(ui, "100%"))
 }
 
+/// The SQL rail: on the RSP, [`SQL_RAIL_SHARE`] of the width the box gives its rails.
+fn sql_rail(ui: &mut egui::Ui, rsp: bool, readout_w: f32, slider: Slider<'_>) -> egui::Response {
+    ui.scope(|ui| {
+        let w = ui.spacing().slider_width * if rsp { SQL_RAIL_SHARE } else { 1.0 };
+        ui.spacing_mut().slider_width = w;
+        crate::chrome::slider_readout(ui, readout_w, slider)
+    })
+    .inner
+}
+
+/// A readout cut to its text ([`crate::chrome::slider_readout_tight`]).
+fn tight_field_w(ui: &egui::Ui, text: &str) -> f32 {
+    crate::chrome::text_width(ui, text, egui::TextStyle::Body.resolve(ui.style()))
+        + 2.0 * crate::chrome::TIGHT_FIELD_PAD
+}
+
 fn value_field_w(ui: &egui::Ui, text: &str) -> f32 {
     let w = crate::chrome::text_width(ui, text, egui::TextStyle::Body.resolve(ui.style()))
         + 2.0 * ui.spacing().button_padding.x;
@@ -7594,7 +7645,7 @@ fn db_rail_w(ui: &egui::Ui) -> f32 {
 /// [`db_rail_w`] with the LNA rail in the row: the shorter rail, and a readout
 /// that only has to hold the longest figure these rails take (`-88.8 dB`).
 fn db_rail_compact_w(ui: &egui::Ui) -> f32 {
-    RX_DB_RAIL_COMPACT_W + MODULE_ROW_SPACING + value_field_w(ui, "-88 dB")
+    RX_DB_RAIL_COMPACT_W + MODULE_ROW_SPACING + tight_field_w(ui, "-100")
 }
 
 /// The LNA step rail and its two-figure readout.
@@ -8107,8 +8158,10 @@ fn rx_rows_with(
 
     // Receive: volume, the front-end gain rail where the rig has one, the
     // decimation chip, the AGC chip, and the manual rail behind it.
-    let mut receive =
-        label(&tr!("topbar-vol")) + g + rail + g + value_field_w(ui, VOL_READOUT_SAMPLE);
+    let mut receive = label(&tr!("topbar-vol"))
+        + g
+        + if lna { rail - (STRIP_RAIL_W - RX_VOL_RAIL_RSP_W) } else { rail }
+        + if lna { g + tight_field_w(ui, VOL_READOUT_SAMPLE) } else { 0.0 };
     if gain {
         receive += g + label(&tr!("topbar-gain")) + g + db_rail(ui);
         if lna {
@@ -8140,7 +8193,8 @@ fn rx_rows_with(
     // be swapped under a running window (`Engine::adopt_source`), so a box
     // sized for one of them would change width when the operator applied a new
     // interface.
-    let noise = label("SQL") + g + rail + g + sql_readout_w(ui);
+    let noise =
+        label("SQL") + g + rail * if lna { SQL_RAIL_SHARE } else { 1.0 } + g + sql_readout_w(ui);
 
     // Then the run itself. Each chip is priced at its widest label, so the box
     // does not breathe as a decode comes and goes (see [`RxChip::width_label`])
@@ -8334,12 +8388,8 @@ fn speed_row(ui: &mut egui::Ui, caption: &str, value: &mut Speed, steps: &[Speed
 /// went would resize the popup under the pointer.
 fn fill_style_row(ui: &mut egui::Ui, cfg: &mut sdroxide_types::UiSettings) {
     ui.horizontal_wrapped(|ui| {
-        ui.label(
-            RichText::new(tr!("topbar-fill-style-caption"))
-                .size(10.0)
-                .color(crate::theme::CYAN_DIM()),
-        )
-        .on_hover_text(tr!("topbar-fill-style-hint"));
+        ui.label(RichText::new(tr!("topbar-fill-style-caption")).size(10.0).color(crate::theme::CYAN_DIM()))
+            .on_hover_text(tr!("topbar-fill-style-hint"));
         for (style, label, hint) in [
             (SpectrumFillStyle::Fixed, tr!("topbar-fill-fixed"), tr!("topbar-fill-fixed-hint")),
             (
@@ -8347,7 +8397,11 @@ fn fill_style_row(ui: &mut egui::Ui, cfg: &mut sdroxide_types::UiSettings) {
                 tr!("topbar-fill-gradient"),
                 tr!("topbar-fill-gradient-hint"),
             ),
-            (SpectrumFillStyle::Mixed, tr!("topbar-fill-mixed"), tr!("topbar-fill-mixed-hint")),
+            (
+                SpectrumFillStyle::Mixed,
+                tr!("topbar-fill-mixed"),
+                tr!("topbar-fill-mixed-hint"),
+            ),
         ] {
             let r = crate::chrome::chip_enabled(
                 ui,
@@ -8897,8 +8951,7 @@ impl RadioChip {
     }
 
     fn draw(&mut self, ui: &mut egui::Ui) {
-        let resp = crate::chrome::chip(ui, self.on, tr!("topbar-radio"))
-            .on_hover_text(tr!("topbar-radio-classic-hint"));
+        let resp = crate::chrome::chip(ui, self.on, tr!("topbar-radio")).on_hover_text(tr!("topbar-radio-classic-hint"));
         self.clicked |= resp.clicked();
     }
 }
@@ -9130,7 +9183,10 @@ fn atsmini_band_menu(ui: &mut egui::Ui, state: &RadioState, cmds: &mut Vec<Comma
         }
     });
     ui.add_space(4.0);
-    ui.label(egui::RichText::new(tr!("topbar-ats-receive-only")).weak());
+    ui.label(
+        egui::RichText::new(tr!("topbar-ats-receive-only"))
+        .weak(),
+    );
 }
 
 /// One band chip, from the menu's state — the same chip the band pad and
@@ -9571,8 +9627,8 @@ pub(in crate::app) fn band_keypad(
         }
         let typed = pad.hz();
         let in_range = typed.is_some_and(|hz| caps.is_none_or(|c| c.may_rx_hz(hz)));
-        let enter = crate::chrome::chip_enabled(ui, in_range, false, &tr!("topbar-keypad-enter"))
-            .on_hover_text(match (typed, in_range) {
+        let enter = crate::chrome::chip_enabled(ui, in_range, false, &tr!("topbar-keypad-enter")).on_hover_text(
+            match (typed, in_range) {
                 (None, _) => {
                     tr!("topbar-keypad-enter-empty-hint")
                 }
@@ -9586,7 +9642,8 @@ pub(in crate::app) fn band_keypad(
                         .map(|c| sdroxide_types::format_freq_ranges(&c.freq_ranges_rx))
                         .unwrap_or_else(|| tr!("topbar-nothing-published"))
                 ),
-            });
+            },
+        );
         if enter.clicked() {
             if let Some(hz) = pad.enter() {
                 cmds.push(Command::SetVfo { vfo: state.active_vfo, hz });
@@ -9647,7 +9704,11 @@ pub(in crate::app) fn band_mode_menu(
     // and to the only person who cares. A hint rather than a control: the switch
     // asks once in Settings, because it changes what the tab means.
     if *tab == BandMenuTab::Listen && !listen_hides_tx {
-        ui.label(egui::RichText::new(tr!("topbar-listen-tab-note")).size(10.0).weak());
+        ui.label(
+            egui::RichText::new(tr!("topbar-listen-tab-note"))
+            .size(10.0)
+            .weak(),
+        );
     }
     ui.add_space(6.0);
 
@@ -9668,8 +9729,7 @@ pub(in crate::app) fn band_mode_menu(
                 *filter = if lit { BandFilter::All } else { f };
             }
         }
-        if *filter != BandFilter::All
-            && crate::chrome::chip(ui, false, tr!("topbar-show-every-band")).clicked()
+        if *filter != BandFilter::All && crate::chrome::chip(ui, false, tr!("topbar-show-every-band")).clicked()
         {
             *filter = BandFilter::All;
         }
@@ -9789,11 +9849,7 @@ pub(in crate::app) fn band_mode_menu(
                 ui.horizontal_wrapped(|ui| {
                     for p in plans {
                         if crate::chrome::chip(ui, current == p, p.short())
-                            .on_hover_text(format!(
-                                "{} — {}",
-                                crate::app::settings::general::cb_plan_label(p),
-                                p.modes()
-                            ))
+                            .on_hover_text(format!("{} — {}", crate::app::settings::general::cb_plan_label(p), p.modes()))
                             .clicked()
                         {
                             cmds.push(Command::SetCbPlan(p));
@@ -9806,11 +9862,7 @@ pub(in crate::app) fn band_mode_menu(
                 chip_lines(ui, &widths, |ui, i| {
                     let p = plans[i];
                     if crate::chrome::chip(ui, current == p, p.short())
-                        .on_hover_text(format!(
-                            "{} — {}",
-                            crate::app::settings::general::cb_plan_label(p),
-                            p.modes()
-                        ))
+                        .on_hover_text(format!("{} — {}", crate::app::settings::general::cb_plan_label(p), p.modes()))
                         .clicked()
                     {
                         cmds.push(Command::SetCbPlan(p));
@@ -9973,9 +10025,10 @@ fn rec_format_chip(format: RecordingFormat, audio: bool, active: RecordingFormat
             if selected { tr!("topbar-mp3") } else { "MP3".to_string() },
             tr!("topbar-what-you-hear-mp3-receiver"),
         ),
-        RecordingFormat::Wav => {
-            (if selected { "● WAV" } else { "WAV" }.to_string(), tr!("topbar-wav-hint"))
-        }
+        RecordingFormat::Wav => (
+            if selected { "● WAV" } else { "WAV" }.to_string(),
+            tr!("topbar-wav-hint"),
+        ),
     };
     RecFormatChip { label, hover, enabled: !audio || selected, selected }
 }
@@ -11675,8 +11728,7 @@ mod tests {
     /// operator pressed, not the measured width.
     #[test]
     fn the_bw_chip_names_the_preset_in_force() {
-        let presets =
-            vec![("3.0k".to_string(), -2850.0, -150.0), ("Rag".to_string(), -2600.0, -200.0)];
+        let presets = vec![("3.0k".to_string(), -2850.0, -150.0), ("Rag".to_string(), -2600.0, -200.0)];
         let on = active_preset_label(Mode::Lsb, &presets, 700.0, -2850.0, -150.0);
         assert_eq!(on.as_deref(), Some("3.0k"));
         assert_eq!(bw_chip_label(Mode::Lsb, -2850.0, -150.0, on.as_deref()), "BW 3.0k");
@@ -11714,14 +11766,14 @@ mod tests {
                     (150.0, 2850.0),
                 ] {
                     for name in [None, Some("3.0k"), Some("8.8k")] {
-                        let label = bw_chip_label(mode, lo, hi, name);
-                        let w = crate::chrome::chip_width(ui, &label, None);
-                        if w > reserved + 0.5 {
-                            over.push(format!(
-                                "{mode:?} {lo}..{hi} reads {label:?} at {w} pt, over the \
+                    let label = bw_chip_label(mode, lo, hi, name);
+                    let w = crate::chrome::chip_width(ui, &label, None);
+                    if w > reserved + 0.5 {
+                        over.push(format!(
+                            "{mode:?} {lo}..{hi} reads {label:?} at {w} pt, over the \
                              {reserved} pt reserved"
-                            ));
-                        }
+                        ));
+                    }
                     }
                 }
             }
@@ -12511,39 +12563,77 @@ mod tests {
         }
     }
 
-    /// What the RSP's second gain rail (LNA) may add to the box, in points,
-    /// beyond the single Gain rail every other rig has. Printed per shape by
-    /// the test below so the cost is visible in the log.
-    const RSP_LNA_WIDTH_BUDGET: f32 = 55.0;
+    /// The RX box as `main` priced it before the Vol readout, the SQL rail
+    /// cut and the RSP's second rail: Vol is a bare rail, Gain and Man are the
+    /// 76 pt rails with their wide readouts, SQL the full rail. The box must
+    /// never be wider than this, for any rig (the panel size is fixed).
+    fn original_rx_w(ui: &egui::Ui, gain: bool, decim: bool, agc_off: bool, mode: Mode) -> f32 {
+        let g = MODULE_ROW_SPACING;
+        let label =
+            |s: &str| crate::chrome::text_width(ui, s, egui::TextStyle::Body.resolve(ui.style()));
+        let chip = |s: &str| crate::chrome::chip_width(ui, s, None);
+        let mut receive = label(&tr!("topbar-vol")) + g + STRIP_RAIL_W;
+        if gain {
+            receive += g + label(&tr!("topbar-gain")) + g + db_rail_w(ui);
+        }
+        if decim {
+            receive += g + chip(&tr!("topbar-dec-off")).max(chip("DEC /64"));
+        }
+        if mode.audio_agc() {
+            receive += g + AgcMode::ALL
+                .iter()
+                .map(|a| chip(&format!("AGC {}", a.tr())))
+                .fold(0.0, f32::max);
+            if agc_off {
+                receive += g + label(&tr!("topbar-man")) + g + db_rail_w(ui);
+            }
+        }
+        let noise = label("SQL") + g + STRIP_RAIL_W + g + sql_readout_w(ui);
+        let chips: Vec<f32> = rx_chips(mode, false).iter().map(|c| g + c.width(ui)).collect();
+        let all: f32 = chips.iter().sum();
+        let mut best = (receive).max(noise + all);
+        let mut up = 0.0;
+        for w in &chips {
+            up += w;
+            best = best.min((receive + up).max(noise + all - up));
+        }
+        best
+    }
 
-    /// The RSP's second gain rail (LNA) and how much wider it makes the box.
+    /// The panel keeps its size: other rigs are priced exactly as `main` did,
+    /// and the RSP (dB Vol readout, second gain rail) is never wider. Prints each shape so a regression shows its size.
     #[test]
-    fn the_rsp_lna_rail_does_not_widen_the_rx_box() {
+    fn the_rx_box_is_never_wider_than_it_was() {
         let (ctx, input) = desktop_ctx();
         let mut out = ctx.run_ui(input, |ui| {
             ui.spacing_mut().item_spacing = egui::vec2(MODULE_ROW_SPACING, MODULE_ROW_SPACING);
             ui.spacing_mut().slider_width = STRIP_RAIL_W;
+            let mut over: Vec<String> = Vec::new();
             for agc_off in [false, true] {
                 for decim in [false, true] {
                     for mode in [Mode::Usb, Mode::Cw, Mode::Nfm, Mode::Am] {
-                        let one = rx_rows(ui, true, decim, agc_off, mode, false);
-                        let two = rx_rows_with(ui, true, true, decim, agc_off, mode, false);
+                        let was = original_rx_w(ui, true, decim, agc_off, mode);
+                        let one = rx_rows(ui, true, decim, agc_off, mode, false).w();
+                        let two = rx_rows_with(ui, true, true, decim, agc_off, mode, false).w();
                         eprintln!(
-                            "agc_off={agc_off} decim={decim} {mode:?}: one={:.1} two={:.1} \
-                             (+{:.1})",
-                            one.w(),
-                            two.w(),
-                            two.w() - one.w()
+                            "agc_off={agc_off} decim={decim} {mode:?}: was={was:.1} \
+                             one={one:.1} ({:+.1}) rsp={two:.1} ({:+.1})",
+                            one - was,
+                            two - was
                         );
                         assert!(
-                            two.w() <= one.w() + RSP_LNA_WIDTH_BUDGET,
-                            "agc_off={agc_off} decim={decim} {mode:?}: {} > {}",
-                            two.w(),
-                            one.w()
+                            (one - was).abs() < 0.01,
+                            "{mode:?} agc_off={agc_off}: other rigs {one} != {was}"
                         );
+                        if two > was + 0.01 {
+                            over.push(format!(
+                                "{mode:?} agc_off={agc_off} decim={decim}: RSP {two:.1} > {was:.1}"
+                            ));
+                        }
                     }
                 }
             }
+            assert!(over.is_empty(), "the RSP box is wider than main's:\n{}", over.join("\n"));
         });
         out.textures_delta.clear();
     }
@@ -12662,8 +12752,9 @@ mod tests {
                             let row2 = ui
                                 .horizontal(|ui| {
                                     ui.label("SQL");
-                                    crate::chrome::slider_readout(
+                                    sql_rail(
                                         ui,
+                                        false,
                                         sql_readout_w(ui),
                                         Slider::new(
                                             &mut sql,

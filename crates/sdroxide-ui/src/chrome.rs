@@ -1036,6 +1036,28 @@ pub fn slider_readout(ui: &mut Ui, readout_w: f32, slider: egui::Slider<'_>) -> 
     r
 }
 
+/// [`slider_readout`] with the readout cut to the text it shows: exactly
+/// `readout_w` wide (not the style's minimum field) and with a slimmer
+/// padding, so a short figure like `-9 dB` does not leave a gap before the
+/// next label. `readout_w` must come from [`TIGHT_FIELD_PAD`].
+pub fn slider_readout_tight(ui: &mut Ui, readout_w: f32, slider: egui::Slider<'_>) -> Response {
+    let beside = ui.spacing().item_spacing.x + readout_w;
+    let width = fit_rail(ui, beside);
+    let r = ui
+        .scope(|ui| {
+            let spacing = ui.spacing_mut();
+            spacing.interact_size.x = readout_w;
+            spacing.button_padding.x = TIGHT_FIELD_PAD;
+            skinned_slider(ui, Some(width), slider)
+        })
+        .inner;
+    trace_row(ui, r.rect, "rdo");
+    r
+}
+
+/// Horizontal padding of a tight readout, each side.
+pub const TIGHT_FIELD_PAD: f32 = 2.0;
+
 /// [`slider`] that may be greyed out — `ui.add_enabled`, with a skin.
 pub fn slider_enabled(ui: &mut Ui, enabled: bool, slider: egui::Slider<'_>) -> Response {
     // Fitted out here, not inside: `add_enabled_ui` opens a child `Ui`, and
