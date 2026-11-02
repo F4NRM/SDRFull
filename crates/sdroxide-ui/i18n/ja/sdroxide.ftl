@@ -8989,3 +8989,11 @@ topbar-bw-hint-title = フィルターの調整と記憶
 topbar-bw-hint-body = クリックでフィルター設定を開きます。プリセットを右クリックすると変更でき、M+ をクリックすると現在の通過帯域を自分のメモリーに保存します。
 
 topbar-preset-memory-hint = 空のメモリー：クリックで現在の通過帯域を保存、右クリックで数値を入力
+
+topbar-lna = LNA
+
+topbar-rsp-total-gain-hint = RSPの総ゲインを1 dBステップで調整します(減衰量として表示。右ほどゲインが大きい)。LNAはIFが補える範囲で最大ゲインのままとし、IFがdBを埋めます。
+
+topbar-rsp-agc-set-point-hint = RSPのAGCがオンです。このスライダーは設定点(ループがコンバーターで保つdBFSのレベル)を動かします。dB単位の固定ゲインにするにはAGCをオフにしてください。
+
+topbar-rsp-lna-step-hint = RSPのLNAの状態です(1ステップにつき1段)。過負荷のフロントエンドを解消するのに使います。隣のゲインスライダーが微調整です。

@@ -9041,3 +9041,11 @@ topbar-bw-hint-title = Filtreyi ayarla ve kaydet
 topbar-bw-hint-body = Filtre ayarlarını açmak için tıklayın. Bir ön ayarı değiştirmek için sağ tıklayın; geçerli geçirme bandını kendi belleğinize kaydetmek için M+ düğmesine tıklayın.
 
 topbar-preset-memory-hint = Boş bellek: geçerli geçirme bandını buraya kaydetmek için tıklayın, elle girmek için sağ tıklayın
+
+topbar-lna = LNA
+
+topbar-rsp-total-gain-hint = RSP'nin toplam kazancı, 1 dB adımlarla (azaltma olarak gösterilir, sağa doğru daha fazla kazanç). LNA, IF'nin telafi edebildiği en yüksek kazançta kalır; IF desibelleri tamamlar.
+
+topbar-rsp-agc-set-point-hint = RSP'nin AGC'si açık: bu çubuk ayar noktasını, yani döngünün dönüştürücüde tuttuğu dBFS düzeyini oynatır. dB cinsinden sabit kazanç için AGC'yi kapatın.
+
+topbar-rsp-lna-step-hint = RSP'nin LNA durumu, adım başına bir konum. Aşırı yüklenmiş girişi rahatlatmak için kullanın; yanındaki Kazanç çubuğu ince ayardır.

@@ -9046,3 +9046,11 @@ topbar-bw-hint-title = Adjust and memorise the filter
 topbar-bw-hint-body = Click to open the filter settings. Right-click a preset chip to change it, or click M+ to store the current passband in your own memory.
 
 topbar-preset-memory-hint = Empty memory: click to store the current passband here, right-click to type one
+
+topbar-lna = LNA
+
+topbar-rsp-total-gain-hint = Total gain of the RSP, in 1 dB steps (shown as the reduction, so right is more gain). The LNA stays at the highest gain the IF can make up for; the IF fills in the decibels.
+
+topbar-rsp-agc-set-point-hint = The RSP's AGC is on: this rail moves its set point, the level in dBFS the loop holds at the converter. Switch the AGC off for a fixed gain in dB.
+
+topbar-rsp-lna-step-hint = The RSP's LNA state, one position per step. Use it to clear an overloaded front end; the Gain rail beside it is the fine control.

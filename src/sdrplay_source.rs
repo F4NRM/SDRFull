@@ -55,6 +55,9 @@ pub struct SdrPlaySource {
     /// says otherwise (the GainChange event keeps `IF` honest under AGC).
     if_gr_db: i32,
     agc: SdrPlayAgc,
+    /// The AGC set point in force, in dBFS, so the Receiver panel can show it
+    /// and move it.
+    agc_setpoint: i32,
     bias_tee: bool,
     /// The RSPdx's high-dynamic-range path, tracked because it selects a
     /// different LNA table below 2 MHz — see [`Self::rx_gain_elements`].
@@ -176,6 +179,7 @@ impl SdrPlaySource {
             hdr_bw: cfg.hdr_bw,
             extended_if_gr: cfg.extended_if_gr,
             antenna,
+            agc_setpoint: cfg.agc_setpoint_dbfs,
             ladder: LnaLadder::new(),
             total_gr_target: None,
             ladder_probe: None,
@@ -509,7 +513,8 @@ impl IqSource for SdrPlaySource {
                 self.handle.set_agc(self.agc.code() as i32);
             }
             SdrPlayConfig::AGC_SETPOINT_ELEMENT => {
-                self.handle.set_agc_setpoint(db.round() as i32);
+                self.agc_setpoint = db.round() as i32;
+                self.handle.set_agc_setpoint(self.agc_setpoint);
             }
             SdrPlayConfig::PPM_ELEMENT => {
                 self.handle.set_ppm(db);
@@ -628,6 +633,10 @@ impl IqSource for SdrPlaySource {
             (SdrPlayConfig::LNA_ELEMENT.to_string(), -(state as f64)),
             (SdrPlayConfig::IF_GAIN_ELEMENT.to_string(), -(gr as f64)),
             (SdrPlayConfig::TOTAL_GAIN_ELEMENT.to_string(), -f64::from(lna_gr + gr)),
+            // Not gains: the AGC mode and set point, published so the
+            // Receiver panel knows which of the two the Gain slider moves.
+            (SdrPlayConfig::AGC_ELEMENT.to_string(), self.agc.code()),
+            (SdrPlayConfig::AGC_SETPOINT_ELEMENT.to_string(), f64::from(self.agc_setpoint)),
         ]
     }
 

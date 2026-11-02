@@ -9049,3 +9049,11 @@ topbar-bw-hint-title = Filter instellen en opslaan
 topbar-bw-hint-body = Klik om de filterinstellingen te openen. Rechtsklik op een preset om die te wijzigen, of klik op M+ om de huidige doorlaatband in je eigen geheugen op te slaan.
 
 topbar-preset-memory-hint = Leeg geheugen: klik om de huidige doorlaatband hier op te slaan, rechtsklik om er een in te typen
+
+topbar-lna = LNA
+
+topbar-rsp-total-gain-hint = Totale versterking van de RSP, in stappen van 1 dB (getoond als reductie: naar rechts is meer versterking). De LNA blijft op de hoogste versterking die de IF kan opvangen; de IF vult de decibels aan.
+
+topbar-rsp-agc-set-point-hint = De AGC van de RSP staat aan: deze schuif verplaatst het instelpunt, het niveau in dBFS dat de lus bij de omzetter houdt. Zet de AGC uit voor een vaste versterking in dB.
+
+topbar-rsp-lna-step-hint = De LNA-stand van de RSP, één positie per stap. Gebruik hem om een overstuurde ingang vrij te maken; de Gain-schuif ernaast is de fijne regeling.

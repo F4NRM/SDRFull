@@ -9039,3 +9039,11 @@ topbar-bw-hint-title = Filter einstellen und speichern
 topbar-bw-hint-body = Klicken, um die Filtereinstellungen zu öffnen. Rechtsklick auf eine Voreinstellung zum Ändern, oder auf M+ klicken, um den aktuellen Durchlassbereich im eigenen Speicher abzulegen.
 
 topbar-preset-memory-hint = Leerer Speicher: Klick legt den aktuellen Durchlassbereich ab, Rechtsklick zum Eintippen
+
+topbar-lna = LNA
+
+topbar-rsp-total-gain-hint = Gesamtverstärkung des RSP in 1-dB-Schritten (als Dämpfung angezeigt, rechts ist mehr Verstärkung). Der LNA bleibt auf der höchsten Verstärkung, die die ZF ausgleichen kann; die ZF füllt die Dezibel auf.
+
+topbar-rsp-agc-set-point-hint = Die AGC des RSP ist an: Dieser Regler verschiebt ihren Sollwert, den Pegel in dBFS, den die Regelschleife am Wandler hält. AGC ausschalten für eine feste Verstärkung in dB.
+
+topbar-rsp-lna-step-hint = Der LNA-Zustand des RSP, eine Stellung pro Stufe. Damit lässt sich ein übersteuerter Eingang befreien; der Regler Verstärkung daneben ist die Feineinstellung.

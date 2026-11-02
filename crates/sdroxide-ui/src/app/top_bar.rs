@@ -143,6 +143,13 @@ const TX_MIC_GAP: f32 = 16.0;
 /// SQL rails on purpose: these two carry a dB readout, and the box has to stay
 /// inside one row. See [`db_rail_w`].
 const RX_DB_RAIL_W: f32 = 76.0;
+/// The Gain and Man rails when the RSP's second gain control (the LNA step
+/// rail) shares the receive row: the same row, the same box, so the two dB
+/// rails give up the width the LNA rail takes.
+const RX_DB_RAIL_COMPACT_W: f32 = 48.0;
+/// The LNA step rail beside the linear Gain rail. It counts a handful of
+/// states, so it needs no length.
+const RX_LNA_RAIL_W: f32 = 24.0;
 /// Text size of the band/mode chip's label.
 const BAND_MODE_TEXT: f32 = 14.0;
 /// How much taller the band/mode chip stands than a plain one. Band and mode
@@ -3265,9 +3272,10 @@ impl SdroxideApp {
     /// [`rx_rows`] against this radio: what the front end offers, what the
     /// AGC is set to, and what mode the receiver is in.
     fn rx_rows(&self, ui: &egui::Ui) -> RxRows {
-        rx_rows(
+        rx_rows_with(
             ui,
             self.rx_gain().is_some(),
+            self.rsp_linear_gain().is_some(),
             self.decim_range().is_some(),
             self.state.rx[0].agc == AgcMode::Off,
             self.state.rx[0].mode,
@@ -3319,6 +3327,39 @@ impl SdroxideApp {
 
     fn rx_gain(&self) -> Option<GainElement> {
         self.rx_gains().first().cloned()
+    }
+
+    /// Whether the RSP's hardware AGC is running, read from the mode the
+    /// source publishes beside its gains.
+    fn rsp_agc_on(&self) -> bool {
+        self.state.gains.iter().any(|(n, v)| {
+            n == sdroxide_types::SdrPlayConfig::AGC_ELEMENT
+                && sdroxide_types::SdrPlayAgc::from_code(*v) != sdroxide_types::SdrPlayAgc::Off
+        })
+    }
+
+    /// The AGC set point's range for the rate in use: the floor is a property
+    /// of the sample rate (see `SdrPlayConfig::agc_setpoint_range_at`).
+    fn rsp_setpoint_range(&mut self) -> (i32, i32) {
+        if self.radio_cfg.is_none() {
+            self.radio_cfg = self.ctrl.radio_config();
+        }
+        let (rate, ext) = self
+            .radio_cfg
+            .as_ref()
+            .map(|c| (c.sdrplay.sample_rate_hz, c.sdrplay.extended_if_gr))
+            .unwrap_or((2_000_000.0, false));
+        let r = sdroxide_types::SdrPlayConfig::agc_setpoint_range_at(rate, ext);
+        (*r.start(), *r.end())
+    }
+
+    /// The RSP's linear total-gain element, when the front end offers it.
+    /// Present only on that radio: every other rig reads `None` and keeps the
+    /// single Gain rail it has always had.
+    pub(in crate::app) fn rsp_linear_gain(&self) -> Option<GainElement> {
+        self.rx_gains()
+            .into_iter()
+            .find(|g| g.name == sdroxide_types::SdrPlayConfig::TOTAL_GAIN_ELEMENT)
     }
 
     /// Whether `element` is a PlutoSDR's receive gain while the AD9361's own
@@ -3408,7 +3449,36 @@ impl SdroxideApp {
         narrow: bool,
     ) {
         let rx_gains = self.rx_gains();
-        let rx_gain = rx_gains.first().cloned();
+        // The RSP carries a linear total-gain element beside its stepped LNA.
+        // Its Gain rail is that one, or the AGC set point while the hardware
+        // AGC owns the IF; the LNA step rail follows it. Every other rig keeps
+        // the one rail it has always had (the first gain element).
+        let linear = self.rsp_linear_gain();
+        let rsp_agc_on = linear.is_some() && self.rsp_agc_on();
+        let mut stages: Vec<GainElement> = Vec::new();
+        match &linear {
+            Some(total) => {
+                if rsp_agc_on {
+                    let (lo, hi) = self.rsp_setpoint_range();
+                    stages.push(GainElement::db(
+                        sdroxide_types::SdrPlayConfig::AGC_SETPOINT_ELEMENT,
+                        Direction::Rx,
+                        f64::from(lo),
+                        f64::from(hi),
+                        1.0,
+                    ));
+                } else {
+                    stages.push(total.clone());
+                }
+                stages.extend(
+                    rx_gains
+                        .iter()
+                        .find(|g| g.name == sdroxide_types::SdrPlayConfig::LNA_ELEMENT)
+                        .cloned(),
+                );
+            }
+            None => stages.extend(rx_gains.first().cloned()),
+        }
         let chips = rx_chips(self.state.rx[0].mode, self.listener_screen());
         // A menu column wraps its rows and is as wide as the menu around it,
         // so there is nothing to balance there: the run stays whole, under the
@@ -3425,8 +3495,14 @@ impl SdroxideApp {
                 self.state.rx[0].volume = vol; // optimistic echo
                 cmds.push(Command::SetVolume { rx: RxId::Main, v: vol });
             }
-            if let Some(g) = &rx_gain {
-                let mut hint = tr!("topbar-rx-gain-hint", stage = g.name.to_string());
+            for (stage_idx, g) in stages.iter().enumerate() {
+                let rsp_stage = linear.is_some();
+                let mut hint = match (rsp_stage, stage_idx) {
+                    (true, 0) if rsp_agc_on => tr!("topbar-rsp-agc-set-point-hint"),
+                    (true, 0) => tr!("topbar-rsp-total-gain-hint"),
+                    (true, _) => tr!("topbar-rsp-lna-step-hint"),
+                    _ => tr!("topbar-rx-gain-hint", stage = g.name.to_string()),
+                };
                 // A stage counted in steps rather than decibels — an RSP's
                 // LNA state, an Airspy's place on its gain curve, a
                 // SpyServer's index into the far end's table. Say so, because
@@ -3437,10 +3513,16 @@ impl SdroxideApp {
                 if g.unit == GainUnit::Step {
                     hint.push_str(&tr!("topbar-counted-steps-not-decibels-what"));
                 }
-                if rx_gains.len() > 1 {
+                if rx_gains.len() > 1 && !rsp_stage {
                     hint.push_str(&tr!("topbar-rx-gain-stages", n = rx_gains.len()));
                 }
-                ui.label(tr!("topbar-gain")).on_hover_text(&hint);
+                // A little air before the second stage's word, so "dBFS" and
+                // "LNA" do not read as one thing.
+                if stage_idx > 0 {
+                    ui.add_space(9.0);
+                }
+                ui.label(if stage_idx == 0 { tr!("topbar-gain") } else { tr!("topbar-lna") })
+                    .on_hover_text(&hint);
                 let mut db = self
                     .state
                     .gains
@@ -3464,12 +3546,26 @@ impl SdroxideApp {
                 let resp = ui
                     .scope(|ui| {
                         if !narrow {
-                            ui.spacing_mut().slider_width = RX_DB_RAIL_W;
+                            ui.spacing_mut().slider_width = match (rsp_stage, stage_idx) {
+                                (true, 0) => RX_DB_RAIL_COMPACT_W,
+                                (true, _) => RX_LNA_RAIL_W,
+                                _ => RX_DB_RAIL_W,
+                            };
+                        }
+                        let readout_w = match (rsp_stage, stage_idx) {
+                            (true, 0) => value_field_w(ui, "-88.8 dB"),
+                            (true, _) => lna_field_w(ui),
+                            _ => value_field_w(ui, "-888.8 dB"),
+                        };
+                        if rsp_stage && stage_idx > 0 {
+                            // A step count of one or two figures: the style's
+                            // minimum field would be wider than the number.
+                            ui.spacing_mut().interact_size.x = readout_w;
                         }
                         ui.add_enabled_ui(!hardware_agc, |ui| {
                             crate::chrome::slider_readout(
                                 ui,
-                                value_field_w(ui, "-888.8 dB"),
+                                readout_w,
                                 Slider::new(&mut db, g.min_db..=g.max_db)
                                     .step_by(step)
                                     // Whatever this element is actually counted
@@ -3522,11 +3618,19 @@ impl SdroxideApp {
                     let resp = ui
                         .scope(|ui| {
                             if !narrow {
-                                ui.spacing_mut().slider_width = RX_DB_RAIL_W;
+                                ui.spacing_mut().slider_width = if linear.is_some() {
+                                    RX_DB_RAIL_COMPACT_W
+                                } else {
+                                    RX_DB_RAIL_W
+                                };
                             }
                             crate::chrome::slider_readout(
                                 ui,
-                                value_field_w(ui, "-888.8 dB"),
+                                if linear.is_some() {
+                                    value_field_w(ui, "-88.8 dB")
+                                } else {
+                                    value_field_w(ui, "-888.8 dB")
+                                },
                                 Slider::new(&mut db, 0.0..=sdroxide_types::MAX_MANUAL_GAIN_DB)
                                     .step_by(1.0)
                                     .suffix(" dB"),
@@ -5839,7 +5943,7 @@ impl SdroxideApp {
         ui.label(tr!("topbar-tx-audio"));
         if crate::chrome::slider_readout(
             ui,
-            value_field_w(ui, "-88 dB"),
+            value_field_w(ui, "-88.8 dB"),
             Slider::new(&mut db, sdroxide_types::TX_AUDIO_LEVEL_MIN_DB..=0.0)
                 .show_value(true)
                 .custom_formatter(|v, _| format!("{v:.0} dB")),
@@ -7456,6 +7560,24 @@ fn db_rail_w(ui: &egui::Ui) -> f32 {
     RX_DB_RAIL_W + MODULE_ROW_SPACING + value_field_w(ui, "-888.8 dB")
 }
 
+/// [`db_rail_w`] with the LNA rail in the row: the shorter rail, and a readout
+/// that only has to hold the longest figure these rails take (`-88.8 dB`).
+fn db_rail_compact_w(ui: &egui::Ui) -> f32 {
+    RX_DB_RAIL_COMPACT_W + MODULE_ROW_SPACING + value_field_w(ui, "-88 dB")
+}
+
+/// The LNA step rail and its two-figure readout.
+fn lna_rail_w(ui: &egui::Ui) -> f32 {
+    RX_LNA_RAIL_W + MODULE_ROW_SPACING + lna_field_w(ui)
+}
+
+/// The LNA readout: one or two figures, so it is not held to the style's
+/// minimum field width.
+fn lna_field_w(ui: &egui::Ui) -> f32 {
+    crate::chrome::text_width(ui, "-88", egui::TextStyle::Body.resolve(ui.style()))
+        + 2.0 * ui.spacing().button_padding.x
+}
+
 /// The strip's **SQL** label: the word itself, in green while it is holding the
 /// gate open.
 ///
@@ -7928,7 +8050,22 @@ fn rx_rows(
     mode: Mode,
     listener: bool,
 ) -> RxRows {
+    rx_rows_with(ui, gain, false, decim, agc_off, mode, listener)
+}
+
+/// [`rx_rows`] for a front end with a second, stepped gain control beside the
+/// linear one (`lna`): the RSP. The dB rails shorten so the row is no wider.
+fn rx_rows_with(
+    ui: &egui::Ui,
+    gain: bool,
+    lna: bool,
+    decim: bool,
+    agc_off: bool,
+    mode: Mode,
+    listener: bool,
+) -> RxRows {
     let g = MODULE_ROW_SPACING;
+    let db_rail = |ui: &egui::Ui| if lna { db_rail_compact_w(ui) } else { db_rail_w(ui) };
     // The Vol and SQL rails, which is what the box's stretch lengthens — so
     // they are priced at the floor they fall back to, not the style width.
     let rail = STRIP_RAIL_W;
@@ -7940,7 +8077,10 @@ fn rx_rows(
     // decimation chip, the AGC chip, and the manual rail behind it.
     let mut receive = label(&tr!("topbar-vol")) + g + rail;
     if gain {
-        receive += g + label(&tr!("topbar-gain")) + g + db_rail_w(ui);
+        receive += g + label(&tr!("topbar-gain")) + g + db_rail(ui);
+        if lna {
+            receive += g + label(&tr!("topbar-lna")) + g + lna_rail_w(ui);
+        }
     }
     if decim {
         // "DEC off" and "DEC /64" measure much the same, so the chip has one
@@ -7956,7 +8096,7 @@ fn rx_rows(
         receive +=
             g + AgcMode::ALL.iter().map(|a| chip(&format!("AGC {}", a.tr()))).fold(0.0, f32::max);
         if agc_off {
-            receive += g + label(&tr!("topbar-man")) + g + db_rail_w(ui);
+            receive += g + label(&tr!("topbar-man")) + g + db_rail(ui);
         }
     }
 
@@ -12313,6 +12453,43 @@ mod tests {
             assert!((BAND_DOCK_MIN_W..=BAND_DOCK_MAX_W).contains(&max), "{w} pt: {max} pt column");
             assert!(w - max >= BAND_DOCK_WATERFALL_MIN_W, "{w} pt leaves {} pt", w - max);
         }
+    }
+
+    /// What the RSP's second gain rail (LNA) may add to the box, in points,
+    /// beyond the single Gain rail every other rig has. Printed per shape by
+    /// the test below so the cost is visible in the log.
+    const RSP_LNA_WIDTH_BUDGET: f32 = 55.0;
+
+    /// The RSP's second gain rail (LNA) and how much wider it makes the box.
+    #[test]
+    fn the_rsp_lna_rail_does_not_widen_the_rx_box() {
+        let (ctx, input) = desktop_ctx();
+        let mut out = ctx.run_ui(input, |ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(MODULE_ROW_SPACING, MODULE_ROW_SPACING);
+            ui.spacing_mut().slider_width = STRIP_RAIL_W;
+            for agc_off in [false, true] {
+                for decim in [false, true] {
+                    for mode in [Mode::Usb, Mode::Cw, Mode::Nfm, Mode::Am] {
+                        let one = rx_rows(ui, true, decim, agc_off, mode, false);
+                        let two = rx_rows_with(ui, true, true, decim, agc_off, mode, false);
+                        eprintln!(
+                            "agc_off={agc_off} decim={decim} {mode:?}: one={:.1} two={:.1} \
+                             (+{:.1})",
+                            one.w(),
+                            two.w(),
+                            two.w() - one.w()
+                        );
+                        assert!(
+                            two.w() <= one.w() + RSP_LNA_WIDTH_BUDGET,
+                            "agc_off={agc_off} decim={decim} {mode:?}: {} > {}",
+                            two.w(),
+                            one.w()
+                        );
+                    }
+                }
+            }
+        });
+        out.textures_delta.clear();
     }
 
     /// Lay the condensed RX box's two rows out with the real widgets at

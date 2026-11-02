@@ -8979,3 +8979,11 @@ topbar-bw-hint-title = 调整并记忆滤波器
 topbar-bw-hint-body = 单击打开滤波器设置。右键单击预设可修改，单击 M+ 可将当前通带存入您自己的存储。
 
 topbar-preset-memory-hint = 空存储：单击存入当前通带，右键单击手动输入
+
+topbar-lna = LNA
+
+topbar-rsp-total-gain-hint = RSP 的总增益,以 1 dB 为步进(按衰减量显示,越靠右增益越大)。LNA 保持在中频能补偿的最高增益,中频补足分贝数。
+
+topbar-rsp-agc-set-point-hint = RSP 的 AGC 已开启:此滑块调节其设定点,即环路在转换器处保持的 dBFS 电平。关闭 AGC 可使用以 dB 为单位的固定增益。
+
+topbar-rsp-lna-step-hint = RSP 的 LNA 状态,每步一档。用于解除前端过载;旁边的增益滑块是精细调节。

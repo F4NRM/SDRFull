@@ -9052,3 +9052,11 @@ topbar-bw-hint-title = Régler et mémoriser le filtre
 topbar-bw-hint-body = Cliquez pour ouvrir les réglages du filtre. Clic droit sur un préréglage pour le modifier, ou cliquez sur M+ pour stocker la bande passante actuelle dans votre mémoire.
 
 topbar-preset-memory-hint = Mémoire vide : cliquez pour y stocker la bande passante actuelle, clic droit pour en saisir une
+
+topbar-lna = LNA
+
+topbar-rsp-total-gain-hint = Gain total du RSP, par pas de 1 dB (affiché en réduction : vers la droite, plus de gain). Le LNA reste au gain le plus haut que la FI peut compenser ; la FI complète les décibels.
+
+topbar-rsp-agc-set-point-hint = L'AGC du RSP est active : ce curseur règle sa consigne, le niveau en dBFS que la boucle tient au convertisseur. Coupez l'AGC pour un gain fixe en dB.
+
+topbar-rsp-lna-step-hint = L'état du LNA du RSP, une position par palier. Servez-vous-en pour dégager un étage d'entrée saturé ; le curseur Gain à côté est le réglage fin.
