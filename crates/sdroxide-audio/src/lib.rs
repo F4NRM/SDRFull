@@ -445,27 +445,29 @@ fn spawn_input(
             );
         }
     });
-    std::thread::spawn(move || {
-        let mut last = 0u64;
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(5));
-            // The counter lives in the stream's callback: when the stream is
-            // dropped the count is gone and so is this thread.
-            let Some(counter) = dropped_watch.upgrade() else { return };
-            let now = counter.load(Ordering::Relaxed);
-            drop(counter);
-            let lost = now.saturating_sub(last);
-            last = now;
-            if lost > 0 {
-                warn!(
-                    "{what}: {lost} samples dropped in 5 s ({:.0} ms of audio) — the \
-                     reader is not keeping up with \"{drop_label}\" and the audio \
-                     arrives short",
-                    lost as f64 * 1000.0 / 48_000.0
-                );
+    if costs_a_decode {
+        std::thread::spawn(move || {
+            let mut last = 0u64;
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(5));
+                // The counter lives in the stream's callback: when the stream is
+                // dropped the count is gone and so is this thread.
+                let Some(counter) = dropped_watch.upgrade() else { return };
+                let now = counter.load(Ordering::Relaxed);
+                drop(counter);
+                let lost = now.saturating_sub(last);
+                last = now;
+                if lost > 0 {
+                    warn!(
+                        "{what}: {lost} samples dropped in 5 s ({:.0} ms of audio) — the \
+                         reader is not keeping up with \"{drop_label}\" and the audio \
+                         arrives short",
+                        lost as f64 * 1000.0 / 48_000.0
+                    );
+                }
             }
-        }
-    });
+        });
+    }
     Ok(stream)
 }
 
@@ -494,12 +496,6 @@ fn spawn_output(
     let calls = Arc::new(AtomicU64::new(0));
     let watched = calls.clone();
     let watch_label = label.clone();
-    // A transmitter fed short blocks is a transmitter that goes quiet mid-over
-    // and then comes back: the card asked, the modem had nothing, and the
-    // operator hears the carrier drop and rise with no explanation (bench,
-    // 2026-11-01). The count existed and was never read.
-    let under_watch = Arc::downgrade(&underruns);
-    let under_label = label.clone();
     macro_rules! build {
         ($t:ty) => {
             device.build_output_stream(
@@ -558,24 +554,6 @@ fn spawn_output(
                 "{what}: \"{watch_label}\" accepted the stream and is running, but has \
                  asked for no audio at all — anything written to it goes nowhere"
             );
-        }
-    });
-    std::thread::spawn(move || {
-        let mut last = 0u64;
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(5));
-            let Some(counter) = under_watch.upgrade() else { return };
-            let now = counter.load(Ordering::Relaxed);
-            drop(counter);
-            let short = now.saturating_sub(last);
-            last = now;
-            if short > 0 {
-                warn!(
-                    "{what}: {short} blocks went to \"{under_label}\" with nothing to \
-                     play in the last 5 s — the sound goes out of the transmitter \
-                     while it stays keyed"
-                );
-            }
         }
     });
     Ok(stream)

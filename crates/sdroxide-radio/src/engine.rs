@@ -3909,6 +3909,9 @@ struct Engine {
     store: sdroxide_config::Store,
     /// This engine's radio id. See [`EngineConfig::instance`].
     instance: u32,
+    /// The largest sample written to the transmitter since the last report, so
+    /// a silent block cannot look like a working one (bench, 2026-11-02).
+    tx_meter_peak: f32,
     /// Whether this engine runs the station-wide network services.
     /// See [`EngineConfig::primary`].
     primary: bool,
@@ -5230,6 +5233,7 @@ fn engine_thread(
         mode_profiles,
         mode_profiles_dirty,
         instance: engine_cfg.instance,
+        tx_meter_peak: 0.0,
         primary: engine_cfg.primary,
         tx_gate: engine_cfg.tx_gate,
         cw_gate_until: None,
@@ -5425,6 +5429,14 @@ fn engine_thread(
     let mut next_drm = Instant::now();
     let mut next_hd = Instant::now();
     let mut next_session = Instant::now() + SESSION_SAVE_INTERVAL;
+    // **A digital over has to be countable.** The transmitter keys, the audio
+    // reaches the card, and then the operator hears it fall away — and nothing
+    // says whether the modem stopped producing, the card stopped taking, or the
+    // over finished and nobody unkeyed. One line a second while transmitting
+    // answers all three (bench, 2026-11-02).
+    let mut tx_blocks: u64 = 0;
+    let mut tx_samples: u64 = 0;
+    let mut tx_log_at = Instant::now();
 
     // The band-dependent gain ranges, once, before anything is published: the
     // ones the device was opened with are the model's widest, and the band the
@@ -5434,17 +5446,76 @@ fn engine_thread(
     // it where they happen.
     engine.refresh_rx_gains();
 
+    // **A loop that stops advancing must say so.** This thread is the only
+    // thing that reads the radio's sound card, and every poll below can block
+    // on something outside the program: a name lookup, a socket, a disk. When
+    // one does, receive audio stops, the capture ring overflows, and the
+    // operator hears a transmitter that comes and goes with nothing in the log
+    // but the symptom (bench, 2026-11-01/02: 2–5 s of every 5 s lost, FT8
+    // reporting the period 9.1 s short). Each stretch of a tick is named, and a
+    // watcher thread reports one that has not moved.
+    let stage: Arc<std::sync::Mutex<&'static str>> =
+        Arc::new(std::sync::Mutex::new("start"));
+    // Progress, not dwell time. A tick spends almost all of its time inside the
+    // one call that waits — `read` naps 5 ms, a transmit block is paced — so a
+    // watcher comparing the stage *name* between two samples reported a stall
+    // on a perfectly healthy loop, on both engines at once (bench, 2026-11-02).
+    // What it watches instead is whether the tick counter has moved at all.
+    let ticks = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    {
+        let watch = stage.clone();
+        let ticks = ticks.clone();
+        let instance = engine.instance;
+        std::thread::Builder::new()
+            .name(format!("sdroxide-stall-{instance}"))
+            .spawn(move || {
+                use std::sync::atomic::Ordering as O;
+                let mut last_tick = ticks.load(O::Relaxed);
+                let mut since = std::time::Instant::now();
+                let mut reported = false;
+                loop {
+                    std::thread::sleep(std::time::Duration::from_millis(250));
+                    let now = ticks.load(O::Relaxed);
+                    if now != last_tick {
+                        last_tick = now;
+                        since = std::time::Instant::now();
+                        reported = false;
+                        continue;
+                    }
+                    let stuck = since.elapsed();
+                    if stuck > std::time::Duration::from_millis(1500) && !reported {
+                        reported = true;
+                        let name = *watch.lock().unwrap_or_else(|e| e.into_inner());
+                        warn!(
+                            "engine {instance}: the loop has not advanced for {:.1} s, \
+                             stalled in \"{name}\" — audio stops for as long as this lasts",
+                            stuck.as_secs_f32()
+                        );
+                    }
+                }
+            })
+            .ok();
+    }
+    macro_rules! at {
+        ($name:literal) => {{
+            *stage.lock().unwrap_or_else(|e| e.into_inner()) = $name;
+        }};
+    }
+
     // The commands waiting at the top of a tick, kept between iterations so the
     // batch costs no allocation. See [`collapse_superseded`].
     let mut batch: Vec<Command> = Vec::new();
     loop {
+        at!("commands");
+        ticks.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         batch.clear();
         loop {
             match cmd_rx.try_recv() {
                 Ok(cmd) => batch.push(cmd),
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => {
-                    if engine.tx_active {
+                    at!("transmit");
+        if engine.tx_active {
                         let _ = engine.source.tx_end();
                     }
                     // A dying engine must not leave the station interlock
@@ -5469,6 +5540,7 @@ fn engine_thread(
             engine.apply(cmd);
         }
 
+        at!("device swaps");
         // Frontend device swaps: audio (rebuilt cpal ring endpoints) and radio
         // interface (rebuild the IQ source from the persisted config).
         while let Ok(swap) = swap_rx.try_recv() {
@@ -5482,11 +5554,13 @@ fn engine_thread(
 
         // Catch up with shared-store writes by any other engine in the process
         // (an atomic load per tick; reloads only when the generation moved).
+        at!("shared stores");
         engine.poll_shared_stores();
 
         // The band plan's repeater shift, if the operator asked to follow it.
         // Ahead of `push_tx_freq`, which is what tells an accessory where we
         // would transmit — and the shift is part of that answer.
+        at!("control link");
         engine.refresh_auto_shift();
 
         // Where we would transmit, for band-switching accessories that have to
@@ -5511,9 +5585,11 @@ fn engine_thread(
 
         // Drive the FT8/FT4 slot machine (runs in both RX and TX). Returns
         // owned actions to avoid borrowing `engine.digi` and `engine` at once.
+        at!("digital mode");
         engine.poll_digi();
         engine.poll_voice();
         engine.poll_skimmer();
+        at!("decoders");
         engine.poll_ism();
         engine.poll_adsb();
         engine.poll_vdl2();
@@ -5522,6 +5598,7 @@ fn engine_thread(
         engine.poll_qo100();
         engine.poll_hfdl();
         engine.poll_scanner();
+        at!("network services");
         engine.poll_tci_server();
         engine.poll_rigctld();
         engine.poll_band_change();
@@ -5529,6 +5606,7 @@ fn engine_thread(
         engine.poll_spots();
         engine.poll_winlink();
         engine.poll_kiss_server();
+        at!("images and satellites");
         engine.poll_images();
         engine.poll_picup();
         engine.poll_tle_refresh();
@@ -5537,11 +5615,31 @@ fn engine_thread(
         engine.poll_tr_switch();
         // Attach (or re-attach) the configured radio on its own when the
         // front-end is only a stand-in — no trip through Settings.
+        at!("reconnect");
         engine.poll_reconnect();
         engine.poll_playback();
 
         if engine.tx_active {
             // Blocking TX write paces this loop at ~10 ms per block.
+            tx_blocks += 1;
+            tx_samples += TX_AUDIO_BLOCK as u64;
+            if tx_log_at.elapsed() >= std::time::Duration::from_secs(1) {
+                let secs = tx_log_at.elapsed().as_secs_f32();
+                info!(
+                    "digi/voice TX: {} blocks, {} samples in {:.1} s ({:.0} samples/s), \
+                     burst active={}, peak {:.3}",
+                    tx_blocks,
+                    tx_samples,
+                    secs,
+                    tx_samples as f32 / secs,
+                    engine.digi_tx,
+                    engine.tx_meter_peak
+                );
+                engine.tx_meter_peak = 0.0;
+                tx_blocks = 0;
+                tx_samples = 0;
+                tx_log_at = Instant::now();
+            }
             if let Err(e) = engine.tx_block() {
                 let _ = engine.event_tx.send(RadioEvent::ConnectionLost(e.to_string()));
                 // Unkey on the way out. This thread is the only thing that ever
@@ -5585,9 +5683,11 @@ fn engine_thread(
                 }
             }
         } else {
+            at!("waiting for audio");
             match engine.source.read(&mut buf) {
                 Ok(0) => continue, // timeout
                 Ok(n) if engine.audio_mode => {
+                    at!("receive audio");
                     if engine.swap_iq {
                         for s in &mut buf[..n] {
                             s.im = -s.im;
@@ -20249,6 +20349,8 @@ impl Engine {
         self.tx_mon_buf.extend(audio.iter().map(|&a| Complex32::new(a, 0.0)));
         self.tx_analyzer.process(&self.tx_mon_buf);
 
+        self.tx_meter_peak =
+            self.tx_meter_peak.max(audio.iter().fold(0.0f32, |m, s| m.max(s.abs())));
         if let Some(mixer) = self.mixer.as_mut() {
             mixer.push_tx(&audio);
         }
@@ -20269,6 +20371,11 @@ impl Engine {
         }
 
         if digi_done {
+            // The end of a digital over on an audio-modulated rig — the other
+            // half of the same line `tx_block_digi` carries, and the one this
+            // radio takes. Without it an over that ended and an over that never
+            // ended read the same in the log (bench, 2026-11-02).
+            info!("digi TX: the over finished, unkeying");
             // Let any queued audio play out before dropping PTT, so the rig
             // transmits the whole burst (FT8 needs every symbol).
             self.source.tx_drain();
