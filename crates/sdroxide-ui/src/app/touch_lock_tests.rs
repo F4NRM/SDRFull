@@ -343,8 +343,7 @@ fn a_tap_on_aircraft_in_extras_leaves_the_window_open() {
 #[test]
 fn a_tap_on_antenna_in_extras_opens_the_calculator() {
     let _guard = crate::multi::frame_test_lock();
-    let dir =
-        std::env::temp_dir().join(format!("sdroxide-antenna-opens-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("sdroxide-antenna-opens-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     unsafe { std::env::set_var("SDROXIDE_CONFIG_DIR", &dir) };

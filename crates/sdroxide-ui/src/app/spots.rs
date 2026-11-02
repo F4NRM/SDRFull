@@ -125,7 +125,10 @@ fn spot_row(ui: &mut egui::Ui, s: &Spot, now_utc: i64, needed: bool) -> egui::Re
                         ui,
                         36.0,
                         egui::Label::new(
-                            RichText::new(tr!("decodes-new")).size(10.0).strong().color(crate::theme::GREEN()),
+                            RichText::new(tr!("decodes-new"))
+                                .size(10.0)
+                                .strong()
+                                .color(crate::theme::GREEN()),
                         ),
                     );
                 }
@@ -208,7 +211,9 @@ fn opening_row(ui: &mut egui::Ui, o: &sdroxide_types::BandOpening, now: i64) {
                     ui,
                     74.0,
                     egui::Label::new(
-                        RichText::new(tr!("spots-n-calls", n = o.short_calls)).size(10.5).color(gray),
+                        RichText::new(tr!("spots-n-calls", n = o.short_calls))
+                            .size(10.5)
+                            .color(gray),
                     ),
                 );
                 col(
@@ -596,10 +601,14 @@ impl SdroxideApp {
     pub(in crate::app) fn spots_window(&mut self, ctx: &egui::Context, cmds: &mut Vec<Command>) {
         let mut clicked: Option<Spot> = None;
         let mut open_setup = false;
-        let open =
-            self.tool_window(ctx, "spots", &tr!("spots-spots"), [580.0, 480.0], self.show_spots, |me, ui| {
-                me.spots_body(ui, &mut clicked, &mut open_setup)
-            });
+        let open = self.tool_window(
+            ctx,
+            "spots",
+            &tr!("spots-spots"),
+            [580.0, 480.0],
+            self.show_spots,
+            |me, ui| me.spots_body(ui, &mut clicked, &mut open_setup),
+        );
         self.show_spots = open;
         if open_setup {
             // Open the main Settings dialog on the Spots tab.
@@ -663,18 +672,14 @@ impl SdroxideApp {
                 self.spot_in_view_only = !self.spot_in_view_only;
             }
             if crate::chrome::chip(ui, self.view.spots_openings, tr!("spots-openings"))
-                .on_hover_text(
-                    tr!("spots-band-opening-detections-paths"),
-                )
+                .on_hover_text(tr!("spots-band-opening-detections-paths"))
                 .clicked()
             {
                 self.view.spots_openings = !self.view.spots_openings;
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if crate::chrome::chip(ui, false, "KML")
-                    .on_hover_text(
-                        tr!("spots-save-the-spots-you-can-see-as-a"),
-                    )
+                    .on_hover_text(tr!("spots-save-the-spots-you-can-see-as-a"))
                     .clicked()
                 {
                     // What is on screen, not the whole buffer: exporting all
@@ -755,9 +760,7 @@ impl SdroxideApp {
                 let all = self.ui_settings.broadcast_labels_all;
                 let label = if all { tr!("spots-bc-all") } else { tr!("spots-bc-tuned") };
                 if crate::chrome::chip(ui, all, label)
-                    .on_hover_text(
-                        tr!("spots-which-broadcasters-the-waterfall"),
-                    )
+                    .on_hover_text(tr!("spots-which-broadcasters-the-waterfall"))
                     .clicked()
                 {
                     self.ui_settings.broadcast_labels_all = !all;

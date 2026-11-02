@@ -15,7 +15,7 @@
 use std::collections::HashSet;
 
 use crate::awards::LogIndex;
-use crate::digi::{cq_is_for_us, Decode, QsoStep, TranscriptLine};
+use crate::digi::{Decode, QsoStep, TranscriptLine, cq_is_for_us};
 use crate::{Band, Mode};
 
 /// How long the app may go without a single input event before auto mode
@@ -344,11 +344,7 @@ pub fn after_call(record: RetryRecord, budget: u8, now: f64) -> RetryRecord {
         return (1, 0.0);
     }
     let calls = calls.saturating_add(1);
-    if calls >= budget {
-        (calls, now + AUTO_RETRY_DELAY_S)
-    } else {
-        (calls, until)
-    }
+    if calls >= budget { (calls, now + AUTO_RETRY_DELAY_S) } else { (calls, until) }
 }
 
 /// The station auto mode has chosen to answer.
@@ -612,8 +608,10 @@ mod tests {
     #[test]
     fn never_answers_a_call_already_in_the_log() {
         let d = [cq("19LR121", 20, 1)];
-        assert!(pick_cq(&d, &log_with(&["19LR121"]), "26AT715", "", &HashSet::new(), |_| false)
-            .is_none());
+        assert!(
+            pick_cq(&d, &log_with(&["19LR121"]), "26AT715", "", &HashSet::new(), |_| false)
+                .is_none()
+        );
     }
 
     #[test]

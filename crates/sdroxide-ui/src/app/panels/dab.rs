@@ -230,10 +230,7 @@ impl SdroxideApp {
             if let Some(e) = &st.ensemble {
                 ui.label(RichText::new(e).strong());
             } else if st.unavailable.is_none() {
-                ui.label(
-                    RichText::new(tr!("dab-no-ensemble-yet"))
-                        .weak(),
-                );
+                ui.label(RichText::new(tr!("dab-no-ensemble-yet")).weak());
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.label(

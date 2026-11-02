@@ -34,27 +34,25 @@ impl SdroxideApp {
         if !self.weather.show {
             return;
         }
-        let show =
-            self.tool_window(ctx, "weather", &tr!("weather-title"), [720.0, 640.0], true, |me, ui| {
+        let show = self.tool_window(
+            ctx,
+            "weather",
+            &tr!("weather-title"),
+            [720.0, 640.0],
+            true,
+            |me, ui| {
                 me.weather_body(ui);
-            });
+            },
+        );
         self.weather.show = show;
     }
 
     fn weather_body(&mut self, ui: &mut egui::Ui) {
-        ui.label(
-            RichText::new(tr!("weather-intro"))
-            .size(11.0)
-            .color(gray(140)),
-        );
+        ui.label(RichText::new(tr!("weather-intro")).size(11.0).color(gray(140)));
         ui.add_space(6.0);
 
         if self.weather_reports.is_empty() {
-            ui.label(
-                RichText::new(tr!("weather-nothing-decoded"))
-                .size(12.0)
-                .color(gray(120)),
-            );
+            ui.label(RichText::new(tr!("weather-nothing-decoded")).size(12.0).color(gray(120)));
             return;
         }
 
@@ -69,9 +67,16 @@ impl SdroxideApp {
                         // Which station, which code, and when it was observed —
                         // the three facts that make a list of figures usable.
                         let head = match (r.callsign.as_deref(), r.observed) {
-                            (Some(c), Some((d, h))) => tr!("weather-head-call-day-hour", call = c, day = d, hour = format!("{h:02}")),
+                            (Some(c), Some((d, h))) => tr!(
+                                "weather-head-call-day-hour",
+                                call = c,
+                                day = d,
+                                hour = format!("{h:02}")
+                            ),
                             (Some(c), None) => format!("{c}"),
-                            (None, Some((d, _))) => tr!("weather-head-day", day = format!("{d:02}")),
+                            (None, Some((d, _))) => {
+                                tr!("weather-head-day", day = format!("{d:02}"))
+                            }
                             (None, None) => tr!("weather-head-report"),
                         };
                         ui.horizontal(|ui| {

@@ -14,7 +14,7 @@
 //! the wasm browser client — the composed buffer is both the live preview and,
 //! PNG-encoded, the transmit payload.
 
-use ab_glyph::{point, Font, FontRef, PxScale, ScaleFont};
+use ab_glyph::{Font, FontRef, PxScale, ScaleFont, point};
 use eframe::egui;
 
 /// The banner strip drawn across the top of a transmitted picture, with the

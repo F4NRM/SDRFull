@@ -11105,7 +11105,8 @@ impl Engine {
                 return;
             }
             WantAudioLevel => {
-                let lease = std::time::Duration::from_secs_f64(sdroxide_types::AUDIO_LEVEL_LEASE_SECS);
+                let lease =
+                    std::time::Duration::from_secs_f64(sdroxide_types::AUDIO_LEVEL_LEASE_SECS);
                 self.audio_level_until = Some(Instant::now() + lease);
                 return;
             }
@@ -18720,10 +18721,7 @@ impl Engine {
             // what is sent.
             if self.state.rx[0].mode.is_rx_only() {
                 let mode = self.state.rx[0].mode;
-                return self.deny_tx(&format!(
-                    "{} is a receive-only mode",
-                    mode.label()
-                ));
+                return self.deny_tx(&format!("{} is a receive-only mode", mode.label()));
             }
             // The SWR latch comes before every other rail, including the
             // station interlock. It is a pure state check with no side effects

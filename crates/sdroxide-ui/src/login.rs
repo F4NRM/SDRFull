@@ -652,7 +652,9 @@ fn card(
             if ui
                 .checkbox(
                     &mut remember,
-                    RichText::new(tr!("login-remember-me")).size(if touch { 13.0 } else { 11.5 }).strong(),
+                    RichText::new(tr!("login-remember-me"))
+                        .size(if touch { 13.0 } else { 11.5 })
+                        .strong(),
                 )
                 .changed()
             {
@@ -671,11 +673,10 @@ fn card(
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let remember = crate::chrome::checkbox(ui, &mut form.remember, tr!("login-remember-device"));
+        let remember =
+            crate::chrome::checkbox(ui, &mut form.remember, tr!("login-remember-device"));
         if !touch {
-            remember.on_hover_text(
-                tr!("login-signs-without-asking-next-time"),
-            );
+            remember.on_hover_text(tr!("login-signs-without-asking-next-time"));
         } else {
             ui.label(
                 RichText::new(tr!("login-keeps-password-device-clear"))

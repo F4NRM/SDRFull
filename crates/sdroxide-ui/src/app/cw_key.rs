@@ -250,10 +250,7 @@ fn run(paths: Vec<PathBuf>, setup: KeySetup, shared: &Shared, stop: &AtomicBool)
     if any_ungrabbed {
         // Not fatal: the contacts are still readable, they just also arrive as
         // clicks. Say so instead of pretending the grab worked.
-        set_error(
-            shared,
-            tr!("cwkey-grab-failed"),
-        );
+        set_error(shared, tr!("cwkey-grab-failed"));
     }
     for fd in &fds {
         unsafe { libc::fcntl(*fd, libc::F_SETFL, libc::O_NONBLOCK) };

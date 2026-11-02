@@ -677,9 +677,10 @@ impl SdroxideApp {
         // rather than inside the tab arm because `qo100_body` needs `&mut self`
         // and the state lives on `self`.
         let mut qo100 = std::mem::take(&mut self.qo100_win);
-        let show = self.tool_window(ctx, "sat", &tr!("sat-satellite"), [560.0, 680.0], true, |me, ui| {
-            me.sat_body(ui, &mut win, &mut qo100, cmds);
-        });
+        let show =
+            self.tool_window(ctx, "sat", &tr!("sat-satellite"), [560.0, 680.0], true, |me, ui| {
+                me.sat_body(ui, &mut win, &mut qo100, cmds);
+            });
         self.show_sat = show;
         self.sat_win = win;
         self.qo100_win = qo100;
@@ -1118,9 +1119,8 @@ impl SdroxideApp {
             if !win.search.is_empty() && ui.small_button("×").clicked() {
                 win.search.clear();
             }
-            crate::chrome::checkbox(ui, &mut win.all, &tr!("settings-tle-all-satellites")).on_hover_text(
-                tr!("sat-off-only-satellites-with"),
-            );
+            crate::chrome::checkbox(ui, &mut win.all, &tr!("settings-tle-all-satellites"))
+                .on_hover_text(tr!("sat-off-only-satellites-with"));
             if qth.is_none() {
                 ui.label(
                     RichText::new(tr!("sat-set-your-grid-passes-settings-2"))

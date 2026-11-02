@@ -182,9 +182,8 @@ pub(in crate::app) fn online_hint(q: &Query, all: &[Haystack]) -> Option<String>
         return None;
     }
     let missing = all.iter().filter(|h| !h.online).count();
-    (missing > 0).then(|| {
-        tr!("aircraft-search-missing-online", missing = missing, total = all.len())
-    })
+    (missing > 0)
+        .then(|| tr!("aircraft-search-missing-online", missing = missing, total = all.len()))
 }
 
 /// `"12 of 47"`.
@@ -300,9 +299,15 @@ pub(in crate::app) fn search_box(
     hint: Option<&str>,
 ) {
     ui.horizontal(|ui| {
-        ui.add(egui::TextEdit::singleline(text).hint_text(tr!("aircraft-search-hint")).desired_width(width))
-            .on_hover_text(help());
-        if !text.is_empty() && ui.small_button("✕").on_hover_text(tr!("aircraft-search-clear")).clicked() {
+        ui.add(
+            egui::TextEdit::singleline(text)
+                .hint_text(tr!("aircraft-search-hint"))
+                .desired_width(width),
+        )
+        .on_hover_text(help());
+        if !text.is_empty()
+            && ui.small_button("✕").on_hover_text(tr!("aircraft-search-clear")).clicked()
+        {
             text.clear();
         }
         if let Some((shown, total)) = counts {

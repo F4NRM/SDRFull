@@ -37,10 +37,7 @@ impl SdroxideApp {
                     return;
                 };
                 if st.messages.is_empty() {
-                    ui.label(
-                        RichText::new(tr!("ale-no-words-yet"))
-                        .weak(),
-                    );
+                    ui.label(RichText::new(tr!("ale-no-words-yet")).weak());
                 }
                 for m in st.messages.iter().rev() {
                     let (_, _, _, h, mi, s) = sdroxide_types::utc_ymd_hms(m.at_unix);

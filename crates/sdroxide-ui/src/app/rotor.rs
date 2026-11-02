@@ -71,11 +71,9 @@ impl SdroxideApp {
             ui.label(msg);
             ui.add_space(6.0);
             ui.label(
-                RichText::new(
-                    tr!("rotor-set-one-up-in-settings-servers-a"),
-                )
-                .size(10.5)
-                .color(theme::CYAN_DIM()),
+                RichText::new(tr!("rotor-set-one-up-in-settings-servers-a"))
+                    .size(10.5)
+                    .color(theme::CYAN_DIM()),
             );
             return;
         }
@@ -101,17 +99,25 @@ impl SdroxideApp {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             ui.label(
-                RichText::new(tr!("rotor-beam", az = format!("{hw_az:.0}"), el = format!("{hw_el:.0}")))
-                    .size(12.0)
-                    .strong()
-                    .color(theme::CYAN()),
+                RichText::new(tr!(
+                    "rotor-beam",
+                    az = format!("{hw_az:.0}"),
+                    el = format!("{hw_el:.0}")
+                ))
+                .size(12.0)
+                .strong()
+                .color(theme::CYAN()),
             );
             if let Some((taz, tel)) = self.rotor_target {
                 crate::chrome::row_tail(ui, |ui| {
                     ui.label(
-                        RichText::new(tr!("rotor-target", az = format!("{taz:.0}"), el = format!("{tel:.0}")))
-                            .size(10.5)
-                            .color(theme::YELLOW()),
+                        RichText::new(tr!(
+                            "rotor-target",
+                            az = format!("{taz:.0}"),
+                            el = format!("{tel:.0}")
+                        ))
+                        .size(10.5)
+                        .color(theme::YELLOW()),
                     );
                 });
             }
@@ -130,7 +136,11 @@ impl SdroxideApp {
             }
             if let Some(park) = self.rot_cfg_edit.park {
                 if crate::chrome::chip(ui, false, tr!("rotor-park"))
-                    .on_hover_text(tr!("rotor-park-hover", az = format!("{:.0}", park.0), el = format!("{:.0}", park.1)))
+                    .on_hover_text(tr!(
+                        "rotor-park-hover",
+                        az = format!("{:.0}", park.0),
+                        el = format!("{:.0}", park.1)
+                    ))
                     .clicked()
                 {
                     cmds.push(Command::PointRotator { az: park.0, el: park.1 });
@@ -138,9 +148,7 @@ impl SdroxideApp {
                 }
             }
             if crate::chrome::chip(ui, false, tr!("topbar-auto"))
-                .on_hover_text(
-                    tr!("rotor-hand-the-antenna-back-to-the"),
-                )
+                .on_hover_text(tr!("rotor-hand-the-antenna-back-to-the"))
                 .clicked()
             {
                 cmds.push(Command::SetRotatorAuthority(RotatorAuthority::Auto));
@@ -271,10 +279,7 @@ impl SdroxideApp {
 
         ui.horizontal(|ui| {
             ui.label(RichText::new(tr!("rotor-dx-country")).size(11.0).color(theme::CYAN_DIM()));
-            let selected = self
-                .rotor_country
-                .clone()
-                .unwrap_or_else(|| tr!("settings-amp-choose"));
+            let selected = self.rotor_country.clone().unwrap_or_else(|| tr!("settings-amp-choose"));
             egui::ComboBox::from_id_salt("rotor-country")
                 .selected_text(selected)
                 .width(190.0)
@@ -299,11 +304,9 @@ impl SdroxideApp {
         match (self.rotor_country.as_ref(), home) {
             (Some(_), None) => {
                 ui.label(
-                    RichText::new(
-                        tr!("rotor-set-your-grid-locator-settings"),
-                    )
-                    .size(10.0)
-                    .color(theme::YELLOW()),
+                    RichText::new(tr!("rotor-set-your-grid-locator-settings"))
+                        .size(10.0)
+                        .color(theme::YELLOW()),
                 );
             }
             (Some(name), Some(home)) => {
@@ -312,9 +315,13 @@ impl SdroxideApp {
                 if let Some(e) = all_entities().iter().find(|e| e.name == name.as_str()) {
                     let az = bearing_deg(home, (e.lat, e.lon));
                     ui.label(
-                        RichText::new(tr!("rotor-country-bearing", name = name, az = format!("{az:.0}")))
-                            .size(10.0)
-                            .color(theme::CYAN_DIM()),
+                        RichText::new(tr!(
+                            "rotor-country-bearing",
+                            name = name,
+                            az = format!("{az:.0}")
+                        ))
+                        .size(10.0)
+                        .color(theme::CYAN_DIM()),
                     );
                 }
             }

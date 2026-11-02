@@ -6326,6 +6326,13 @@ impl SdrPlayConfig {
     pub const DIV_FREEZE_ELEMENT: &'static str = DIV_FREEZE_ELEMENT;
     pub const DIV_RESET_ELEMENT: &'static str = DIV_RESET_ELEMENT;
 
+    /// One linear gain control over both knobs: the **total** gain reduction
+    /// in dB (LNA plus IF), carried negated like the two it sits beside, so
+    /// more is louder. The source splits it between the LNA and the IF (see
+    /// `sdroxide-sdrplay`'s `ladder.rs`). An addition: `LNA` and `IF` keep
+    /// their meaning, so removing this element restores the old behaviour.
+    pub const TOTAL_GAIN_ELEMENT: &'static str = "RSPGAIN";
+
     /// IF gain reduction limits, in dB, from the API (`NORMAL_MIN_GR` and
     /// `MAX_BB_GR`).
     pub const IF_GR_MIN: i32 = 20;
@@ -8950,6 +8957,7 @@ mod tests {
         assert_eq!(SdrPlayConfig::IF_GAIN_ELEMENT, "IF");
         assert_eq!(SdrPlayConfig::AGC_ELEMENT, "AGC");
         assert_eq!(SdrPlayConfig::AGC_SETPOINT_ELEMENT, "AGCSP");
+        assert_eq!(SdrPlayConfig::TOTAL_GAIN_ELEMENT, "RSPGAIN");
         assert_eq!(SdrPlayConfig::IF_GR_MIN, 20);
         assert_eq!(SdrPlayConfig::IF_GR_MAX, 59);
         assert_eq!(SdrPlayConfig::IF_GR_MIN_EXTENDED, 0);

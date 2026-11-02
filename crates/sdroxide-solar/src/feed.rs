@@ -792,9 +792,8 @@ pub fn band_activity_cached() -> Option<indices::BandActivityTable> {
     match http_get(&agent, &url, &cache.validators(&url), JSON_LIMIT) {
         Ok(Some((bytes, validators, _))) => {
             let now = now_unix();
-            let parsed = std::str::from_utf8(&bytes)
-                .ok()
-                .and_then(|t| indices::parse_band_activity(t, now));
+            let parsed =
+                std::str::from_utf8(&bytes).ok().and_then(|t| indices::parse_band_activity(t, now));
             // Only cache what parsed; an error page over a good document would
             // outlive the failed fetch.
             if parsed.is_some() {
@@ -847,9 +846,8 @@ pub fn psk_activity_cached() -> Option<indices::BandActivityTable> {
     match http_get(&agent, url, &cache.validators(url), JSON_LIMIT) {
         Ok(Some((bytes, validators, _))) => {
             let now = now_unix();
-            let parsed = std::str::from_utf8(&bytes)
-                .ok()
-                .and_then(|t| indices::parse_psk_activity(t, now));
+            let parsed =
+                std::str::from_utf8(&bytes).ok().and_then(|t| indices::parse_psk_activity(t, now));
             if parsed.is_some() {
                 cache.write(PSK_ACTIVITY_CACHE, url, &bytes, validators);
             }

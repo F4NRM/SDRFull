@@ -170,10 +170,7 @@ fn open_transport(cfg: &RotatorConfig) -> Result<Box<dyn Transport>, String> {
         RotatorTransport::EasyComm2 | RotatorTransport::Gs232 => {
             Ok(Box::new(SerialTransport::open(cfg)?))
         }
-        RotatorTransport::PsRotator => Ok(Box::new(PstLink::open(
-            cfg,
-            cfg.port.wrapping_add(1),
-        )?)),
+        RotatorTransport::PsRotator => Ok(Box::new(PstLink::open(cfg, cfg.port.wrapping_add(1))?)),
     }
 }
 
@@ -527,7 +524,7 @@ impl SerialTransport {
             RotatorTransport::EasyComm2 => SerialProtocol::EasyComm2,
             RotatorTransport::Gs232 => SerialProtocol::Gs232,
             RotatorTransport::Rotctld | RotatorTransport::PsRotator => {
-                return Err("not a serial transport".into())
+                return Err("not a serial transport".into());
             }
         };
         if cfg.serial_port.trim().is_empty() {
@@ -940,11 +937,7 @@ mod pst_tests {
     /// The three transports this fork had before must all still be there.
     #[test]
     fn the_transports_we_already_had_are_untouched() {
-        let had = [
-            RotatorTransport::Rotctld,
-            RotatorTransport::EasyComm2,
-            RotatorTransport::Gs232,
-        ];
+        let had = [RotatorTransport::Rotctld, RotatorTransport::EasyComm2, RotatorTransport::Gs232];
         for t in had {
             assert_ne!(t, RotatorTransport::PsRotator);
         }

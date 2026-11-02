@@ -124,17 +124,27 @@ pub(in crate::app) fn macro_window(
             // without this is the paragraph below.
             ui.set_min_width(crate::layout::window_w(ctx, 520.0));
             ui.label(
-                RichText::new(tr!("macros-buttons-note"))
-                .size(10.5)
-                .color(crate::theme::gray(150)),
+                RichText::new(tr!("macros-buttons-note")).size(10.5).color(crate::theme::gray(150)),
             );
             ui.add_space(6.0);
             egui::Grid::new(format!("{id}-grid")).num_columns(4).spacing([6.0, 4.0]).show(
                 ui,
                 |ui| {
-                    ui.label(RichText::new(tr!("macros-column-key")).size(10.0).color(crate::theme::gray(140)));
-                    ui.label(RichText::new(tr!("macros-column-button")).size(10.0).color(crate::theme::gray(140)));
-                    ui.label(RichText::new(tr!("macros-column-sends")).size(10.0).color(crate::theme::gray(140)));
+                    ui.label(
+                        RichText::new(tr!("macros-column-key"))
+                            .size(10.0)
+                            .color(crate::theme::gray(140)),
+                    );
+                    ui.label(
+                        RichText::new(tr!("macros-column-button"))
+                            .size(10.0)
+                            .color(crate::theme::gray(140)),
+                    );
+                    ui.label(
+                        RichText::new(tr!("macros-column-sends"))
+                            .size(10.0)
+                            .color(crate::theme::gray(140)),
+                    );
                     ui.label("");
                     ui.end_row();
                     for (i, m) in macros.iter_mut().enumerate() {
@@ -154,7 +164,8 @@ pub(in crate::app) fn macro_window(
                         changed |= crate::chrome::field_sized(
                             ui,
                             [80.0, 22.0],
-                            egui::TextEdit::singleline(&mut m.label).hint_text(tr!("macros-label-hint")),
+                            egui::TextEdit::singleline(&mut m.label)
+                                .hint_text(tr!("macros-label-hint")),
                         )
                         .changed();
                         changed |= crate::chrome::field_sized(
@@ -186,9 +197,13 @@ pub(in crate::app) fn macro_window(
                     changed = true;
                 }
                 ui.label(
-                    RichText::new(tr!("macros-note-placeholders", mycall = "{MYCALL}", mygrid = "{MYGRID}"))
-                        .size(10.5)
-                        .color(crate::theme::gray(140)),
+                    RichText::new(tr!(
+                        "macros-note-placeholders",
+                        mycall = "{MYCALL}",
+                        mygrid = "{MYGRID}"
+                    ))
+                    .size(10.5)
+                    .color(crate::theme::gray(140)),
                 );
             });
         });

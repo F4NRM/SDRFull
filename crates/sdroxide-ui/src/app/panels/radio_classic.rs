@@ -17,10 +17,12 @@
 use crate::i18n::{Tr, tr};
 use std::collections::VecDeque;
 
-use eframe::egui::{self, Align, Align2, Color32, FontId, Pos2, Rect, RichText, Stroke, StrokeKind, vec2};
+use eframe::egui::{
+    self, Align, Align2, Color32, FontId, Pos2, Rect, RichText, Stroke, StrokeKind, vec2,
+};
 use sdroxide_types::{
-    AUDIO_BANDS, AgcMode, Band, Command, Mode, RdsData, RxId, SQUELCH_CLOSED_DB, SQUELCH_OPEN_DB,
-    BroadcastStation, MemoryChannel, broadcast, byte_to_unit, pty_name,
+    AUDIO_BANDS, AgcMode, Band, BroadcastStation, Command, MemoryChannel, Mode, RdsData, RxId,
+    SQUELCH_CLOSED_DB, SQUELCH_OPEN_DB, broadcast, byte_to_unit, pty_name,
 };
 
 use crate::app::SdroxideApp;
@@ -673,7 +675,8 @@ impl SdroxideApp {
             _ => tr!("panels-float-chip-hint"),
         };
         let size = vec2(ICON_W, ICON_H);
-        let at = Rect::from_min_size(Pos2::new(outer.right() - size.x - 4.0, outer.top() + 3.0), size);
+        let at =
+            Rect::from_min_size(Pos2::new(outer.right() - size.x - 4.0, outer.top() + 3.0), size);
         let clicked = ui
             .scope_builder(egui::UiBuilder::new().max_rect(at), |ui| {
                 chip_window_icon_sized(ui, icon, size).on_hover_text(hover).clicked()
@@ -837,7 +840,9 @@ impl SdroxideApp {
             crate::chrome::menu_caption(ui, &tr!("rc-bands"));
             ui.horizontal_wrapped(|ui| {
                 for (g, label) in Group::ALL {
-                    if crate::chrome::chip(ui, self.radio_classic.group == g, group_tr(label)).clicked() {
+                    if crate::chrome::chip(ui, self.radio_classic.group == g, group_tr(label))
+                        .clicked()
+                    {
                         self.radio_classic.group = g;
                     }
                 }
@@ -852,7 +857,9 @@ impl SdroxideApp {
                             Some(b) if b != Band::Gen => band == b && p.holds(hz),
                             _ => p.holds(hz),
                         };
-                        if crate::chrome::chip(ui, lit, preset_tr(p.label.as_str())).clicked() && !lit {
+                        if crate::chrome::chip(ui, lit, preset_tr(p.label.as_str())).clicked()
+                            && !lit
+                        {
                             match p.band {
                                 Some(b) => cmds.push(Command::SetBand(b)),
                                 None => {
@@ -1064,8 +1071,7 @@ impl SdroxideApp {
             (
                 "SQL".to_string(),
                 if open { tr!("rc-open") } else { format!("{:.0} dB", rx.squelch_db) },
-                tr!("rc-sql-click-open-back-to-the-last")
-                    .to_string(),
+                tr!("rc-sql-click-open-back-to-the-last").to_string(),
             ),
         ];
         let cell_w = (boxes.width() - 3.0 * 6.0) / 4.0;
@@ -1077,7 +1083,11 @@ impl SdroxideApp {
                 vec2(cell_w, boxes.height()),
             );
             let resp = ui
-                .interact(r, ui.id().with(("radio-classic-box", cap.as_str())), egui::Sense::click())
+                .interact(
+                    r,
+                    ui.id().with(("radio-classic-box", cap.as_str())),
+                    egui::Sense::click(),
+                )
                 .on_hover_text(hint.as_str());
             // One notch per wheel event, whatever the smoothing makes of it.
             let notches = if resp.hovered() {

@@ -1433,24 +1433,24 @@ fn pass_window(ui: &egui::Ui, st: &mut SolarUi, data: Option<&SolarData>, sim_no
             }
         }
 
-            // The operator's own entry wins over the built-in table: they have
-            // either corrected it or added a satellite it never knew about.
-            // `tunable` is false in the browser: its relay carries no commands,
-            // so a clickable value there would be a lie — same rule as LOCK.
-            let clicked = {
-                let (freqs, mine) = match st.sat_cfg.freqs_for(id) {
-                    Some(f) => (Some(f), true),
-                    None => (sdroxide_solar::satfreq::builtin_for(id), false),
-                };
-                freq_table(ui, freqs, mine, &cache.name, cfg!(not(target_arch = "wasm32")))
+        // The operator's own entry wins over the built-in table: they have
+        // either corrected it or added a satellite it never knew about.
+        // `tunable` is false in the browser: its relay carries no commands,
+        // so a clickable value there would be a lie — same rule as LOCK.
+        let clicked = {
+            let (freqs, mine) = match st.sat_cfg.freqs_for(id) {
+                Some(f) => (Some(f), true),
+                None => (sdroxide_solar::satfreq::builtin_for(id), false),
             };
-            #[cfg(not(target_arch = "wasm32"))]
-            if let Some(idx) = clicked {
-                st.tune_requested = Some((id, idx));
-            }
-            #[cfg(target_arch = "wasm32")]
-            let _ = clicked;
-        });
+            freq_table(ui, freqs, mine, &cache.name, cfg!(not(target_arch = "wasm32")))
+        };
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(idx) = clicked {
+            st.tune_requested = Some((id, idx));
+        }
+        #[cfg(target_arch = "wasm32")]
+        let _ = clicked;
+    });
     if !open {
         st.selected_sat = None;
     }

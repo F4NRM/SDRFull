@@ -19,9 +19,9 @@ use sdroxide_aircraft_history::{FORMAT_VERSION, ListReply, Status, Summary};
 use sdroxide_aircraft_online::{Info, Status as InfoStatus};
 
 use super::aircraft_history::Reason;
-use crate::i18n::tr;
 use super::aircraft_online::Badge;
 use super::aircraft_registry::AircraftCard;
+use crate::i18n::tr;
 
 /// How often the station's list is fetched again while the view is open.
 pub(in crate::app) const REFRESH_S: i64 = 60;

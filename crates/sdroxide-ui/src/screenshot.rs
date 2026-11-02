@@ -184,7 +184,10 @@ impl ScreenshotApp {
                     self.inner.open_settings(tab);
                 } else if name_lower == "schedule" {
                     self.inner.open_dialog("schedule");
-                } else if name_lower == "session_qsos" || name_lower == "live_log" || name_lower == "live log" {
+                } else if name_lower == "session_qsos"
+                    || name_lower == "live_log"
+                    || name_lower == "live log"
+                {
                     self.inner.open_dialog("session_qsos");
                 } else {
                     return Err(format!(
@@ -277,8 +280,9 @@ impl ScreenshotApp {
                 self.wait_frames = 2;
             }
             ScreenshotAction::Wait(ms) => {
-                self.wait_until =
-                    Some(std::time::Instant::now() + std::time::Duration::from_millis(u64::from(ms)));
+                self.wait_until = Some(
+                    std::time::Instant::now() + std::time::Duration::from_millis(u64::from(ms)),
+                );
                 self.action_index += 1;
             }
             ScreenshotAction::Centre(hz) => {

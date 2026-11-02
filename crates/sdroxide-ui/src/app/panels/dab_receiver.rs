@@ -28,7 +28,9 @@ const ROW_H: f32 = 22.0;
 /// on, said in words — "Channel received 8D 201.072".
 pub(in crate::app) fn channel_caption(channel: &str) -> String {
     match sdroxide_types::DAB_BAND_III.iter().find(|(n, _)| *n == channel) {
-        Some((n, hz)) => tr!("dab-channel-received-mhz", channel = *n, mhz = dab_mhz(*hz).to_string()),
+        Some((n, hz)) => {
+            tr!("dab-channel-received-mhz", channel = *n, mhz = dab_mhz(*hz).to_string())
+        }
         None if channel.is_empty() => tr!("dab-no-channel-received"),
         None => tr!("dab-channel-received", channel = channel),
     }
@@ -542,8 +544,9 @@ impl SdroxideApp {
                     if resp.hovered() || ui.rect_contains_pointer(r) {
                         let c = r.right_center() - Vec2::new(10.0, 0.0);
                         let xr = Rect::from_center_size(c, Vec2::splat(16.0));
-                        let x =
-                            ui.interact(xr, resp.id.with("clear"), Sense::click()).on_hover_text(tr!("dab-clear-station-hint"));
+                        let x = ui
+                            .interact(xr, resp.id.with("clear"), Sense::click())
+                            .on_hover_text(tr!("dab-clear-station-hint"));
                         p.text(
                             c,
                             Align2::CENTER_CENTER,
@@ -642,14 +645,14 @@ impl SdroxideApp {
             if crate::chrome::chip_sized(
                 ui,
                 scanning,
-                if scanning { label("⏹", &tr!("windows-stop"), false) } else { label("⟳", &tr!("topbar-chip-scan"), false) },
+                if scanning {
+                    label("⏹", &tr!("windows-stop"), false)
+                } else {
+                    label("⟳", &tr!("topbar-chip-scan"), false)
+                },
                 size,
             )
-            .on_hover_text(if scanning {
-                tr!("dab-stop-sweep-hint")
-            } else {
-                tr!("dab-scan-hint")
-            })
+            .on_hover_text(if scanning { tr!("dab-stop-sweep-hint") } else { tr!("dab-scan-hint") })
             .clicked()
             {
                 self.dab_toggle_scan(cmds);

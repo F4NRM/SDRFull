@@ -1005,17 +1005,19 @@ mod tests {
         let before = store.status().slot(1);
 
         let mut template = sdroxide_types::Composer::default();
-        template.layers.push(sdroxide_types::TextLayer {
-            text: "FROM A LAYOUT".into(),
-            ..Default::default()
-        });
+        template
+            .layers
+            .push(sdroxide_types::TextLayer { text: "FROM A LAYOUT".into(), ..Default::default() });
         assert!(store.set_composer(1, template.clone()));
 
         let after = store.status().slot(1);
         assert_eq!(after.composer, template, "the layout did not land");
         assert_eq!(after.version, before.version, "a layout load changed the picture");
         assert_eq!(after.message, before.message, "a layout load rewrote the caption");
-        assert_eq!(after.apply_overlay, before.apply_overlay, "a layout load moved the overlay switch");
+        assert_eq!(
+            after.apply_overlay, before.apply_overlay,
+            "a layout load moved the overlay switch"
+        );
         assert!(after.has_picture(), "a layout load emptied the slot");
     }
 

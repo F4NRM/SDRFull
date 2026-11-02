@@ -44,7 +44,9 @@ pub(in crate::app) fn settings_ui_tab(
     report_pick: &std::sync::Arc<std::sync::Mutex<Option<String>>>,
 ) {
     use sdroxide_types::{ChromeStyle, FontSize, LayoutMode, UiSettings, UiTheme};
-    ui.label(RichText::new(tr!("settings-ui-display")).size(14.0).strong().color(crate::theme::CYAN()));
+    ui.label(
+        RichText::new(tr!("settings-ui-display")).size(14.0).strong().color(crate::theme::CYAN()),
+    );
     {
         // **How many broadcast stations a listener's screen may show** (#80).
         // The window is the panadapter's span, which is right for a label on
@@ -56,13 +58,15 @@ pub(in crate::app) fn settings_ui_tab(
             .selected_text(broadcast_scope_label(cfg.broadcast_scope))
             .show_styled(ui, |ui| {
                 for scope in [B::InView, B::WholeBand] {
-                    ui.selectable_value(&mut cfg.broadcast_scope, scope, broadcast_scope_label(scope));
+                    ui.selectable_value(
+                        &mut cfg.broadcast_scope,
+                        scope,
+                        broadcast_scope_label(scope),
+                    );
                 }
             })
             .response
-            .on_hover_text(
-                tr!("settings-ui-broadcast-stations-hint"),
-            );
+            .on_hover_text(tr!("settings-ui-broadcast-stations-hint"));
         // The **other** question about broadcasters, and the one the operator kept
         // having to answer with ⭐ ALL: whether the waterfall names the station the
         // dial is on or the whole band. The chip is in the SPOTS window, where it
@@ -71,17 +75,13 @@ pub(in crate::app) fn settings_ui_tab(
         ui.label(tr!("settings-ui-waterfall-labels"));
         ui.horizontal(|ui| {
             if crate::chrome::chip(ui, !cfg.broadcast_labels_all, tr!("settings-ui-tuned-only"))
-                .on_hover_text(
-                    tr!("settings-ui-tuned-only-hint"),
-                )
+                .on_hover_text(tr!("settings-ui-tuned-only-hint"))
                 .clicked()
             {
                 cfg.broadcast_labels_all = false;
             }
             if crate::chrome::chip(ui, cfg.broadcast_labels_all, tr!("settings-ui-whole-band"))
-                .on_hover_text(
-                    tr!("settings-ui-whole-band-hint"),
-                )
+                .on_hover_text(tr!("settings-ui-whole-band-hint"))
                 .clicked()
             {
                 cfg.broadcast_labels_all = true;
@@ -93,577 +93,593 @@ pub(in crate::app) fn settings_ui_tab(
     // who remembers them will come looking. They moved to the panadapter's own
     // button, beside the picture they change — see
     // `SdroxideApp::panadapter_controls`.
-    super::note_at(
-        ui,
-        &tr!("settings-ui-moved-note"),
-        Some(11.0),
-    );
+    super::note_at(ui, &tr!("settings-ui-moved-note"), Some(11.0));
     ui.add_space(6.0);
-    egui::Grid::new("ui-grid").num_columns(2).spacing([12.0, 8.0]).min_row_height(ui.spacing().interact_size.y).show(ui, |ui| {
-        ui.label(tr!("settings-ui-layout"));
-        enum_combo(ui, "ui-layout", &mut cfg.layout, &LayoutMode::ALL, LayoutMode::tr);
-        ui.end_row();
-
-        // The two arrangements of the desktop. It is beside Layout because it
-        // is the same kind of choice — where things live on this screen — and
-        // not under it, because it is not a size: the column is offered at
-        // every desktop size and left out where there is no room for it.
-        ui.label(tr!("settings-ui-classic-ui")).on_hover_text(
-            tr!("settings-ui-classic-ui-hint"),
-        );
-        crate::chrome::checkbox(ui, &mut cfg.classic_ui, tr!("settings-ui-classic-ui-check"));
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-theme"));
-        enum_combo(ui, "ui-theme", &mut cfg.theme, &UiTheme::ALL, UiTheme::tr);
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-button-style"));
-        enum_combo(ui, "ui-btn-style", &mut cfg.button_style, &ChromeStyle::ALL, ChromeStyle::tr);
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-updates"));
-        crate::chrome::checkbox(
-            ui,
-            &mut cfg.check_for_updates,
-            tr!("settings-ui-updates-check"),
-        )
-        .on_hover_text(
-            tr!("settings-ui-updates-hint"),
-        );
-        ui.end_row();
-
-        // The **undocked** modules. A window arrangement, chosen once and kept,
-        // rather than something reached for mid-QSO — so it lives here with the
-        // other display settings. One row per [`DetachableModule`], so the next
-        // detachable module appears here for free. Native only: the browser
-        // keeps every module in its one window.
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            use sdroxide_types::DetachableModule;
-            for module in DetachableModule::ALL {
-                let mut on = cfg.is_detached(module);
-                ui.label(tr!("settings-ui-window-label", module = module_label(module)));
-                ComboBox::from_id_salt(("ui-undocked", module))
-                    .selected_text(if on {
-                        tr!("settings-ui-undocked")
-                    } else {
-                        tr!("settings-ui-docked")
-                    })
-                    .show_styled(ui, |ui| {
-                        ui.selectable_value(&mut on, false, tr!("settings-ui-docked"));
-                        ui.selectable_value(&mut on, true, tr!("settings-ui-undocked"));
-                    })
-                    .response
-                    .on_hover_text(tr!("settings-ui-undock-hint", app_id = module.app_id()));
-                cfg.set_detached(module, on);
-                ui.end_row();
-            }
-            // Both directions at once, for arranging a whole screen in one
-            // press: every module out, or every module home. Shown only while
-            // they would do something, so neither is a button that changes
-            // nothing.
-            let any_out = DetachableModule::ALL.iter().any(|m| cfg.is_detached(*m));
-            let any_in = DetachableModule::ALL.iter().any(|m| !cfg.is_detached(*m));
-            if any_out || any_in {
-                ui.label("");
-                ui.horizontal(|ui| {
-                    if any_out
-                        && crate::chrome::chip(ui, false, tr!("multi-dock-all-windows"))
-                            .on_hover_text(
-                                tr!("settings-ui-dock-all-hint"),
-                            )
-                            .clicked()
-                    {
-                        for m in DetachableModule::ALL {
-                            cfg.set_detached(m, false);
-                        }
-                    }
-                    if any_in
-                        && crate::chrome::chip(ui, false, tr!("multi-undock-all-windows"))
-                            .on_hover_text(
-                                tr!("settings-ui-undock-all-hint"),
-                            )
-                            .clicked()
-                    {
-                        for m in DetachableModule::ALL {
-                            cfg.set_detached(m, true);
-                        }
-                    }
-                });
-                ui.end_row();
-            }
-        }
-
-        ui.label(tr!("settings-ui-frame-rate"));
-        ComboBox::from_id_salt("ui-fps")
-            .selected_text(format!("{fps} fps", fps = cfg.frame_rate_fps))
-            .show_styled(ui, |ui| {
-                for f in UiSettings::FPS_OPTIONS {
-                    ui.selectable_value(&mut cfg.frame_rate_fps, f, format!("{fps} fps", fps = f));
-                }
-            });
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-palette"));
-        ComboBox::from_id_salt("ui-palette")
-            .selected_text(colormap::name_tr(cfg.waterfall_palette.min(colormap::NAMES.len() - 1)))
-            .show_styled(ui, |ui| {
-                for i in 0..colormap::NAMES.len() {
-                    ui.selectable_value(&mut cfg.waterfall_palette, i, colormap::name_tr(i));
-                }
-            });
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-tuning-buttons"));
-        ui.horizontal(|ui| {
-            crate::chrome::checkbox(ui, &mut cfg.tune_step_buttons, tr!("settings-ui-tuning-buttons-show"))
-                .on_hover_text(
-                    tr!("settings-ui-tuning-buttons-show", "hint"),
-                );
-            super::note(ui, &tr!("settings-ui-tuning-step", step = cfg.tune_step_label()));
-        });
-        ui.end_row();
-
-        // Only meaningful with the row above, so it sits under it.
-        if cfg.tune_step_buttons {
-            ui.label("");
-            crate::chrome::checkbox(
-                ui,
-                &mut cfg.tune_step_round_first,
-                tr!("settings-ui-tuning-snap"),
-            )
-            .on_hover_text(tr!("settings-ui-tuning-snap", "hint"));
+    egui::Grid::new("ui-grid")
+        .num_columns(2)
+        .spacing([12.0, 8.0])
+        .min_row_height(ui.spacing().interact_size.y)
+        .show(ui, |ui| {
+            ui.label(tr!("settings-ui-layout"));
+            enum_combo(ui, "ui-layout", &mut cfg.layout, &LayoutMode::ALL, LayoutMode::tr);
             ui.end_row();
-        }
 
-        ui.label(tr!("settings-ui-smoothing"));
-        crate::chrome::checkbox(
-            ui,
-            &mut cfg.waterfall_smooth,
-            tr!("settings-ui-smoothing-interpolate"),
-        )
-        .on_hover_text(tr!("settings-ui-smoothing-interpolate", "hint"));
-        ui.end_row();
+            // The two arrangements of the desktop. It is beside Layout because it
+            // is the same kind of choice — where things live on this screen — and
+            // not under it, because it is not a size: the column is offered at
+            // every desktop size and left out where there is no room for it.
+            ui.label(tr!("settings-ui-classic-ui"))
+                .on_hover_text(tr!("settings-ui-classic-ui-hint"));
+            crate::chrome::checkbox(ui, &mut cfg.classic_ui, tr!("settings-ui-classic-ui-check"));
+            ui.end_row();
 
-        ui.label(tr!("settings-ui-background"));
-        ui.horizontal(|ui| {
+            ui.label(tr!("settings-ui-theme"));
+            enum_combo(ui, "ui-theme", &mut cfg.theme, &UiTheme::ALL, UiTheme::tr);
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-button-style"));
+            enum_combo(
+                ui,
+                "ui-btn-style",
+                &mut cfg.button_style,
+                &ChromeStyle::ALL,
+                ChromeStyle::tr,
+            );
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-updates"));
             crate::chrome::checkbox(
                 ui,
-                &mut cfg.spectrum_gradient,
-                tr!("settings-ui-background-gradient"),
-            );
-            ui.add_enabled_ui(cfg.spectrum_gradient, |ui| {
-                ui.label(tr!("settings-ui-background-top"));
-                ui.color_edit_button_srgb(&mut cfg.gradient_top);
-                ui.label(tr!("settings-ui-background-bottom"));
-                ui.color_edit_button_srgb(&mut cfg.gradient_bottom);
-            });
-        });
-        ui.end_row();
+                &mut cfg.check_for_updates,
+                tr!("settings-ui-updates-check"),
+            )
+            .on_hover_text(tr!("settings-ui-updates-hint"));
+            ui.end_row();
 
-        ui.label(tr!("settings-ui-spectrum-line")).on_hover_text(
-            tr!("settings-ui-spectrum-line-hint"),
-        );
-        ui.horizontal(|ui| {
-            crate::chrome::checkbox(ui, &mut cfg.spectrum_fill, tr!("settings-ui-fill"));
-            ui.add_enabled_ui(cfg.spectrum_fill, |ui| {
-                ui.label(tr!("settings-ui-fill-colour"));
-                ui.color_edit_button_srgb(&mut cfg.spectrum_fill_color);
-                ComboBox::from_id_salt("ui-spectrum-fill-style")
-                    .selected_text(fill_style_label(cfg.spectrum_fill_style))
-                    .show_styled(ui, |ui| {
-                        for s in sdroxide_types::SpectrumFillStyle::ALL {
-                            ui.selectable_value(&mut cfg.spectrum_fill_style, s, fill_style_label(s));
+            // The **undocked** modules. A window arrangement, chosen once and kept,
+            // rather than something reached for mid-QSO — so it lives here with the
+            // other display settings. One row per [`DetachableModule`], so the next
+            // detachable module appears here for free. Native only: the browser
+            // keeps every module in its one window.
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                use sdroxide_types::DetachableModule;
+                for module in DetachableModule::ALL {
+                    let mut on = cfg.is_detached(module);
+                    ui.label(tr!("settings-ui-window-label", module = module_label(module)));
+                    ComboBox::from_id_salt(("ui-undocked", module))
+                        .selected_text(if on {
+                            tr!("settings-ui-undocked")
+                        } else {
+                            tr!("settings-ui-docked")
+                        })
+                        .show_styled(ui, |ui| {
+                            ui.selectable_value(&mut on, false, tr!("settings-ui-docked"));
+                            ui.selectable_value(&mut on, true, tr!("settings-ui-undocked"));
+                        })
+                        .response
+                        .on_hover_text(tr!("settings-ui-undock-hint", app_id = module.app_id()));
+                    cfg.set_detached(module, on);
+                    ui.end_row();
+                }
+                // Both directions at once, for arranging a whole screen in one
+                // press: every module out, or every module home. Shown only while
+                // they would do something, so neither is a button that changes
+                // nothing.
+                let any_out = DetachableModule::ALL.iter().any(|m| cfg.is_detached(*m));
+                let any_in = DetachableModule::ALL.iter().any(|m| !cfg.is_detached(*m));
+                if any_out || any_in {
+                    ui.label("");
+                    ui.horizontal(|ui| {
+                        if any_out
+                            && crate::chrome::chip(ui, false, tr!("multi-dock-all-windows"))
+                                .on_hover_text(tr!("settings-ui-dock-all-hint"))
+                                .clicked()
+                        {
+                            for m in DetachableModule::ALL {
+                                cfg.set_detached(m, false);
+                            }
+                        }
+                        if any_in
+                            && crate::chrome::chip(ui, false, tr!("multi-undock-all-windows"))
+                                .on_hover_text(tr!("settings-ui-undock-all-hint"))
+                                .clicked()
+                        {
+                            for m in DetachableModule::ALL {
+                                cfg.set_detached(m, true);
+                            }
                         }
                     });
-            });
-        });
-        ui.end_row();
-
-        first_line_label(ui, &tr!("settings-ui-spot-colours")).on_hover_text(
-            tr!("settings-ui-spot-colours", "hint"),
-        );
-        // Wrapped inside a column, not straight in the grid cell: laid out
-        // directly in the cell, a row that wraps onto a second line is not
-        // given that line's full height, and its Reset button ran into the
-        // picker in the row below.
-        ui.vertical(|ui| {
-            ui.horizontal_wrapped(|ui| {
-                for kind in SpotKind::ALL {
-                    ui.color_edit_button_srgb(&mut cfg.spot_colors[kind.index()])
-                        .on_hover_text(tr!("settings-ui-spot-colour", kind = spot_kind_label(kind)));
-                    let [r, g, b] = cfg.spot_colors[kind.index()];
-                    // Tinted with what was just picked, so the row is its own
-                    // preview — a colour that vanishes into the panel here would
-                    // vanish into the waterfall too.
-                    ui.label(
-                        RichText::new(spot_kind_label(kind))
-                            .size(11.0)
-                            .strong()
-                            .color(crate::theme::data_ink((r, g, b))),
-                    );
-                    ui.add_space(6.0);
+                    ui.end_row();
                 }
-                if ui
-                    .button(tr!("settings-ui-reset"))
-                    .on_hover_text(tr!("settings-ui-spot-colours-reset"))
-                    .clicked()
-                {
-                    for kind in SpotKind::ALL {
-                        let (r, g, b) = kind.default_color();
-                        cfg.spot_colors[kind.index()] = [r, g, b];
-                    }
-                }
-            });
-        });
-        ui.end_row();
-
-        first_line_label(ui, &tr!("settings-ui-bandplan-colours")).on_hover_text(
-            tr!("settings-ui-bandplan-colours", "hint"),
-        );
-        ui.vertical(|ui| {
-            ui.horizontal_wrapped(|ui| {
-                for kind in BandplanKind::ALL {
-                    ui.color_edit_button_srgb(&mut cfg.bandplan_colors[kind.index()])
-                        .on_hover_text(tr!("settings-ui-bandplan-colour", kind = kind.tr()));
-                    let [r, g, b] = cfg.bandplan_colors[kind.index()];
-                    ui.label(
-                        RichText::new(kind.tr())
-                            .size(11.0)
-                            .strong()
-                            .color(crate::theme::data_ink((r, g, b))),
-                    );
-                    ui.add_space(6.0);
-                }
-                if ui
-                    .button(tr!("settings-ui-reset"))
-                    .on_hover_text(tr!("settings-ui-bandplan-colours-reset"))
-                    .clicked()
-                {
-                    for kind in BandplanKind::ALL {
-                        let (r, g, b) = kind.default_color();
-                        cfg.bandplan_colors[kind.index()] = [r, g, b];
-                    }
-                }
-            });
-        });
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-skimmer-font"));
-        enum_combo(ui, "ui-skim-font", &mut cfg.skimmer_font_size, &FontSize::ALL, FontSize::tr);
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-waterfall-font"));
-        enum_combo(ui, "ui-wf-font", &mut cfg.waterfall_font_size, &FontSize::ALL, FontSize::tr);
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-interface-font"))
-            .on_hover_text(tr!("settings-ui-interface-font", "hint"));
-        enum_combo(ui, "ui-menu-font", &mut cfg.menu_font_size, &FontSize::ALL, FontSize::tr);
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-simple-ui")).on_hover_text(
-            tr!("settings-ui-simple-ui-hint"),
-        );
-        crate::chrome::checkbox(ui, &mut cfg.simple_ui, tr!("settings-ui-simple-ui-check"));
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-wake-lock")).on_hover_text(
-            tr!("settings-ui-wake-lock-hint"),
-        );
-        ui.horizontal(|ui| {
-            crate::chrome::checkbox(ui, &mut cfg.keep_screen_on, tr!("settings-ui-wake-lock-check"));
-            let status = crate::wake_lock::status(cfg.keep_screen_on);
-            if !wake_label(status).is_empty() {
-                let ink = if status.is_problem() {
-                    crate::theme::YELLOW()
-                } else {
-                    ui.visuals().weak_text_color()
-                };
-                ui.label(egui::RichText::new(wake_label(status)).small().color(ink));
             }
-        });
-        ui.end_row();
 
-        ui.label(tr!("settings-ui-sound-welcome")).on_hover_text(
-            tr!("settings-ui-sound-welcome-hint"),
-        );
-        ui.horizontal(|ui| {
+            ui.label(tr!("settings-ui-frame-rate"));
+            ComboBox::from_id_salt("ui-fps")
+                .selected_text(format!("{fps} fps", fps = cfg.frame_rate_fps))
+                .show_styled(ui, |ui| {
+                    for f in UiSettings::FPS_OPTIONS {
+                        ui.selectable_value(
+                            &mut cfg.frame_rate_fps,
+                            f,
+                            format!("{fps} fps", fps = f),
+                        );
+                    }
+                });
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-palette"));
+            ComboBox::from_id_salt("ui-palette")
+                .selected_text(colormap::name_tr(
+                    cfg.waterfall_palette.min(colormap::NAMES.len() - 1),
+                ))
+                .show_styled(ui, |ui| {
+                    for i in 0..colormap::NAMES.len() {
+                        ui.selectable_value(&mut cfg.waterfall_palette, i, colormap::name_tr(i));
+                    }
+                });
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-tuning-buttons"));
+            ui.horizontal(|ui| {
+                crate::chrome::checkbox(
+                    ui,
+                    &mut cfg.tune_step_buttons,
+                    tr!("settings-ui-tuning-buttons-show"),
+                )
+                .on_hover_text(tr!("settings-ui-tuning-buttons-show", "hint"));
+                super::note(ui, &tr!("settings-ui-tuning-step", step = cfg.tune_step_label()));
+            });
+            ui.end_row();
+
+            // Only meaningful with the row above, so it sits under it.
+            if cfg.tune_step_buttons {
+                ui.label("");
+                crate::chrome::checkbox(
+                    ui,
+                    &mut cfg.tune_step_round_first,
+                    tr!("settings-ui-tuning-snap"),
+                )
+                .on_hover_text(tr!("settings-ui-tuning-snap", "hint"));
+                ui.end_row();
+            }
+
+            ui.label(tr!("settings-ui-smoothing"));
             crate::chrome::checkbox(
                 ui,
-                &mut cfg.sound_welcome,
-                egui::RichText::new(tr!("settings-ui-sound-welcome-check")).color(crate::theme::YELLOW()),
-            );
-            if !crate::sound_welcome::available() {
-                ui.label(
-                    egui::RichText::new(
-                        tr!("settings-ui-sound-welcome-browser-only"),
-                    )
-                    .small()
-                    .color(crate::theme::YELLOW()),
-                );
-            }
-        });
-        ui.end_row();
+                &mut cfg.waterfall_smooth,
+                tr!("settings-ui-smoothing-interpolate"),
+            )
+            .on_hover_text(tr!("settings-ui-smoothing-interpolate", "hint"));
+            ui.end_row();
 
-
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-profile-screen")).on_hover_text(
-            tr!("settings-ui-profile-screen-hint"),
-        );
-        ui.horizontal(|ui| {
-            if ui.button(tr!("settings-ui-save-to-profile")).clicked() {
-                profile_action.set(Some(ProfileAction::Save));
-            }
-            if ui.button(tr!("settings-ui-back-to-profile")).clicked() {
-                profile_action.set(Some(ProfileAction::Revert));
-            }
-        });
-        // Say where the look in force came from, and what the last save did. A
-        // save that says nothing is a save nobody can trust.
-        ui.label(
-            RichText::new(match profile_from {
-                Some(Some(name)) => tr!("settings-ui-profile-in-use-named", name = name.as_str()),
-                Some(None) => tr!("settings-ui-profile-in-use-default"),
-                None => tr!("settings-ui-profile-not-in-use"),
-            })
-            .weak()
-            .small(),
-        );
-        if let Some(status) = profile_status {
-            ui.label(RichText::new(status.clone()).small().color(crate::theme::YELLOW()));
-        }
-        ui.end_row();
-
-        // The opt-in stays, deliberately. The shared keyboard is the one thing
-        // in a profile that can hurt another operator, so it is behind an
-        // acknowledgement and off by default — and it is **not** to be removed
-        // as unnecessary: it is asked for. Someone running their own server and
-        // reaching it from several of their own devices wants their keys to
-        // follow them. The answer to a shared station is the acknowledgement
-        // and the default, not taking the feature away.
-        ui.label(tr!("settings-ui-carry-bindings")).on_hover_text(
-            tr!("settings-ui-carry-bindings-hint"),
-        );
-        {
-            // The opt-in is not a plain checkbox: turning it ON must be
-            // acknowledged, so the click opens a modal and the flag stays off
-            // until the operator confirms. Turning it OFF is immediate.
-            let confirm_id = egui::Id::new("client-share-bindings-confirm");
+            ui.label(tr!("settings-ui-background"));
             ui.horizontal(|ui| {
-                ui.scope(|ui| {
-                    let was = cfg.client_share_bindings;
-                    let mut shown = was;
-                    let resp = crate::chrome::checkbox(
-                        ui,
-                        &mut shown,
-                        if was {
-                            tr!("settings-ui-carry-bindings-on")
-                        } else {
-                            tr!("settings-ui-carry-bindings-off")
-                        },
-                    );
-                    if resp.clicked() {
-                        if shown && !was {
-                            ui.data_mut(|d| d.insert_temp(confirm_id, true));
-                        } else {
-                            cfg.client_share_bindings = shown;
-                            // Turning it off is an answer too — "keep mine" —
-                            // so the server stops offering the profile's keys.
-                            cfg.client_bindings_declined = !shown;
-                        }
-                    }
-                    resp
+                crate::chrome::checkbox(
+                    ui,
+                    &mut cfg.spectrum_gradient,
+                    tr!("settings-ui-background-gradient"),
+                );
+                ui.add_enabled_ui(cfg.spectrum_gradient, |ui| {
+                    ui.label(tr!("settings-ui-background-top"));
+                    ui.color_edit_button_srgb(&mut cfg.gradient_top);
+                    ui.label(tr!("settings-ui-background-bottom"));
+                    ui.color_edit_button_srgb(&mut cfg.gradient_bottom);
                 });
             });
-            let confirming: bool = ui.data(|d| d.get_temp(confirm_id)).unwrap_or(false);
-            if confirming {
-                let mut enable = false;
-                let mut cancel = false;
-                egui::Modal::new(egui::Id::new("client-share-bindings-modal")).show(
-                    ui.ctx(),
-                    |ui| {
-                        ui.set_max_width(470.0);
-                        ui.heading(
-                            RichText::new(tr!("settings-ui-carry-bindings-title"))
-                                .color(crate::theme::ALERT()),
-                        );
-                        ui.add_space(6.0);
-                        ui.label(
-                            tr!("settings-ui-carry-bindings-body"),
-                        );
-                        ui.add_space(10.0);
-                        ui.horizontal(|ui| {
-                            if ui
-                                .button(
-                                    RichText::new(tr!("settings-ui-carry-bindings-confirm"))
-                                        .color(crate::theme::ALERT()),
-                                )
-                                .clicked()
-                            {
-                                enable = true;
-                            }
-                            if ui.button(tr!("settings-wavelog-cancel")).clicked() {
-                                cancel = true;
-                            }
-                        });
-                    },
-                );
-                if enable {
-                    cfg.client_share_bindings = true;
-                    cfg.client_bindings_declined = false;
-                }
-                if enable || cancel {
-                    ui.data_mut(|d| d.remove_temp::<bool>(confirm_id));
-                }
-            }
-        }
-        ui.end_row();
-
-        ui.label(tr!("settings-ui-start-swl")).on_hover_text(
-            tr!("settings-ui-start-swl-hint"),
-        );
-        crate::chrome::checkbox(ui, &mut cfg.start_swl, tr!("settings-ui-start-swl-check"));
-        ui.end_row();
-
-        // Issue #146: the LISTEN tab in the band/mode menu carrying the listening
-        // screen. **It hides; it never grants.** Off by default, and it asks once
-        // — the reporter's own words were "I accept this operating mode at my own
-        // risk", and the person who wrote them is the one who has to read what it
-        // does not do.
-        ui.label(tr!("settings-ui-listen-hides-tx")).on_hover_text(
-            tr!("settings-ui-listen-hides-tx-hint"),
-        );
-        {
-            let confirm_id = egui::Id::new("listen-tab-hides-tx-confirm");
-            let mut shown = cfg.listen_tab_hides_tx;
-            let resp = crate::chrome::checkbox(ui, &mut shown, tr!("settings-ui-listen-hides-tx-check"));
-            let was = cfg.listen_tab_hides_tx;
-            if resp.changed() {
-                if shown && !was {
-                    ui.data_mut(|d| d.insert_temp(confirm_id, true));
-                } else {
-                    cfg.listen_tab_hides_tx = shown;
-                }
-            }
-            let confirming: bool = ui.data(|d| d.get_temp(confirm_id)).unwrap_or(false);
-            if confirming {
-                let mut enable = false;
-                let mut cancel = false;
-                egui::Modal::new(egui::Id::new("listen-tab-hides-tx-modal")).show(
-                    ui.ctx(),
-                    |ui| {
-                        ui.set_max_width(470.0);
-                        ui.heading(
-                            RichText::new(tr!("settings-ui-listen-hides-tx-title"))
-                                .color(crate::theme::ALERT()),
-                        );
-                        ui.add_space(6.0);
-                        ui.label(
-                            tr!("settings-ui-listen-hides-tx-body"),
-                        );
-                        ui.add_space(10.0);
-                        ui.horizontal(|ui| {
-                            if ui
-                                .button(
-                                    RichText::new(tr!("settings-ui-listen-hides-tx-confirm"))
-                                        .color(crate::theme::ALERT()),
-                                )
-                                .clicked()
-                            {
-                                enable = true;
-                            }
-                            if ui.button(tr!("settings-wavelog-cancel")).clicked() {
-                                cancel = true;
-                            }
-                        });
-                    },
-                );
-                if enable {
-                    cfg.listen_tab_hides_tx = true;
-                }
-                if enable || cancel {
-                    ui.data_mut(|d| d.remove_temp::<bool>(confirm_id));
-                }
-            }
-        }
-        ui.end_row();
-
-        // The switch itself, not only the seed: the same per-radio
-        // `RadioConfig::hide_tx` that Settings → Radio → Transmit controls
-        // writes, reachable here because a listener looks for it in the UI
-        // menu. Off `radio` (a remote or browser client with no config yet)
-        // there is nothing to set, so the row is left out rather than shown
-        // dead.
-        if let Some(radio) = radio {
-            ui.label(tr!("settings-ui-swl-mode")).on_hover_text(
-                tr!("settings-ui-swl-mode-hint"),
-            );
-            // The checkbox reflects the whole per-radio SWL state (the
-            // start-in-SWL seed *or* `hide_tx`), so a session that came up in
-            // SWL mode reads as "on" and one toggle turns it off, not two.
-            if crate::chrome::checkbox(ui, swl_hide, tr!("settings-ui-swl-mode-check")).changed() {
-                radio.hide_tx = *swl_hide;
-            }
             ui.end_row();
-        }
 
-        // ── Reception reports ──
-        // What a mailed reception report carries besides the reception itself.
-        // Both optional and both genuinely so: a plain-text report is a
-        // perfectly good report, so leaving these empty breaks nothing.
-        //
-        // Native-only, because the picture is a **path on this machine's disk**
-        // and a browser tab has no disk to name. Storing a string there could
-        // never resolve to a file, so the row is left out rather than shown
-        // dead — the same rule the rest of this crate follows for paths.
-        if !cfg!(target_arch = "wasm32") {
-            ui.label(tr!("settings-ui-report-picture")).on_hover_text(
-                tr!("settings-ui-report-picture-hint"),
-            );
-            // Whatever the picker thread found, taken once and cleared so it is
-            // applied exactly once.
-            if let Ok(mut inbox) = report_pick.lock()
-                && let Some(picked) = inbox.take()
-            {
-                report.picture = picked;
-            }
+            ui.label(tr!("settings-ui-spectrum-line"))
+                .on_hover_text(tr!("settings-ui-spectrum-line-hint"));
             ui.horizontal(|ui| {
-                ui.add(
-                    egui::TextEdit::singleline(&mut report.picture)
-                        .desired_width(240.0)
-                        .hint_text(tr!("settings-ui-report-picture-none")),
+                crate::chrome::checkbox(ui, &mut cfg.spectrum_fill, tr!("settings-ui-fill"));
+                ui.add_enabled_ui(cfg.spectrum_fill, |ui| {
+                    ui.label(tr!("settings-ui-fill-colour"));
+                    ui.color_edit_button_srgb(&mut cfg.spectrum_fill_color);
+                    ComboBox::from_id_salt("ui-spectrum-fill-style")
+                        .selected_text(fill_style_label(cfg.spectrum_fill_style))
+                        .show_styled(ui, |ui| {
+                            for s in sdroxide_types::SpectrumFillStyle::ALL {
+                                ui.selectable_value(
+                                    &mut cfg.spectrum_fill_style,
+                                    s,
+                                    fill_style_label(s),
+                                );
+                            }
+                        });
+                });
+            });
+            ui.end_row();
+
+            first_line_label(ui, &tr!("settings-ui-spot-colours"))
+                .on_hover_text(tr!("settings-ui-spot-colours", "hint"));
+            // Wrapped inside a column, not straight in the grid cell: laid out
+            // directly in the cell, a row that wraps onto a second line is not
+            // given that line's full height, and its Reset button ran into the
+            // picker in the row below.
+            ui.vertical(|ui| {
+                ui.horizontal_wrapped(|ui| {
+                    for kind in SpotKind::ALL {
+                        ui.color_edit_button_srgb(&mut cfg.spot_colors[kind.index()])
+                            .on_hover_text(tr!(
+                                "settings-ui-spot-colour",
+                                kind = spot_kind_label(kind)
+                            ));
+                        let [r, g, b] = cfg.spot_colors[kind.index()];
+                        // Tinted with what was just picked, so the row is its own
+                        // preview — a colour that vanishes into the panel here would
+                        // vanish into the waterfall too.
+                        ui.label(
+                            RichText::new(spot_kind_label(kind))
+                                .size(11.0)
+                                .strong()
+                                .color(crate::theme::data_ink((r, g, b))),
+                        );
+                        ui.add_space(6.0);
+                    }
+                    if ui
+                        .button(tr!("settings-ui-reset"))
+                        .on_hover_text(tr!("settings-ui-spot-colours-reset"))
+                        .clicked()
+                    {
+                        for kind in SpotKind::ALL {
+                            let (r, g, b) = kind.default_color();
+                            cfg.spot_colors[kind.index()] = [r, g, b];
+                        }
+                    }
+                });
+            });
+            ui.end_row();
+
+            first_line_label(ui, &tr!("settings-ui-bandplan-colours"))
+                .on_hover_text(tr!("settings-ui-bandplan-colours", "hint"));
+            ui.vertical(|ui| {
+                ui.horizontal_wrapped(|ui| {
+                    for kind in BandplanKind::ALL {
+                        ui.color_edit_button_srgb(&mut cfg.bandplan_colors[kind.index()])
+                            .on_hover_text(tr!("settings-ui-bandplan-colour", kind = kind.tr()));
+                        let [r, g, b] = cfg.bandplan_colors[kind.index()];
+                        ui.label(
+                            RichText::new(kind.tr())
+                                .size(11.0)
+                                .strong()
+                                .color(crate::theme::data_ink((r, g, b))),
+                        );
+                        ui.add_space(6.0);
+                    }
+                    if ui
+                        .button(tr!("settings-ui-reset"))
+                        .on_hover_text(tr!("settings-ui-bandplan-colours-reset"))
+                        .clicked()
+                    {
+                        for kind in BandplanKind::ALL {
+                            let (r, g, b) = kind.default_color();
+                            cfg.bandplan_colors[kind.index()] = [r, g, b];
+                        }
+                    }
+                });
+            });
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-skimmer-font"));
+            enum_combo(
+                ui,
+                "ui-skim-font",
+                &mut cfg.skimmer_font_size,
+                &FontSize::ALL,
+                FontSize::tr,
+            );
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-waterfall-font"));
+            enum_combo(
+                ui,
+                "ui-wf-font",
+                &mut cfg.waterfall_font_size,
+                &FontSize::ALL,
+                FontSize::tr,
+            );
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-interface-font"))
+                .on_hover_text(tr!("settings-ui-interface-font", "hint"));
+            enum_combo(ui, "ui-menu-font", &mut cfg.menu_font_size, &FontSize::ALL, FontSize::tr);
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-simple-ui")).on_hover_text(tr!("settings-ui-simple-ui-hint"));
+            crate::chrome::checkbox(ui, &mut cfg.simple_ui, tr!("settings-ui-simple-ui-check"));
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-wake-lock")).on_hover_text(tr!("settings-ui-wake-lock-hint"));
+            ui.horizontal(|ui| {
+                crate::chrome::checkbox(
+                    ui,
+                    &mut cfg.keep_screen_on,
+                    tr!("settings-ui-wake-lock-check"),
                 );
-                if crate::chrome::chip(ui, false, tr!("settings-ui-choose"))
-                    .on_hover_text(tr!("settings-ui-report-picture-pick"))
-                    .clicked()
-                {
-                    pick_report_picture(report_pick);
-                }
-                if !report.picture.is_empty()
-                    && crate::chrome::chip(ui, false, tr!("sstv-clear")).clicked()
-                {
-                    report.picture.clear();
+                let status = crate::wake_lock::status(cfg.keep_screen_on);
+                if !wake_label(status).is_empty() {
+                    let ink = if status.is_problem() {
+                        crate::theme::YELLOW()
+                    } else {
+                        ui.visuals().weak_text_color()
+                    };
+                    ui.label(egui::RichText::new(wake_label(status)).small().color(ink));
                 }
             });
-            ui.label(tr!("settings-ui-report-note")).on_hover_text(
-                tr!("settings-ui-report-note-hint"),
-            );
-            crate::chrome::field(
-                ui,
-                egui::TextEdit::multiline(&mut report.message)
-                    .desired_width(380.0)
-                    .desired_rows(3)
-                    .hint_text(tr!("settings-ui-report-note-hint-text")),
-            );
-        }
+            ui.end_row();
 
-        ui.label(tr!("settings-ui-cities")).on_hover_text(tr!("settings-ui-cities", "hint"));
-        crate::chrome::checkbox(ui, &mut cfg.map_cities, tr!("settings-ui-cities-show"));
-        ui.end_row();
-    });
+            ui.label(tr!("settings-ui-sound-welcome"))
+                .on_hover_text(tr!("settings-ui-sound-welcome-hint"));
+            ui.horizontal(|ui| {
+                crate::chrome::checkbox(
+                    ui,
+                    &mut cfg.sound_welcome,
+                    egui::RichText::new(tr!("settings-ui-sound-welcome-check"))
+                        .color(crate::theme::YELLOW()),
+                );
+                if !crate::sound_welcome::available() {
+                    ui.label(
+                        egui::RichText::new(tr!("settings-ui-sound-welcome-browser-only"))
+                            .small()
+                            .color(crate::theme::YELLOW()),
+                    );
+                }
+            });
+            ui.end_row();
+
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-profile-screen"))
+                .on_hover_text(tr!("settings-ui-profile-screen-hint"));
+            ui.horizontal(|ui| {
+                if ui.button(tr!("settings-ui-save-to-profile")).clicked() {
+                    profile_action.set(Some(ProfileAction::Save));
+                }
+                if ui.button(tr!("settings-ui-back-to-profile")).clicked() {
+                    profile_action.set(Some(ProfileAction::Revert));
+                }
+            });
+            // Say where the look in force came from, and what the last save did. A
+            // save that says nothing is a save nobody can trust.
+            ui.label(
+                RichText::new(match profile_from {
+                    Some(Some(name)) => {
+                        tr!("settings-ui-profile-in-use-named", name = name.as_str())
+                    }
+                    Some(None) => tr!("settings-ui-profile-in-use-default"),
+                    None => tr!("settings-ui-profile-not-in-use"),
+                })
+                .weak()
+                .small(),
+            );
+            if let Some(status) = profile_status {
+                ui.label(RichText::new(status.clone()).small().color(crate::theme::YELLOW()));
+            }
+            ui.end_row();
+
+            // The opt-in stays, deliberately. The shared keyboard is the one thing
+            // in a profile that can hurt another operator, so it is behind an
+            // acknowledgement and off by default — and it is **not** to be removed
+            // as unnecessary: it is asked for. Someone running their own server and
+            // reaching it from several of their own devices wants their keys to
+            // follow them. The answer to a shared station is the acknowledgement
+            // and the default, not taking the feature away.
+            ui.label(tr!("settings-ui-carry-bindings"))
+                .on_hover_text(tr!("settings-ui-carry-bindings-hint"));
+            {
+                // The opt-in is not a plain checkbox: turning it ON must be
+                // acknowledged, so the click opens a modal and the flag stays off
+                // until the operator confirms. Turning it OFF is immediate.
+                let confirm_id = egui::Id::new("client-share-bindings-confirm");
+                ui.horizontal(|ui| {
+                    ui.scope(|ui| {
+                        let was = cfg.client_share_bindings;
+                        let mut shown = was;
+                        let resp = crate::chrome::checkbox(
+                            ui,
+                            &mut shown,
+                            if was {
+                                tr!("settings-ui-carry-bindings-on")
+                            } else {
+                                tr!("settings-ui-carry-bindings-off")
+                            },
+                        );
+                        if resp.clicked() {
+                            if shown && !was {
+                                ui.data_mut(|d| d.insert_temp(confirm_id, true));
+                            } else {
+                                cfg.client_share_bindings = shown;
+                                // Turning it off is an answer too — "keep mine" —
+                                // so the server stops offering the profile's keys.
+                                cfg.client_bindings_declined = !shown;
+                            }
+                        }
+                        resp
+                    });
+                });
+                let confirming: bool = ui.data(|d| d.get_temp(confirm_id)).unwrap_or(false);
+                if confirming {
+                    let mut enable = false;
+                    let mut cancel = false;
+                    egui::Modal::new(egui::Id::new("client-share-bindings-modal")).show(
+                        ui.ctx(),
+                        |ui| {
+                            ui.set_max_width(470.0);
+                            ui.heading(
+                                RichText::new(tr!("settings-ui-carry-bindings-title"))
+                                    .color(crate::theme::ALERT()),
+                            );
+                            ui.add_space(6.0);
+                            ui.label(tr!("settings-ui-carry-bindings-body"));
+                            ui.add_space(10.0);
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .button(
+                                        RichText::new(tr!("settings-ui-carry-bindings-confirm"))
+                                            .color(crate::theme::ALERT()),
+                                    )
+                                    .clicked()
+                                {
+                                    enable = true;
+                                }
+                                if ui.button(tr!("settings-wavelog-cancel")).clicked() {
+                                    cancel = true;
+                                }
+                            });
+                        },
+                    );
+                    if enable {
+                        cfg.client_share_bindings = true;
+                        cfg.client_bindings_declined = false;
+                    }
+                    if enable || cancel {
+                        ui.data_mut(|d| d.remove_temp::<bool>(confirm_id));
+                    }
+                }
+            }
+            ui.end_row();
+
+            ui.label(tr!("settings-ui-start-swl")).on_hover_text(tr!("settings-ui-start-swl-hint"));
+            crate::chrome::checkbox(ui, &mut cfg.start_swl, tr!("settings-ui-start-swl-check"));
+            ui.end_row();
+
+            // Issue #146: the LISTEN tab in the band/mode menu carrying the listening
+            // screen. **It hides; it never grants.** Off by default, and it asks once
+            // — the reporter's own words were "I accept this operating mode at my own
+            // risk", and the person who wrote them is the one who has to read what it
+            // does not do.
+            ui.label(tr!("settings-ui-listen-hides-tx"))
+                .on_hover_text(tr!("settings-ui-listen-hides-tx-hint"));
+            {
+                let confirm_id = egui::Id::new("listen-tab-hides-tx-confirm");
+                let mut shown = cfg.listen_tab_hides_tx;
+                let resp = crate::chrome::checkbox(
+                    ui,
+                    &mut shown,
+                    tr!("settings-ui-listen-hides-tx-check"),
+                );
+                let was = cfg.listen_tab_hides_tx;
+                if resp.changed() {
+                    if shown && !was {
+                        ui.data_mut(|d| d.insert_temp(confirm_id, true));
+                    } else {
+                        cfg.listen_tab_hides_tx = shown;
+                    }
+                }
+                let confirming: bool = ui.data(|d| d.get_temp(confirm_id)).unwrap_or(false);
+                if confirming {
+                    let mut enable = false;
+                    let mut cancel = false;
+                    egui::Modal::new(egui::Id::new("listen-tab-hides-tx-modal")).show(
+                        ui.ctx(),
+                        |ui| {
+                            ui.set_max_width(470.0);
+                            ui.heading(
+                                RichText::new(tr!("settings-ui-listen-hides-tx-title"))
+                                    .color(crate::theme::ALERT()),
+                            );
+                            ui.add_space(6.0);
+                            ui.label(tr!("settings-ui-listen-hides-tx-body"));
+                            ui.add_space(10.0);
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .button(
+                                        RichText::new(tr!("settings-ui-listen-hides-tx-confirm"))
+                                            .color(crate::theme::ALERT()),
+                                    )
+                                    .clicked()
+                                {
+                                    enable = true;
+                                }
+                                if ui.button(tr!("settings-wavelog-cancel")).clicked() {
+                                    cancel = true;
+                                }
+                            });
+                        },
+                    );
+                    if enable {
+                        cfg.listen_tab_hides_tx = true;
+                    }
+                    if enable || cancel {
+                        ui.data_mut(|d| d.remove_temp::<bool>(confirm_id));
+                    }
+                }
+            }
+            ui.end_row();
+
+            // The switch itself, not only the seed: the same per-radio
+            // `RadioConfig::hide_tx` that Settings → Radio → Transmit controls
+            // writes, reachable here because a listener looks for it in the UI
+            // menu. Off `radio` (a remote or browser client with no config yet)
+            // there is nothing to set, so the row is left out rather than shown
+            // dead.
+            if let Some(radio) = radio {
+                ui.label(tr!("settings-ui-swl-mode"))
+                    .on_hover_text(tr!("settings-ui-swl-mode-hint"));
+                // The checkbox reflects the whole per-radio SWL state (the
+                // start-in-SWL seed *or* `hide_tx`), so a session that came up in
+                // SWL mode reads as "on" and one toggle turns it off, not two.
+                if crate::chrome::checkbox(ui, swl_hide, tr!("settings-ui-swl-mode-check"))
+                    .changed()
+                {
+                    radio.hide_tx = *swl_hide;
+                }
+                ui.end_row();
+            }
+
+            // ── Reception reports ──
+            // What a mailed reception report carries besides the reception itself.
+            // Both optional and both genuinely so: a plain-text report is a
+            // perfectly good report, so leaving these empty breaks nothing.
+            //
+            // Native-only, because the picture is a **path on this machine's disk**
+            // and a browser tab has no disk to name. Storing a string there could
+            // never resolve to a file, so the row is left out rather than shown
+            // dead — the same rule the rest of this crate follows for paths.
+            if !cfg!(target_arch = "wasm32") {
+                ui.label(tr!("settings-ui-report-picture"))
+                    .on_hover_text(tr!("settings-ui-report-picture-hint"));
+                // Whatever the picker thread found, taken once and cleared so it is
+                // applied exactly once.
+                if let Ok(mut inbox) = report_pick.lock()
+                    && let Some(picked) = inbox.take()
+                {
+                    report.picture = picked;
+                }
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut report.picture)
+                            .desired_width(240.0)
+                            .hint_text(tr!("settings-ui-report-picture-none")),
+                    );
+                    if crate::chrome::chip(ui, false, tr!("settings-ui-choose"))
+                        .on_hover_text(tr!("settings-ui-report-picture-pick"))
+                        .clicked()
+                    {
+                        pick_report_picture(report_pick);
+                    }
+                    if !report.picture.is_empty()
+                        && crate::chrome::chip(ui, false, tr!("sstv-clear")).clicked()
+                    {
+                        report.picture.clear();
+                    }
+                });
+                ui.label(tr!("settings-ui-report-note"))
+                    .on_hover_text(tr!("settings-ui-report-note-hint"));
+                crate::chrome::field(
+                    ui,
+                    egui::TextEdit::multiline(&mut report.message)
+                        .desired_width(380.0)
+                        .desired_rows(3)
+                        .hint_text(tr!("settings-ui-report-note-hint-text")),
+                );
+            }
+
+            ui.label(tr!("settings-ui-cities")).on_hover_text(tr!("settings-ui-cities", "hint"));
+            crate::chrome::checkbox(ui, &mut cfg.map_cities, tr!("settings-ui-cities-show"));
+            ui.end_row();
+        });
 
     let Some(cloud_march) = cloud_march else { return };
     ui.add_space(14.0);
@@ -678,7 +694,11 @@ pub(in crate::app) fn settings_ui_tab(
         .show(ui, |ui| {
             ui.label(tr!("settings-ui-clouds"));
             ComboBox::from_id_salt("ui-cloud-march")
-                .selected_text(if *cloud_march { tr!("settings-ui-clouds-volumetric") } else { tr!("settings-ui-clouds-layered") })
+                .selected_text(if *cloud_march {
+                    tr!("settings-ui-clouds-volumetric")
+                } else {
+                    tr!("settings-ui-clouds-layered")
+                })
                 .show_styled(ui, |ui| {
                     ui.selectable_value(cloud_march, false, tr!("settings-ui-clouds-layered"));
                     ui.selectable_value(cloud_march, true, tr!("settings-ui-clouds-volumetric"));
@@ -686,10 +706,7 @@ pub(in crate::app) fn settings_ui_tab(
             ui.end_row();
         });
     ui.add_space(8.0);
-    super::note(
-        ui,
-        &tr!("settings-ui-clouds-note"),
-    );
+    super::note(ui, &tr!("settings-ui-clouds-note"));
 }
 
 /// Spoken announcements.
@@ -728,7 +745,10 @@ pub(in crate::app) fn speech_settings(
                     .width(300.0)
                     .selected_text(shown)
                     .show_styled(ui, |ui| {
-                        if ui.selectable_label(cfg.voice.is_empty(), tr!("speech-voice-shipped")).clicked() {
+                        if ui
+                            .selectable_label(cfg.voice.is_empty(), tr!("speech-voice-shipped"))
+                            .clicked()
+                        {
                             cfg.voice.clear();
                         }
                         for v in voices {
@@ -746,9 +766,7 @@ pub(in crate::app) fn speech_settings(
                         .step_by(0.1)
                         .suffix("×"),
                 )
-                .on_hover_text(
-                    tr!("speech-speed", "hint"),
-                );
+                .on_hover_text(tr!("speech-speed", "hint"));
                 ui.end_row();
 
                 ui.label(tr!("speech-volume"));
@@ -826,12 +844,8 @@ pub(in crate::app) fn speech_settings(
                     crate::chrome::checkbox(ui, &mut c.band_edge, tr!("speech-cat-band-edge"));
                     crate::chrome::checkbox(ui, &mut c.notices, tr!("speech-cat-notices"));
                     ui.end_row();
-                    crate::chrome::checkbox(
-                        ui,
-                        &mut c.filters,
-                        tr!("speech-cat-filters"),
-                    )
-                    .on_hover_text(tr!("speech-cat-filters", "hint"));
+                    crate::chrome::checkbox(ui, &mut c.filters, tr!("speech-cat-filters"))
+                        .on_hover_text(tr!("speech-cat-filters", "hint"));
                     ui.end_row();
                 });
 
@@ -846,23 +860,17 @@ pub(in crate::app) fn speech_settings(
                     let d = &mut cfg.decodes;
                     crate::chrome::checkbox(ui, &mut d.ft8_to_me, tr!("speech-ft8-to-me"));
                     crate::chrome::checkbox(ui, &mut d.ft8_cq_for_me, tr!("speech-ft8-cq"))
-                        .on_hover_text(
-                            tr!("speech-ft8-cq", "hint"),
-                        );
+                        .on_hover_text(tr!("speech-ft8-cq", "hint"));
                     ui.end_row();
                     crate::chrome::checkbox(ui, &mut d.js8, tr!("speech-js8"));
                     crate::chrome::checkbox(ui, &mut d.js8_allcall, tr!("speech-js8-allcall"));
                     ui.end_row();
                     crate::chrome::checkbox(ui, &mut d.fsq, tr!("speech-fsq"));
                     crate::chrome::checkbox(ui, &mut d.include_snr, tr!("speech-include-snr"))
-                    .on_hover_text(
-                        tr!("speech-include-snr", "hint"),
-                    );
+                        .on_hover_text(tr!("speech-include-snr", "hint"));
                     ui.end_row();
                     crate::chrome::checkbox(ui, &mut d.ft8_qso, tr!("speech-ft8-qso"))
-                        .on_hover_text(
-                            tr!("speech-ft8-qso", "hint"),
-                        );
+                        .on_hover_text(tr!("speech-ft8-qso", "hint"));
                     ui.end_row();
                 });
 
@@ -879,10 +887,7 @@ pub(in crate::app) fn speech_settings(
                 tr!("speech-text-cw-locked"),
             )
             .on_hover_text(tr!("speech-text-cw-locked", "hint"));
-            super::note(
-                ui,
-                &tr!("speech-text-note"),
-            );
+            super::note(ui, &tr!("speech-text-note"));
 
             ui.add_space(8.0);
             ui.label(RichText::new(tr!("speech-tuning-up")).strong());
@@ -939,10 +944,7 @@ pub(in crate::app) fn speech_settings(
     });
 
     ui.add_space(8.0);
-    super::note(
-        ui,
-        &tr!("speech-device-note"),
-    );
+    super::note(ui, &tr!("speech-device-note"));
 }
 
 /// Open a file dialog for the report picture, off the UI thread.
@@ -959,8 +961,9 @@ pub(in crate::app) fn pick_report_picture(
     std::thread::Builder::new()
         .name("sdroxide-report-pick".into())
         .spawn(move || {
-            if let Some(path) =
-                rfd::FileDialog::new().add_filter(tr!("widgets-image"), &["png", "jpg", "jpeg"]).pick_file()
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter(tr!("widgets-image"), &["png", "jpg", "jpeg"])
+                .pick_file()
             {
                 if let Ok(mut g) = inbox.lock() {
                     *g = Some(path.to_string_lossy().into_owned());
@@ -997,13 +1000,14 @@ pub(in crate::app) fn workspaces_section(
     name: &mut String,
 ) {
     use sdroxide_types::{WORKSPACE_MAX, Workspace};
-    ui.label(RichText::new(tr!("settings-ui-workspaces")).size(14.0).strong().color(crate::theme::CYAN()));
-    ui.add_space(2.0);
-    super::note_at(
-        ui,
-        &tr!("settings-ui-workspaces-note"),
-        Some(11.0),
+    ui.label(
+        RichText::new(tr!("settings-ui-workspaces"))
+            .size(14.0)
+            .strong()
+            .color(crate::theme::CYAN()),
     );
+    ui.add_space(2.0);
+    super::note_at(ui, &tr!("settings-ui-workspaces-note"), Some(11.0));
     ui.add_space(6.0);
 
     if workspaces.is_empty() {
@@ -1023,7 +1027,9 @@ pub(in crate::app) fn workspaces_section(
             if chip.clicked() {
                 apply = Some(i);
             }
-            if crate::chrome::chip(ui, false, "×").on_hover_text(tr!("settings-ui-workspace-forget")).clicked()
+            if crate::chrome::chip(ui, false, "×")
+                .on_hover_text(tr!("settings-ui-workspace-forget"))
+                .clicked()
             {
                 delete = Some(i);
             }
@@ -1040,15 +1046,15 @@ pub(in crate::app) fn workspaces_section(
         let named = !name.trim().is_empty();
         let full = workspaces.len() >= WORKSPACE_MAX;
         let can_save = named && !full;
-        let save = crate::chrome::chip_enabled(ui, can_save, false, &tr!("settings-ui-workspace-save")).on_hover_text(
-            if full {
-                tr!("settings-ui-workspace-full")
-            } else if named {
-                tr!("settings-ui-workspace-save-hint").to_string()
-            } else {
-                tr!("settings-ui-workspace-name-first").to_string()
-            },
-        );
+        let save =
+            crate::chrome::chip_enabled(ui, can_save, false, &tr!("settings-ui-workspace-save"))
+                .on_hover_text(if full {
+                    tr!("settings-ui-workspace-full")
+                } else if named {
+                    tr!("settings-ui-workspace-save-hint").to_string()
+                } else {
+                    tr!("settings-ui-workspace-name-first").to_string()
+                });
         if save.clicked() {
             let n = name.trim().to_string();
             // Saving over an existing name replaces it rather than making a

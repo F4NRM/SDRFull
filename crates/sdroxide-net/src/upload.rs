@@ -30,10 +30,8 @@ pub fn upload(
         // The default station location: a caller of this function has no
         // operating profile to take one from. The engine's own uploads go
         // through `SpotManager`, which does, and queues them.
-        UploadTarget::Wavelog => {
-            crate::wavelog::upload(&cfg.wavelog, cfg.wavelog.station_id, adif)
-                .map_err(|f| f.message)
-        }
+        UploadTarget::Wavelog => crate::wavelog::upload(&cfg.wavelog, cfg.wavelog.station_id, adif)
+            .map_err(|f| f.message),
     }
 }
 
@@ -42,10 +40,8 @@ pub fn upload(
 /// QTH profile unless the target profile is named, so the nickname is sent only
 /// when the operator has set one and left off entirely otherwise (issue #647).
 fn eqsl_form_fields<'a>(cfg: &'a NetworkConfig, adif: &'a str) -> Vec<(&'a str, &'a str)> {
-    let mut fields = vec![
-        ("EQSL_USER", cfg.eqsl.user.trim()),
-        ("EQSL_PSWD", cfg.eqsl.password.trim()),
-    ];
+    let mut fields =
+        vec![("EQSL_USER", cfg.eqsl.user.trim()), ("EQSL_PSWD", cfg.eqsl.password.trim())];
     let qth = cfg.eqsl_qth_nickname.trim();
     if !qth.is_empty() {
         // eQSL's own spelling of the parameter.
@@ -64,11 +60,7 @@ fn eqsl_form_fields<'a>(cfg: &'a NetworkConfig, adif: &'a str) -> Vec<(&'a str, 
 /// when no nickname is set, so a single-profile account is unchanged.
 fn eqsl_qth_query(cfg: &NetworkConfig) -> String {
     let qth = cfg.eqsl_qth_nickname.trim();
-    if qth.is_empty() {
-        String::new()
-    } else {
-        format!("&QTHNickname={}", urlencode(qth))
-    }
+    if qth.is_empty() { String::new() } else { format!("&QTHNickname={}", urlencode(qth)) }
 }
 
 fn upload_eqsl(cfg: &NetworkConfig, adif: &str) -> Result<String, String> {
@@ -272,8 +264,7 @@ fn upload_log11dx(cfg: &NetworkConfig, my_call: &str, adif: &str) -> Result<Stri
         cfg.log11dx_api_url.trim()
     };
     let (status, reply) = http::post_json_status(url, token, &body)?;
-    let parsed: serde_json::Value =
-        serde_json::from_str(&reply).unwrap_or(serde_json::Value::Null);
+    let parsed: serde_json::Value = serde_json::from_str(&reply).unwrap_or(serde_json::Value::Null);
     let what = parsed.get("status").and_then(|v| v.as_str()).unwrap_or("");
     let message = parsed.get("message").and_then(|v| v.as_str()).unwrap_or("");
     match what {
@@ -289,10 +280,7 @@ fn upload_log11dx(cfg: &NetworkConfig, my_call: &str, adif: &str) -> Result<Stri
         }
         _ => {
             let detail = if message.is_empty() { reply.trim() } else { message };
-            Err(format!(
-                "LOG11DX: HTTP {status}: {}",
-                detail.chars().take(200).collect::<String>()
-            ))
+            Err(format!("LOG11DX: HTTP {status}: {}", detail.chars().take(200).collect::<String>()))
         }
     }
 }
@@ -376,13 +364,16 @@ fn test_log11dx(cfg: &NetworkConfig) -> Result<String, String> {
     if status == 401 {
         return Err("token rejected — copy it again from your profile page".into());
     }
-    let parsed: serde_json::Value =
-        serde_json::from_str(&reply).unwrap_or(serde_json::Value::Null);
+    let parsed: serde_json::Value = serde_json::from_str(&reply).unwrap_or(serde_json::Value::Null);
     let message = parsed.get("message").and_then(|v| v.as_str()).unwrap_or("");
     let rejected = parsed.get("ok").and_then(|v| v.as_bool()) == Some(false)
         || parsed.get("status").and_then(|v| v.as_str()) == Some("invalid_token");
     if rejected {
-        return Err(if message.is_empty() { "token rejected".to_string() } else { message.to_string() });
+        return Err(if message.is_empty() {
+            "token rejected".to_string()
+        } else {
+            message.to_string()
+        });
     }
     if !(200..300).contains(&status) {
         return Err(format!("HTTP {status}"));

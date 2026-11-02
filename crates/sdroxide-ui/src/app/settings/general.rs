@@ -147,7 +147,12 @@ pub(in crate::app) fn device_field(
 /// does the wrong half.
 pub(in crate::app) fn signed_in_station(ui: &mut egui::Ui, station: &str) {
     let station_key = crate::login::station_key(station);
-    ui.label(RichText::new(tr!("settings-general-signed-in-station")).size(14.0).strong().color(crate::theme::CYAN()));
+    ui.label(
+        RichText::new(tr!("settings-general-signed-in-station"))
+            .size(14.0)
+            .strong()
+            .color(crate::theme::CYAN()),
+    );
     ui.add_space(6.0);
     ui.label(RichText::new(station_key.clone()).size(11.5).weak());
     ui.add_space(8.0);
@@ -168,11 +173,7 @@ pub(in crate::app) fn signed_in_station(ui: &mut egui::Ui, station: &str) {
     let fallback = crate::login::cookie_fallback_stations();
     if fallback.is_empty() {
         ui.add_space(4.0);
-        super::note_at(
-            ui,
-            &tr!("settings-general-sign-out-hint"),
-            Some(11.0),
-        );
+        super::note_at(ui, &tr!("settings-general-sign-out-hint"), Some(11.0));
     } else {
         // The cookie could not be taken, so a password is being kept in the page
         // instead. Said here because the alternative is a browser holding a
@@ -209,11 +210,7 @@ pub(in crate::app) fn remote_access_settings(ui: &mut egui::Ui, access: &mut Rem
             .color(crate::theme::CYAN()),
     );
     ui.add_space(6.0);
-    super::note_at(
-        ui,
-        &tr!("settings-general-what-remote-client-browser-page"),
-        Some(11.5),
-    );
+    super::note_at(ui, &tr!("settings-general-what-remote-client-browser-page"), Some(11.5));
     ui.add_space(8.0);
     egui::Grid::new("remote-access-grid")
         .num_columns(2)
@@ -303,11 +300,9 @@ pub(in crate::app) fn settings_rx_audio_gain(
     // over the paragraph after it, which is what rendering this page showed.
     ui.add(
         egui::Label::new(
-            RichText::new(
-                tr!("settings-general-extra-gain-everything-radio-sends"),
-            )
-            .size(10.5)
-            .color(crate::theme::gray(140)),
+            RichText::new(tr!("settings-general-extra-gain-everything-radio-sends"))
+                .size(10.5)
+                .color(crate::theme::gray(140)),
         )
         .wrap(),
     );
@@ -490,33 +485,41 @@ impl SdroxideApp {
     ) {
         if self.ctrl.engine_is_remote() {
             ui.label(
-                RichText::new(
-                    tr!("settings-general-recordings-remote"),
-                )
-                .size(10.5)
-                .color(crate::theme::gray(140)),
+                RichText::new(tr!("settings-general-recordings-remote"))
+                    .size(10.5)
+                    .color(crate::theme::gray(140)),
             );
             return;
         }
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new(tr!("settings-general-folder")).size(11.0).color(crate::theme::gray(150)));
+            ui.label(
+                RichText::new(tr!("settings-general-folder"))
+                    .size(11.0)
+                    .color(crate::theme::gray(150)),
+            );
             ui.label(
                 RichText::new(self.recordings_dir.display().to_string())
                     .size(10.5)
                     .monospace()
                     .color(crate::theme::gray(180)),
             );
-            if crate::chrome::chip(ui, false, RichText::new(tr!("settings-general-choose")).size(10.5))
-                .on_hover_text(tr!("settings-general-choose-hint"))
-                .clicked()
+            if crate::chrome::chip(
+                ui,
+                false,
+                RichText::new(tr!("settings-general-choose")).size(10.5),
+            )
+            .on_hover_text(tr!("settings-general-choose-hint"))
+            .clicked()
             {
                 *choose = true;
             }
-            if crate::chrome::chip(ui, false, RichText::new(tr!("settings-general-default")).size(10.5))
-                .on_hover_text(
-                    tr!("settings-general-default-hint"),
-                )
-                .clicked()
+            if crate::chrome::chip(
+                ui,
+                false,
+                RichText::new(tr!("settings-general-default")).size(10.5),
+            )
+            .on_hover_text(tr!("settings-general-default-hint"))
+            .clicked()
             {
                 *reset = true;
             }
@@ -524,11 +527,9 @@ impl SdroxideApp {
         ui.add_space(4.0);
         ui.add(
             egui::Label::new(
-                RichText::new(
-                    tr!("settings-general-recordings-dir-note"),
-                )
-                .size(10.5)
-                .color(crate::theme::gray(140)),
+                RichText::new(tr!("settings-general-recordings-dir-note"))
+                    .size(10.5)
+                    .color(crate::theme::gray(140)),
             )
             .wrap(),
         );
@@ -709,12 +710,7 @@ impl SdroxideApp {
             }
         });
         ui.add_space(4.0);
-        super::note_rich(
-            ui,
-            &tr!("settings-general-selecting-mode-lays-mode-s"),
-            Some(10.5),
-            None,
-        );
+        super::note_rich(ui, &tr!("settings-general-selecting-mode-lays-mode-s"), Some(10.5), None);
     }
 }
 

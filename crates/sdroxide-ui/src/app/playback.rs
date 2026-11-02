@@ -87,7 +87,11 @@ fn describe(file: &RecordingFile) -> (String, String) {
                 "{:.4} MHz · {}{}",
                 st.freq_hz / 1e6,
                 st.mode.map_or("?", |m| m.label()),
-                if st.radio > 0 { tr!("playback-radio-n", n = st.radio + 1) } else { String::new() }
+                if st.radio > 0 {
+                    tr!("playback-radio-n", n = st.radio + 1)
+                } else {
+                    String::new()
+                }
             );
             (format!("{when}Z"), what)
         }
@@ -144,11 +148,7 @@ impl super::SdroxideApp {
 
     fn playback_body(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
         crate::chrome::window_body_bg(ui);
-        ui.label(
-            RichText::new(tr!("playback-intro"))
-            .size(11.0)
-            .color(crate::theme::gray(160)),
-        );
+        ui.label(RichText::new(tr!("playback-intro")).size(11.0).color(crate::theme::gray(160)));
         ui.add_space(4.0);
         if let Some(st) = self.state.playback.clone() {
             self.playback_transport(ui, &st, cmds, true);
@@ -191,10 +191,7 @@ impl super::SdroxideApp {
             ui,
             |ui| {
                 if listing.files.is_empty() {
-                    ui.label(
-                        RichText::new(tr!("playback-none"))
-                        .color(crate::theme::gray(150)),
-                    );
+                    ui.label(RichText::new(tr!("playback-none")).color(crate::theme::gray(150)));
                 }
                 let find = self.playback.find.clone();
                 for file in listing.files.iter().filter(|f| matches(f, &find)) {
@@ -245,7 +242,11 @@ impl super::SdroxideApp {
                                 crate::chrome::chip_accent(
                                     ui,
                                     armed,
-                                    if armed { tr!("playback-delete-ask") } else { tr!("decodes-clear") },
+                                    if armed {
+                                        tr!("playback-delete-ask")
+                                    } else {
+                                        tr!("decodes-clear")
+                                    },
                                     crate::theme::ALERT(),
                                     egui::Color32::WHITE,
                                 )
@@ -310,11 +311,11 @@ impl super::SdroxideApp {
         full: bool,
     ) {
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new(tr!("playback-strip-label")).strong().color(crate::theme::ALERT()));
             ui.label(
-                RichText::new(tr!("playback-not-live"))
-                    .size(11.0)
-                    .color(crate::theme::gray(170)),
+                RichText::new(tr!("playback-strip-label")).strong().color(crate::theme::ALERT()),
+            );
+            ui.label(
+                RichText::new(tr!("playback-not-live")).size(11.0).color(crate::theme::gray(170)),
             );
             let (label, hover) = if st.paused || st.ended {
                 (tr!("playback-play"), tr!("playback-carry-on"))
@@ -354,7 +355,8 @@ impl super::SdroxideApp {
             {
                 cmds.push(Command::Playback(PlaybackCommand::Stop));
             }
-            if !full && crate::chrome::chip(ui, self.playback.show, tr!("playback-files")).clicked() {
+            if !full && crate::chrome::chip(ui, self.playback.show, tr!("playback-files")).clicked()
+            {
                 if self.playback.show {
                     self.playback.show = false;
                 } else {
@@ -388,9 +390,15 @@ impl super::SdroxideApp {
                 }
             }
             if st.ended {
-                ui.label(RichText::new(tr!("playback-end-of-file")).size(11.0).color(crate::theme::gray(160)));
+                ui.label(
+                    RichText::new(tr!("playback-end-of-file"))
+                        .size(11.0)
+                        .color(crate::theme::gray(160)),
+                );
             } else if st.paused {
-                ui.label(RichText::new(tr!("playback-paused")).size(11.0).color(crate::theme::gray(160)));
+                ui.label(
+                    RichText::new(tr!("playback-paused")).size(11.0).color(crate::theme::gray(160)),
+                );
             }
         });
         let mut line = st.name.clone();
@@ -418,7 +426,9 @@ impl super::SdroxideApp {
         ui.label(RichText::new(line).size(10.5).color(crate::theme::CYAN_DIM()));
         if let Some(f) = &st.fault {
             ui.label(
-                RichText::new(tr!("playback-stopped", fault = f)).size(11.0).color(crate::theme::ALERT()),
+                RichText::new(tr!("playback-stopped", fault = f))
+                    .size(11.0)
+                    .color(crate::theme::ALERT()),
             );
         }
     }

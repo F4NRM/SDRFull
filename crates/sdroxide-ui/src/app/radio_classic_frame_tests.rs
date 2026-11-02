@@ -783,10 +783,12 @@ fn a_click_on_the_stereo_lamp_flips_the_decode() {
     app.state.rx[0].wfm_stereo = true;
     app.meters = Some(fm_meters(true));
     assert!(click(&ctx, &mut app, "STEREO"), "no STEREO lamp");
-    assert!(sent.lock().unwrap().iter().any(|c| matches!(
-        c,
-        sdroxide_types::Command::SetWfmStereo { on: false, .. }
-    )));
+    assert!(
+        sent.lock()
+            .unwrap()
+            .iter()
+            .any(|c| matches!(c, sdroxide_types::Command::SetWfmStereo { on: false, .. }))
+    );
     assert!(!app.state.rx[0].wfm_stereo);
 }
 

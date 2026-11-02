@@ -188,20 +188,25 @@ fn windows_menu_body(
     actions: &mut Vec<StripAction>,
 ) {
     use sdroxide_types::DetachableModule as M;
-    ui.label(RichText::new(tr!("multi-module-windows")).color(crate::theme::CYAN()).size(11.0).strong());
+    ui.label(
+        RichText::new(tr!("multi-module-windows")).color(crate::theme::CYAN()).size(11.0).strong(),
+    );
     ui.separator();
     for m in M::ALL {
         let out = ui_settings.is_detached(m);
         ui.horizontal(|ui| {
             ui.label(RichText::new(module_window_name(m)).size(12.0));
             crate::chrome::row_tail(ui, |ui| {
-                let chip =
-                    crate::chrome::chip(ui, out, if out { tr!("multi-in-its-own-window") } else { tr!("multi-docked") })
-                        .on_hover_text(if out {
-                            tr!("multi-bring-back", name = module_window_name(m))
-                        } else {
-                            tr!("multi-put-own-window", name = module_window_name(m))
-                        });
+                let chip = crate::chrome::chip(
+                    ui,
+                    out,
+                    if out { tr!("multi-in-its-own-window") } else { tr!("multi-docked") },
+                )
+                .on_hover_text(if out {
+                    tr!("multi-bring-back", name = module_window_name(m))
+                } else {
+                    tr!("multi-put-own-window", name = module_window_name(m))
+                });
                 if chip.clicked() {
                     actions.push(StripAction::SetDetached { module: m, on: !out });
                 }
@@ -225,9 +230,7 @@ fn windows_menu_body(
             }
             if any_in
                 && crate::chrome::chip(ui, false, tr!("multi-undock-all-windows"))
-                    .on_hover_text(
-                        tr!("multi-put-every-module-in-a-window-of"),
-                    )
+                    .on_hover_text(tr!("multi-put-every-module-in-a-window-of"))
                     .clicked()
             {
                 actions.push(StripAction::UndockAll);
@@ -1142,12 +1145,16 @@ impl MultiApp {
             use sdroxide_types::DetachableModule as M;
             let ui_settings = self.tabs[self.focused].app.ui_settings_for_windows();
             let any_out = M::ALL.iter().any(|m| ui_settings.is_detached(*m));
-            let btn = crate::chrome::chip(ui, any_out, RichText::new(format!("🪟 {}", tr!("multi-windows-chip"))).size(12.0))
-                .on_hover_text(if any_out {
-                    tr!("multi-the-station-s-windows-some-modules")
-                } else {
-                    tr!("multi-put-a-module-in-its-own-window-sp1")
-                });
+            let btn = crate::chrome::chip(
+                ui,
+                any_out,
+                RichText::new(format!("🪟 {}", tr!("multi-windows-chip"))).size(12.0),
+            )
+            .on_hover_text(if any_out {
+                tr!("multi-the-station-s-windows-some-modules")
+            } else {
+                tr!("multi-put-a-module-in-its-own-window-sp1")
+            });
             let popup_id = egui::Popup::default_response_id(&btn);
             let before = actions.len();
             crate::chrome::fading_menu_popup(ui, &btn, since, |ui| {
@@ -1227,9 +1234,7 @@ impl MultiApp {
         // Nothing else happens here. The station answers with its roster, and
         // `open_peer_radios` opens what is new in it — including, for a radio
         // this screen asked for, putting it in front of the operator.
-        self.tabs[self.focused]
-            .app
-            .show_notice(tr!("multi-asked-station-another-radio"));
+        self.tabs[self.focused].app.show_notice(tr!("multi-asked-station-another-radio"));
     }
 
     /// Take a tab's radio out of the roster of the station it belongs to.

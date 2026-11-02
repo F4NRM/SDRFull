@@ -195,7 +195,8 @@ fn station_with(n: u32, cfg: RelayConfig, caps: DeviceCaps) -> Station {
         let h = start_engine(
             Box::new(MockTrx { log: Arc::clone(&log) }),
             caps.clone(),
-            EngineConfig { tx_bands_open: true,
+            EngineConfig {
+                tx_bands_open: true,
                 tx_ham_only: false,
                 instance: i,
                 // Only the first engine would open hardware; none of them does

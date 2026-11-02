@@ -60,42 +60,48 @@ impl SdroxideApp {
         ui.scope_builder(egui::UiBuilder::new().max_rect(body), |ui| {
             ui.set_clip_rect(body.intersect(ui.clip_rect()));
             ui.horizontal_top(|ui| {
-            if pane.is_none_or(|p| p == 0) {
-                ui.allocate_ui_with_layout(
-                    egui::vec2(
-                        if pane.is_some() { full_w } else { (full_w * 0.34).clamp(190.0, 340.0) },
-                        avail_h,
-                    ),
-                    egui::Layout::top_down(egui::Align::Min),
-                    |ui| self.aprs_station_list(ui, &st, now, avail_h, tx_ok),
-                );
-            }
-            if pane.is_none() {
-                ui.separator();
-            }
-            // The map and the messages share the rest, the map taking the
-            // larger share: it is the reason this mode has a panel of its own.
-            if pane.is_none_or(|p| p == 1) {
-                ui.vertical(|ui| {
-                    if pane.is_none() {
-                        // The map pane adds its own chip row above the map, which
-                        // is not part of the height it is given: count it, or the
-                        // messages below start that much too low and the box you
-                        // type into hangs off the bottom of the window.
-                        let chip_row = ui.spacing().interact_size.y + ui.spacing().item_spacing.y;
-                        let map_h = (avail_h * 0.56 - chip_row).max(crate::aprs_map::MIN_HEIGHT);
-                        self.aprs_map_pane(ui, &st, now, map_h);
-                        ui.add_space(2.0);
-                        let left = (content_bottom - ui.cursor().top()).max(60.0);
-                        self.aprs_message_pane(ui, cmds, &st, left, tx_ok);
-                    } else {
-                        self.aprs_message_pane(ui, cmds, &st, avail_h, tx_ok);
-                    }
-                });
-            }
-            if pane == Some(2) {
-                ui.vertical(|ui| self.aprs_map_pane(ui, &st, now, avail_h));
-            }
+                if pane.is_none_or(|p| p == 0) {
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(
+                            if pane.is_some() {
+                                full_w
+                            } else {
+                                (full_w * 0.34).clamp(190.0, 340.0)
+                            },
+                            avail_h,
+                        ),
+                        egui::Layout::top_down(egui::Align::Min),
+                        |ui| self.aprs_station_list(ui, &st, now, avail_h, tx_ok),
+                    );
+                }
+                if pane.is_none() {
+                    ui.separator();
+                }
+                // The map and the messages share the rest, the map taking the
+                // larger share: it is the reason this mode has a panel of its own.
+                if pane.is_none_or(|p| p == 1) {
+                    ui.vertical(|ui| {
+                        if pane.is_none() {
+                            // The map pane adds its own chip row above the map, which
+                            // is not part of the height it is given: count it, or the
+                            // messages below start that much too low and the box you
+                            // type into hangs off the bottom of the window.
+                            let chip_row =
+                                ui.spacing().interact_size.y + ui.spacing().item_spacing.y;
+                            let map_h =
+                                (avail_h * 0.56 - chip_row).max(crate::aprs_map::MIN_HEIGHT);
+                            self.aprs_map_pane(ui, &st, now, map_h);
+                            ui.add_space(2.0);
+                            let left = (content_bottom - ui.cursor().top()).max(60.0);
+                            self.aprs_message_pane(ui, cmds, &st, left, tx_ok);
+                        } else {
+                            self.aprs_message_pane(ui, cmds, &st, avail_h, tx_ok);
+                        }
+                    });
+                }
+                if pane == Some(2) {
+                    ui.vertical(|ui| self.aprs_map_pane(ui, &st, now, avail_h));
+                }
             });
         });
         ui.allocate_rect(body, egui::Sense::hover());
@@ -191,9 +197,7 @@ impl SdroxideApp {
                                     if n < 1.0 { tr!("topbar-off") } else { format!("{n:.0} min") }
                                 }),
                         )
-                        .on_hover_text(
-                            tr!("aprs-how-often-beacon-your-position"),
-                        );
+                        .on_hover_text(tr!("aprs-how-often-beacon-your-position"));
                     if resp.changed() && cfg.aprs_beacon_minutes != before {
                         let cfg = cfg.clone();
                         cmds.push(Command::SetDigiConfig(cfg));
@@ -665,9 +669,13 @@ impl SdroxideApp {
                 {
                     self.aprs_msgs_all = !self.aprs_msgs_all;
                 }
-                if crate::chrome::chip(ui, self.aprs_show_traffic, RichText::new(tr!("aprs-raw-chip")).size(9.5))
-                    .on_hover_text(tr!("aprs-every-frame-channel-arrived-other"))
-                    .clicked()
+                if crate::chrome::chip(
+                    ui,
+                    self.aprs_show_traffic,
+                    RichText::new(tr!("aprs-raw-chip")).size(9.5),
+                )
+                .on_hover_text(tr!("aprs-every-frame-channel-arrived-other"))
+                .clicked()
                 {
                     self.aprs_show_traffic = !self.aprs_show_traffic;
                 }
@@ -721,12 +729,8 @@ impl SdroxideApp {
                         && (m.from.eq_ignore_ascii_case(&me) || m.to.eq_ignore_ascii_case(&me))
                         || m.to.to_ascii_uppercase().starts_with("BLN")
                 };
-                let mut shown: Vec<sdroxide_types::AprsMessage> = st
-                    .messages
-                    .iter()
-                    .filter(|m| self.aprs_msgs_all || mine(m))
-                    .cloned()
-                    .collect();
+                let mut shown: Vec<sdroxide_types::AprsMessage> =
+                    st.messages.iter().filter(|m| self.aprs_msgs_all || mine(m)).cloned().collect();
                 // With ALL lit, what stations say about themselves — the comment
                 // of a position, a status report — belongs in the conversation
                 // column too: most channels carry far more of that than real
@@ -827,8 +831,12 @@ impl SdroxideApp {
                                     .on_hover_text(tip);
                             }
                         } else if !m.id.is_empty()
-                            && crate::chrome::chip(ui, false, RichText::new(tr!("aprs-reply-chip")).size(9.0))
-                                .clicked()
+                            && crate::chrome::chip(
+                                ui,
+                                false,
+                                RichText::new(tr!("aprs-reply-chip")).size(9.0),
+                            )
+                            .clicked()
                         {
                             self.aprs_target = m.from.clone();
                         }
@@ -874,7 +882,8 @@ impl SdroxideApp {
                         .weak(),
                 )
                 .on_hover_text(tr!("aprs-compose-count-hint"));
-                let ready = !self.aprs_target.trim().is_empty() && !self.aprs_draft.trim().is_empty();
+                let ready =
+                    !self.aprs_target.trim().is_empty() && !self.aprs_draft.trim().is_empty();
                 if tx_gated(ui, tx_ok && ready && have_call, |ui| {
                     crate::chrome::chip_accent(
                         ui,

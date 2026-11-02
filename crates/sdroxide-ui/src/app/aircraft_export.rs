@@ -18,8 +18,8 @@ use sdroxide_aircraft_history::export::{Format, Row, Scope};
 use sdroxide_aircraft_online::{Info, Status as InfoStatus};
 
 use super::aircraft_history::Reason;
-use crate::i18n::tr;
 use super::aircraft_registry::AircraftCard;
+use crate::i18n::tr;
 
 /// How long the station is waited for before the file is made here instead.
 pub(in crate::app) const FLIGHT_TIMEOUT_S: i64 = 30;

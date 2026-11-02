@@ -914,9 +914,13 @@ impl SdroxideApp {
                             to_edit = Some(r.id);
                         }
                         if !up_targets.is_empty()
-                            && crate::chrome::chip(ui, false, RichText::new(tr!("logbook-up-chip")).size(11.0))
-                                .on_hover_text(tr!("logbook-upload-qso-configured-logs"))
-                                .clicked()
+                            && crate::chrome::chip(
+                                ui,
+                                false,
+                                RichText::new(tr!("logbook-up-chip")).size(11.0),
+                            )
+                            .on_hover_text(tr!("logbook-upload-qso-configured-logs"))
+                            .clicked()
                         {
                             to_upload = Some(r.id);
                         }

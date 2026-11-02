@@ -148,12 +148,15 @@ impl super::SdroxideApp {
         // the thing it moves is. `◀` folds it to the rails; the `▶` on the rails
         // brings it back. Nothing of this is drawn when Classic UI is off.
         ui.horizontal(|ui| {
-            ui.label(RichText::new(tr!("classic-controls")).size(10.5).strong().color(crate::theme::CYAN_DIM()));
+            ui.label(
+                RichText::new(tr!("classic-controls"))
+                    .size(10.5)
+                    .strong()
+                    .color(crate::theme::CYAN_DIM()),
+            );
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if crate::chrome::chip(ui, false, RichText::new('◀').size(11.0))
-                    .on_hover_text(
-                        tr!("classic-fold-the-column-away-to-a-rail-on"),
-                    )
+                    .on_hover_text(tr!("classic-fold-the-column-away-to-a-rail-on"))
                     .clicked()
                 {
                     self.classic_collapsed = true;
@@ -302,9 +305,7 @@ impl super::SdroxideApp {
                     if bar.dragged() {
                         egui::DragAndDrop::set_payload(ui.ctx(), sec);
                     }
-                    bar.on_hover_text(
-                        tr!("classic-click-to-open-or-close-this"),
-                    );
+                    bar.on_hover_text(tr!("classic-click-to-open-or-close-this"));
                     let bar_rect = egui::Rect::from_min_max(
                         egui::pos2(ui.max_rect().left(), row.response.rect.top() - 2.0),
                         egui::pos2(ui.max_rect().right(), row.response.rect.bottom() + 2.0),
@@ -377,16 +378,18 @@ impl super::SdroxideApp {
             self.caps.as_ref().map(|c| c.label.clone()).unwrap_or_else(|| tr!("classic-no-radio"));
         source_row(ui, &tr!("settings-radio"), &label);
         source_row(ui, &tr!("classic-rate"), &format!("{:.3} Msps", self.state.sample_rate / 1e6));
-        source_row(ui, &tr!("classic-dial"), &crate::app::frame::readout_text(self.state.rx_freq_hz()));
+        source_row(
+            ui,
+            &tr!("classic-dial"),
+            &crate::app::frame::readout_text(self.state.rx_freq_hz()),
+        );
         source_row(ui, &tr!("vdl2-mode"), self.state.rx[0].mode.label());
         if self.swl_mode() {
             source_row(ui, &tr!("classic-receive"), &tr!("classic-listening-screen"));
         }
         ui.add_space(4.0);
         if crate::chrome::chip(ui, self.show_settings, tr!("classic-radio-settings"))
-            .on_hover_text(
-                tr!("classic-the-backend-the-sample-rate-the"),
-            )
+            .on_hover_text(tr!("classic-the-backend-the-sample-rate-the"))
             .clicked()
         {
             self.show_settings = true;
@@ -435,14 +438,10 @@ impl super::SdroxideApp {
                 g.name
             );
             if g.unit == sdroxide_types::GainUnit::Step {
-                hint.push_str(
-                    &tr!("classic-counted-in-steps-not-decibels-what"),
-                );
+                hint.push_str(&tr!("classic-counted-in-steps-not-decibels-what"));
             }
             if hardware_agc {
-                hint.push_str(
-                    &tr!("classic-the-plutosdr-s-own-agc-is-setting"),
-                );
+                hint.push_str(&tr!("classic-the-plutosdr-s-own-agc-is-setting"));
             }
             classic_row(ui, &tr!("settings-radio-gain"), |ui| {
                 let mut db = self
@@ -510,9 +509,7 @@ impl super::SdroxideApp {
                         .step_by(1.0)
                         .suffix(" dB"),
                 )
-                .on_hover_text(
-                    tr!("topbar-manual-audio-gain-used-while"),
-                );
+                .on_hover_text(tr!("topbar-manual-audio-gain-used-while"));
                 if resp.changed() {
                     self.state.rx[0].manual_gain_db = db; // optimistic echo
                     cmds.push(Command::SetManualGain { rx: RxId::Main, db });
@@ -548,9 +545,7 @@ impl super::SdroxideApp {
                     if v <= -149.5 { "off".into() } else { format!("{v:.0} dB") }
                 }),
             )
-            .on_hover_text(
-                tr!("classic-gate-the-audio-below-this-power-in"),
-            );
+            .on_hover_text(tr!("classic-gate-the-audio-below-this-power-in"));
             if resp.changed() {
                 self.state.rx[0].squelch_db = v; // optimistic echo
                 cmds.push(Command::SetSquelch { rx: RxId::Main, db: v });
@@ -674,9 +669,7 @@ impl super::SdroxideApp {
                     ) + 22.0,
                     Slider::new(&mut db, 0.0..=sdroxide_types::CESSB_MAX_DB).suffix(" dB"),
                 )
-                .on_hover_text(
-                    tr!("classic-controlled-envelope-ssb-how-much"),
-                );
+                .on_hover_text(tr!("classic-controlled-envelope-ssb-how-much"));
                 if resp.changed() {
                     cmds.push(Command::SetCessb(db));
                 }

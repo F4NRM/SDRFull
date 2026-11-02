@@ -81,11 +81,7 @@ impl SdroxideApp {
         });
 
         ui.horizontal_wrapped(|ui| {
-            ui.label(
-                RichText::new(tr!("uvpacket-intro"))
-                .size(10.0)
-                .weak(),
-            );
+            ui.label(RichText::new(tr!("uvpacket-intro")).size(10.0).weak());
         });
 
         ui.separator();
@@ -95,10 +91,7 @@ impl SdroxideApp {
             .max_height((panel_h - 60.0).max(60.0))
             .show(ui, |ui| {
                 if st.frames.is_empty() {
-                    ui.label(
-                        RichText::new(tr!("uvpacket-nothing-yet"))
-                        .weak(),
-                    );
+                    ui.label(RichText::new(tr!("uvpacket-nothing-yet")).weak());
                     return;
                 }
                 let mut pick: Option<usize> = None;
@@ -115,9 +108,13 @@ impl SdroxideApp {
                             RichText::new(f.mode.label()).monospace().strong().color(theme::CYAN()),
                         );
                         ui.label(
-                            RichText::new(tr!("uvpacket-app-seq", app = f.app_type, seq = f.sequence))
-                                .monospace()
-                                .size(10.0),
+                            RichText::new(tr!(
+                                "uvpacket-app-seq",
+                                app = f.app_type,
+                                seq = f.sequence
+                            ))
+                            .monospace()
+                            .size(10.0),
                         );
                         ui.label(
                             RichText::new(format!("{} B", f.payload.len()))
@@ -173,7 +170,11 @@ impl SdroxideApp {
                 field(ui, &tr!("uvpacket-app-type"), &f.app_type.to_string());
                 field(ui, &tr!("panels-sequence"), &f.sequence.to_string());
                 field(ui, &tr!("panels-blocks"), &f.block_count.to_string());
-                field(ui, &tr!("panels-payload"), &tr!("uvpacket-payload-bytes", n = f.payload.len()));
+                field(
+                    ui,
+                    &tr!("panels-payload"),
+                    &tr!("uvpacket-payload-bytes", n = f.payload.len()),
+                );
                 field(ui, "SNR", &format!("{:+} dB", f.snr_db));
 
                 ui.add_space(4.0);

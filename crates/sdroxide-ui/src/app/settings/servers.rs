@@ -43,10 +43,7 @@ pub(in crate::app) fn settings_wsjtx_tab(
         super::note(ui, &tr!("settings-servers-waiting-station-s-wsjt-x"));
         return;
     }
-    super::note(
-        ui,
-        &tr!("settings-servers-sends-decodes-station-status-logged"),
-    );
+    super::note(ui, &tr!("settings-servers-sends-decodes-station-status-logged"));
     ui.add_space(6.0);
     crate::chrome::checkbox(ui, &mut cfg.enabled, tr!("settings-servers-enable"));
     ui.add_space(6.0);
@@ -63,9 +60,7 @@ pub(in crate::app) fn settings_wsjtx_tab(
                         .desired_width(160.0)
                         .hint_text("127.0.0.1"),
                 )
-                .on_hover_text(
-                    tr!("settings-servers-t-127-0-0-1-reaches"),
-                );
+                .on_hover_text(tr!("settings-servers-t-127-0-0-1-reaches"));
                 ui.end_row();
 
                 ui.label(tr!("settings-servers-port"));
@@ -78,9 +73,7 @@ pub(in crate::app) fn settings_wsjtx_tab(
                     ui,
                     egui::TextEdit::singleline(&mut cfg.id).desired_width(160.0),
                 )
-                .on_hover_text(
-                    tr!("settings-servers-name-clients-see-some-loggers"),
-                );
+                .on_hover_text(tr!("settings-servers-name-clients-see-some-loggers"));
                 ui.end_row();
             });
     });
@@ -97,10 +90,7 @@ pub(in crate::app) fn settings_wsjtx_tab(
             .color(crate::theme::CYAN()),
     );
     ui.add_space(4.0);
-    super::note(
-        ui,
-        &tr!("settings-servers-same-news-n1mm-s-words"),
-    );
+    super::note(ui, &tr!("settings-servers-same-news-n1mm-s-words"));
     ui.add_space(6.0);
     crate::chrome::checkbox(ui, &mut cfg.n1mm.enabled, tr!("settings-servers-enable"));
     ui.add_space(6.0);
@@ -117,9 +107,7 @@ pub(in crate::app) fn settings_wsjtx_tab(
                         .desired_width(160.0)
                         .hint_text("127.0.0.1"),
                 )
-                .on_hover_text(
-                    tr!("settings-servers-t-127-0-0-1-reaches-2"),
-                );
+                .on_hover_text(tr!("settings-servers-t-127-0-0-1-reaches-2"));
                 ui.end_row();
 
                 ui.label(tr!("settings-servers-port"));
@@ -132,9 +120,7 @@ pub(in crate::app) fn settings_wsjtx_tab(
                     ui,
                     egui::TextEdit::singleline(&mut cfg.n1mm.station).desired_width(160.0),
                 )
-                .on_hover_text(
-                    tr!("settings-servers-what-n1mm-calls-stationname-name"),
-                );
+                .on_hover_text(tr!("settings-servers-what-n1mm-calls-stationname-name"));
                 ui.end_row();
             });
     });
@@ -145,13 +131,13 @@ pub(in crate::app) fn settings_wsjtx_tab(
     ui.end_row();
     ui.add_space(6.0);
     ui.label(
-        RichText::new(tr!("settings-servers-decoded-text-udp")).size(13.0).strong().color(crate::theme::CYAN()),
+        RichText::new(tr!("settings-servers-decoded-text-udp"))
+            .size(13.0)
+            .strong()
+            .color(crate::theme::CYAN()),
     );
     ui.add_space(4.0);
-    super::note(
-        ui,
-        &tr!("settings-servers-decoded-text-udp-note"),
-    );
+    super::note(ui, &tr!("settings-servers-decoded-text-udp-note"));
     ui.add_space(4.0);
     ui.label(RichText::new(tr!("settings-servers-cw-panel-s-copy-plain")).weak());
     ui.add_space(6.0);
@@ -168,16 +154,17 @@ pub(in crate::app) fn settings_wsjtx_tab(
                         .desired_width(160.0)
                         .hint_text("127.0.0.1:9999"),
                 )
-                .on_hover_text(
-                    tr!("settings-servers-decoded-text-udp-hint"),
-                );
+                .on_hover_text(tr!("settings-servers-decoded-text-udp-hint"));
                 ui.end_row();
             });
     }
     if !decode_udp.trim().is_empty() {
         super::note(
             ui,
-            &tr!("settings-servers-decoded-text-udp-format", example = "{\"time\":…,\"unix\":…,\"kind\":\"text\",\"mode\":\"RTTY\",\"dial_hz\":…,\"freq_hz\":…,\"text\":\"…\"}"),
+            &tr!(
+                "settings-servers-decoded-text-udp-format",
+                example = "{\"time\":…,\"unix\":…,\"kind\":\"text\",\"mode\":\"RTTY\",\"dial_hz\":…,\"freq_hz\":…,\"text\":\"…\"}"
+            ),
         );
     }
 
@@ -327,10 +314,7 @@ pub(in crate::app) fn settings_rigctld_tab(
     }
 
     ui.add_space(8.0);
-    super::note(
-        ui,
-        &tr!("settings-servers-lets-any-hamlib-capable-program"),
-    );
+    super::note(ui, &tr!("settings-servers-lets-any-hamlib-capable-program"));
 }
 
 /// The antenna rotator — the one interface on this tab where sdroxide dials
@@ -345,16 +329,18 @@ pub(in crate::app) fn settings_rotator_tab(
     apply: &mut bool,
 ) {
     use sdroxide_types::RotatorTransport as T;
-    ui.label(RichText::new(tr!("settings-servers-antenna-rotator")).size(14.0).strong().color(crate::theme::CYAN()));
+    ui.label(
+        RichText::new(tr!("settings-servers-antenna-rotator"))
+            .size(14.0)
+            .strong()
+            .color(crate::theme::CYAN()),
+    );
     ui.add_space(4.0);
     if !seeded {
         super::note(ui, &tr!("settings-servers-waiting-station-s-rotator-configuration"));
         return;
     }
-    super::note(
-        ui,
-        &tr!("settings-servers-rotator-note"),
-    );
+    super::note(ui, &tr!("settings-servers-rotator-note"));
     ui.add_space(6.0);
     crate::chrome::checkbox(ui, &mut cfg.enabled, tr!("settings-servers-enable"));
     ui.add_space(6.0);
@@ -373,14 +359,26 @@ pub(in crate::app) fn settings_rotator_tab(
                         T::PsRotator => tr!("settings-servers-transport-pstrotator"),
                     })
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut cfg.transport, T::Rotctld, tr!("settings-servers-transport-rotctld"));
+                        ui.selectable_value(
+                            &mut cfg.transport,
+                            T::Rotctld,
+                            tr!("settings-servers-transport-rotctld"),
+                        );
                         ui.selectable_value(
                             &mut cfg.transport,
                             T::EasyComm2,
                             tr!("settings-servers-transport-easycomm"),
                         );
-                        ui.selectable_value(&mut cfg.transport, T::Gs232, tr!("settings-servers-transport-gs232"));
-                        ui.selectable_value(&mut cfg.transport, T::PsRotator, tr!("settings-servers-transport-pstrotator"));
+                        ui.selectable_value(
+                            &mut cfg.transport,
+                            T::Gs232,
+                            tr!("settings-servers-transport-gs232"),
+                        );
+                        ui.selectable_value(
+                            &mut cfg.transport,
+                            T::PsRotator,
+                            tr!("settings-servers-transport-pstrotator"),
+                        );
                     });
                 ui.end_row();
 
@@ -420,17 +418,13 @@ pub(in crate::app) fn settings_rotator_tab(
                         // port + 1, so the host and port row above is the whole of
                         // it — no serial port, no baud.
                         ui.label("");
-                        ui.label(
-                            tr!("settings-servers-pstrotator-note"),
-                        );
+                        ui.label(tr!("settings-servers-pstrotator-note"));
                     }
                 }
 
                 ui.label(tr!("settings-servers-min-elevation"));
                 ui.add(egui::DragValue::new(&mut cfg.min_el_deg).range(0.0..=45.0).suffix("°"))
-                    .on_hover_text(
-                        tr!("settings-servers-below-rotator-parks-instead-tracking"),
-                    );
+                    .on_hover_text(tr!("settings-servers-below-rotator-parks-instead-tracking"));
                 ui.end_row();
 
                 ui.label(tr!("settings-servers-azimuth-offset"));
@@ -442,9 +436,7 @@ pub(in crate::app) fn settings_rotator_tab(
 
                 ui.label(tr!("settings-servers-min-movement"));
                 ui.add(egui::DragValue::new(&mut cfg.min_move_deg).range(0.1..=10.0).suffix("°"))
-                    .on_hover_text(
-                        tr!("settings-servers-steps-smaller-than-are-not"),
-                    );
+                    .on_hover_text(tr!("settings-servers-steps-smaller-than-are-not"));
                 ui.end_row();
 
                 ui.label(tr!("settings-servers-park-position"));
@@ -642,8 +634,5 @@ pub(in crate::app) fn settings_tci_server_tab(
     }
 
     ui.add_space(8.0);
-    super::note(
-        ui,
-        &tr!("settings-servers-tci-note"),
-    );
+    super::note(ui, &tr!("settings-servers-tci-note"));
 }

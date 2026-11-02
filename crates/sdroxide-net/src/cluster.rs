@@ -221,10 +221,7 @@ pub(crate) fn parse_dx_line(line: &str, now: i64) -> Option<Spot> {
         return None;
     }
     // Live pushed spot: "DX de <spotter>: <freq> <call> <comment> <time>".
-    if let Some(rest) = line
-        .strip_prefix("DX de ")
-        .or_else(|| line.strip_prefix("Dx de "))
-    {
+    if let Some(rest) = line.strip_prefix("DX de ").or_else(|| line.strip_prefix("Dx de ")) {
         let (spotter, after) = rest.split_once(':')?;
         return build_spot_from_dx_de(spotter, after, now);
     }

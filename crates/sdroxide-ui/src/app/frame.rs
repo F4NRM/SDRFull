@@ -445,15 +445,9 @@ fn tool_window_chip(ui: &mut egui::Ui, undocked: bool) -> bool {
             // A **floating panel** docks back into the pane; an OS window docks
             // back into the main window. Two different pictures, because they are
             // two different places to go back to.
-            (
-                crate::chrome::WindowIcon::Dock,
-                tr!("frame-dock-panel-pane-hint"),
-            )
+            (crate::chrome::WindowIcon::Dock, tr!("frame-dock-panel-pane-hint"))
         } else {
-            (
-                crate::chrome::WindowIcon::Out,
-                tr!("frame-window-chip-hint"),
-            )
+            (crate::chrome::WindowIcon::Out, tr!("frame-window-chip-hint"))
         };
         // A **one-row** allocation, right-aligned — not `row_tail`. `row_tail`
         // lays out `right_to_left(Align::Center)` over the whole available
@@ -1273,8 +1267,7 @@ impl eframe::App for SdroxideApp {
             if unavailable {
                 if self.panel_undock_notice_mode != Some(mode) {
                     self.panel_undock_notice_mode = Some(mode);
-                    self.radio_notice =
-                        Some(tr!("frame-no-operating-panel", mode = mode.label()));
+                    self.radio_notice = Some(tr!("frame-no-operating-panel", mode = mode.label()));
                 }
             } else {
                 self.panel_undock_notice_mode = None;
@@ -1295,9 +1288,7 @@ impl eframe::App for SdroxideApp {
             .or_else(|| tx_note.clone())
             .or_else(|| self.other_instance.clone());
         let notice = shown.or_else(|| {
-            (rx_only && !self.rx_only_nudge_dismissed).then(|| {
-                tr!("frame-rx-only-nudge")
-            })
+            (rx_only && !self.rx_only_nudge_dismissed).then(|| tr!("frame-rx-only-nudge"))
         });
         // A refused PTT or TUNE press: big, red, every time — no cap.
         if let Some(red) = self.tx_press_banner(crate::time::now_unix_f64()) {
@@ -1364,7 +1355,10 @@ impl eframe::App for SdroxideApp {
                                 // it, and nothing is retuned.
                                 if rx_only
                                     && ui
-                                        .button(RichText::new(tr!("frame-listening-controls")).size(13.0))
+                                        .button(
+                                            RichText::new(tr!("frame-listening-controls"))
+                                                .size(13.0),
+                                        )
                                         .on_hover_text(tr!("frame-listening-controls-hint"))
                                         .clicked()
                                 {
@@ -2005,11 +1999,11 @@ impl eframe::App for SdroxideApp {
             self.ui_settings.tool_windows_open |= TW_LOGBOOK;
         } else {
             self.ui_settings.tool_windows_open &= !TW_LOGBOOK;
-        if self.show_session_qsos {
-            self.ui_settings.tool_windows_open |= TW_SESSION_QSOS;
-        } else {
-            self.ui_settings.tool_windows_open &= !TW_SESSION_QSOS;
-        }
+            if self.show_session_qsos {
+                self.ui_settings.tool_windows_open |= TW_SESSION_QSOS;
+            } else {
+                self.ui_settings.tool_windows_open &= !TW_SESSION_QSOS;
+            }
         }
         if self.show_settings {
             self.ui_settings.tool_windows_open |= TW_SETTINGS;
@@ -4746,7 +4740,10 @@ impl SdroxideApp {
                     // stopped by this page every launch. Ticking it is itself
                     // an acknowledgement, so the window goes away with it.
                     if ui
-                        .checkbox(&mut self.ui_settings.oob_tx_dismissed, tr!("frame-dont-show-again"))
+                        .checkbox(
+                            &mut self.ui_settings.oob_tx_dismissed,
+                            tr!("frame-dont-show-again"),
+                        )
                         .on_hover_text(tr!("frame-dont-show-again-hint"))
                         .changed()
                     {
@@ -4801,15 +4798,9 @@ impl SdroxideApp {
                         .size(13.0),
                 );
                 ui.add_space(6.0);
-                ui.label(
-                    RichText::new(tr!("frame-cb-not-amateur"))
-                    .color(crate::theme::TEXT()),
-                );
+                ui.label(RichText::new(tr!("frame-cb-not-amateur")).color(crate::theme::TEXT()));
                 ui.add_space(6.0);
-                ui.label(
-                    RichText::new(tr!("frame-cb-only-continue"))
-                    .color(crate::theme::TEXT()),
-                );
+                ui.label(RichText::new(tr!("frame-cb-only-continue")).color(crate::theme::TEXT()));
                 ui.add_space(10.0);
                 ui.horizontal(|ui| {
                     if crate::chrome::chip_accent(
@@ -5147,8 +5138,7 @@ impl SdroxideApp {
         egui::Modal::new(egui::Id::new("client-bindings-offer")).show(ctx, |ui| {
             ui.set_max_width(470.0);
             ui.heading(
-                RichText::new(tr!("frame-bindings-offer-title"))
-                    .color(crate::theme::ALERT()),
+                RichText::new(tr!("frame-bindings-offer-title")).color(crate::theme::ALERT()),
             );
             ui.add_space(6.0);
             ui.label(match &offer.profile {
@@ -5160,9 +5150,7 @@ impl SdroxideApp {
             ui.add_space(10.0);
             ui.horizontal(|ui| {
                 if ui
-                    .button(
-                        RichText::new(tr!("frame-bindings-use")).color(crate::theme::ALERT()),
-                    )
+                    .button(RichText::new(tr!("frame-bindings-use")).color(crate::theme::ALERT()))
                     .clicked()
                 {
                     adopt = true;
@@ -5181,8 +5169,7 @@ impl SdroxideApp {
             self.input.cfg.migrate();
             self.input.persist();
             self.client_settings_from = Some(offer.profile);
-            self.client_settings_status =
-                Some(tr!("frame-bindings-using-profile"));
+            self.client_settings_status = Some(tr!("frame-bindings-using-profile"));
             self.bindings_pending = None;
         } else if decline {
             // **"and stop asking" has to mean it.** Dropping the offer is not
@@ -5192,8 +5179,7 @@ impl SdroxideApp {
             // the fork's #18, "displays all the time, already reported".
             self.ui_settings.client_bindings_declined = true;
             crate::app::persist::persist_ui_settings(&self.ui_settings);
-            self.client_settings_status =
-                Some(tr!("frame-bindings-keeping-own"));
+            self.client_settings_status = Some(tr!("frame-bindings-keeping-own"));
             self.bindings_pending = None;
         }
     }
@@ -5208,12 +5194,10 @@ impl SdroxideApp {
                 self.view.center_on_vfo = stored.center_on_vfo;
                 self.view.fft_size = stored.fft_size;
                 crate::app::persist::persist_ui_settings(&self.ui_settings);
-                self.client_settings_status =
-                    Some(tr!("frame-look-back-to-profile"));
+                self.client_settings_status = Some(tr!("frame-look-back-to-profile"));
             }
             None => {
-                self.client_settings_status =
-                    Some(tr!("frame-look-none-stored"));
+                self.client_settings_status = Some(tr!("frame-look-none-stored"));
             }
         }
     }

@@ -131,10 +131,11 @@ impl crate::app::SdroxideApp {
 
         // An empty inbox would otherwise draw as a couple of lines; a height
         // floor keeps the window usable whichever way it is drawn.
-        let show = self.tool_window(ctx, "mail", &tr!("winlink-mail"), [860.0, 640.0], true, |me, ui| {
-            ui.set_min_height(crate::layout::window_h(ui.ctx(), 520.0));
-            me.mail_body(ui, cmds);
-        });
+        let show =
+            self.tool_window(ctx, "mail", &tr!("winlink-mail"), [860.0, 640.0], true, |me, ui| {
+                ui.set_min_height(crate::layout::window_h(ui.ctx(), 520.0));
+                me.mail_body(ui, cmds);
+            });
         self.mail.open = show;
     }
 

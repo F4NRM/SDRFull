@@ -74,7 +74,8 @@ impl Radio {
         let mut h = start_engine(
             Box::new(MockTrx { center: START_CENTER }),
             caps(),
-            EngineConfig { tx_bands_open: true,
+            EngineConfig {
+                tx_bands_open: true,
                 tx_ham_only: false,
                 instance,
                 primary: instance == 0,

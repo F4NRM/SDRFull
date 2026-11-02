@@ -32,7 +32,6 @@ pub(in crate::app) mod aircraft_search;
 pub(in crate::app) mod aircraft_share;
 pub(in crate::app) mod aircraft_stats;
 pub(in crate::app) mod aircraft_watch;
-pub(in crate::app) mod programs_sync;
 pub(in crate::app) mod alerts;
 pub(in crate::app) mod antenna;
 pub(in crate::app) mod auto_mode;
@@ -66,6 +65,7 @@ pub(in crate::app) mod net;
 pub(in crate::app) mod panels;
 pub(crate) mod persist;
 pub(in crate::app) mod playback;
+pub(in crate::app) mod programs_sync;
 pub(in crate::app) mod publicsdr;
 pub(in crate::app) mod qo100;
 pub(in crate::app) mod rds;
@@ -7448,7 +7448,12 @@ mod tests {
         assert!(app.tx_band_msg.is_none(), "80 m is enabled: no banner");
         // Four refused bands in turn: the banner shows for three of them.
         let mut shown = 0;
-        for (hz, ok) in [(14_074_000.0, 7_074_000.0), (21_074_000.0, 7_074_000.0), (28_074_000.0, 7_074_000.0), (18_100_000.0, 7_074_000.0)] {
+        for (hz, ok) in [
+            (14_074_000.0, 7_074_000.0),
+            (21_074_000.0, 7_074_000.0),
+            (28_074_000.0, 7_074_000.0),
+            (18_100_000.0, 7_074_000.0),
+        ] {
             tune(&mut app, hz);
             assert_eq!(app.state.vfo_a_hz, hz, "the dial is never moved");
             if app.tx_band_msg.is_some() {

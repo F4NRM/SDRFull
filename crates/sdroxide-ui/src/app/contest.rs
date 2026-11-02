@@ -35,9 +35,16 @@ impl SdroxideApp {
         if !self.show_contest {
             return;
         }
-        let show = self.tool_window(ctx, "contest", &tr!("contest-title"), [660.0, 540.0], true, |me, ui| {
-            me.contest_body(ui, cmds);
-        });
+        let show = self.tool_window(
+            ctx,
+            "contest",
+            &tr!("contest-title"),
+            [660.0, 540.0],
+            true,
+            |me, ui| {
+                me.contest_body(ui, cmds);
+            },
+        );
         self.show_contest = show;
     }
 
@@ -68,10 +75,7 @@ impl SdroxideApp {
         ui.label(tr!("contest-you-send", exchange = exchange_hint(spec.sent)));
         ui.label(tr!("contest-they-send", exchange = exchange_hint(spec.rcvd)));
         if picked == ContestId::CbActivity {
-            ui.label(
-                egui::RichText::new(tr!("contest-cb-note"))
-                .size(11.0),
-            );
+            ui.label(egui::RichText::new(tr!("contest-cb-note")).size(11.0));
         }
         ui.add_space(8.0);
         ui.horizontal(|ui| {
@@ -195,7 +199,9 @@ impl SdroxideApp {
                 egui::TextEdit::singleline(&mut self.contest_entry.call).desired_width(100.0),
             );
             if dupe {
-                ui.label(egui::RichText::new(tr!("contest-dupe")).strong().color(crate::theme::ALERT()));
+                ui.label(
+                    egui::RichText::new(tr!("contest-dupe")).strong().color(crate::theme::ALERT()),
+                );
             }
             ui.label(tr!("contest-sent"));
             crate::chrome::field(

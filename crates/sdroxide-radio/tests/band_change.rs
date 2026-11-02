@@ -311,8 +311,6 @@ fn a_qsy_empties_the_call_queue() {
         "a QSY must drop the queue: its offsets belong to the dial we have left"
     );
     shutdown(h);
-
-
 }
 
 /// **A band this receiver has never been on takes the mode already in use.**

@@ -344,7 +344,8 @@ async fn a_signed_in_clients_screen_lands_in_its_own_profile() {
     }
 
     // On disk, under the profile and not only the default.
-    let saved = std::fs::read_to_string(dir.join("clientsettings.json")).expect("clientsettings.json written");
+    let saved = std::fs::read_to_string(dir.join("clientsettings.json"))
+        .expect("clientsettings.json written");
     assert!(saved.contains(user), "the profile is in the store: {saved}");
 
     // A new session is offered that profile's own set, unasked.

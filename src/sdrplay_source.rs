@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 
 use sdroxide_dsp::Diversity;
 use sdroxide_radio::{Complex32, IqSource, Result, lo_offset_for};
-use sdroxide_sdrplay::{DuoMode, SdrPlayDevice, SdrPlayHandle};
+use sdroxide_sdrplay::{DuoMode, LnaLadder, SdrPlayDevice, SdrPlayHandle};
 use sdroxide_types::{
     Direction, DiversityMode, GainElement, SdrPlayAgc, SdrPlayConfig, SdrPlayDuo, SdrPlayDuoTuner,
     SdrPlayHdrBw, SdrPlayModel,
@@ -41,6 +41,10 @@ const SILENCE_BEFORE_REOPEN: Duration = Duration::from_secs(3);
 /// How often the diversity filter's achieved null depth reaches the log.
 const DEPTH_LOG_INTERVAL: Duration = Duration::from_secs(10);
 
+/// How long a (LNA state, LNA reduction) pair must stand before the ladder
+/// learns it.
+const LADDER_SETTLE: Duration = Duration::from_millis(300);
+
 pub struct SdrPlaySource {
     handle: SdrPlayHandle,
     center: f64,
@@ -61,6 +65,16 @@ pub struct SdrPlaySource {
     /// Whether the IF gain reduction may go below the API's 20 dB floor.
     extended_if_gr: bool,
     antenna: String,
+    /// The band's LNA ladder as measured — see `sdroxide_sdrplay::LnaLadder`.
+    ladder: LnaLadder,
+    /// The total reduction the linear gain slider asked for, while it is the
+    /// control in charge. The `LNA` and `IF` elements clear it: whoever
+    /// touched a knob last wins.
+    total_gr_target: Option<i32>,
+    /// A ladder reading waiting to be believed: the event can still describe
+    /// the state before the one just programmed, so a reading counts only
+    /// once it has stood unchanged for [`LADDER_SETTLE`].
+    ladder_probe: Option<(u8, i32, Instant)>,
     /// The ports this model (and, on the RSPduo, this tuner) offers — what
     /// the capabilities advertise. Empty hides the selector.
     antennas: Vec<String>,
@@ -162,6 +176,9 @@ impl SdrPlaySource {
             hdr_bw: cfg.hdr_bw,
             extended_if_gr: cfg.extended_if_gr,
             antenna,
+            ladder: LnaLadder::new(),
+            total_gr_target: None,
+            ladder_probe: None,
             antennas,
             div_cfg: cfg.duo.clone(),
             diversity,
@@ -232,7 +249,76 @@ impl SdrPlaySource {
                 -f64::from(SdrPlayConfig::IF_GR_MIN),
                 1.0,
             ),
+            // The linear control, after the two it sits beside so that their
+            // order (and the main window's first-element rule) is unchanged.
+            GainElement::db(
+                SdrPlayConfig::TOTAL_GAIN_ELEMENT,
+                Direction::Rx,
+                -f64::from(self.ladder.max_reduction(max_lna, SdrPlayConfig::IF_GR_MAX)),
+                -f64::from(self.if_gr_floor()),
+                1.0,
+            ),
         ]
+    }
+
+    /// The IF gain reduction floor in force.
+    fn if_gr_floor(&self) -> i32 {
+        if self.extended_if_gr {
+            SdrPlayConfig::IF_GR_MIN_EXTENDED
+        } else {
+            SdrPlayConfig::IF_GR_MIN
+        }
+    }
+
+    /// The LNA's last state on this band, port and HDR setting.
+    fn lna_max_state(&self) -> u8 {
+        let hiz = self.model().antenna_is_hiz(&self.antenna);
+        self.model().max_lna_state_on(self.center, hiz, self.hdr)
+    }
+
+    /// Put the linear gain request on the two knobs: the LNA as high in gain
+    /// as the IF allows, the IF making up the decibels.
+    fn apply_total_gain(&mut self) {
+        let Some(total) = self.total_gr_target else { return };
+        // Under the hardware AGC the IF is the loop's, and a slider that the
+        // loop snaps back is worse than none; the AGC set point is the
+        // control there.
+        if self.agc != SdrPlayAgc::Off {
+            return;
+        }
+        let (state, gr) = self.ladder.split(
+            total,
+            self.lna_max_state(),
+            self.if_gr_floor(),
+            SdrPlayConfig::IF_GR_MAX,
+        );
+        if self.handle.lna_state() != state {
+            self.handle.set_lna_state(state);
+        }
+        self.if_gr_db = gr;
+        self.handle.set_if_gr_db(gr);
+    }
+
+    /// Learn the band's LNA ladder from the GainChange events, one state at a
+    /// time as the operator uses them, and re-split the linear request when a
+    /// measurement replaces an estimate.
+    fn learn_ladder(&mut self) {
+        let Some(gr) = self.handle.lna_gr_db() else { return };
+        let state = self.handle.lna_state();
+        match self.ladder_probe {
+            Some((s, g, since)) if s == state && g == gr => {
+                if since.elapsed() >= LADDER_SETTLE && self.ladder.learn(state, gr) {
+                    self.apply_total_gain();
+                }
+            }
+            _ => self.ladder_probe = Some((state, gr, Instant::now())),
+        }
+    }
+
+    /// The ladder belongs to a band, a port and an HDR setting.
+    fn forget_ladder(&mut self) {
+        self.ladder.clear();
+        self.ladder_probe = None;
     }
 
     /// Push this radio's own settings at its tuner.
@@ -313,8 +399,13 @@ impl IqSource for SdrPlaySource {
     }
 
     fn set_center_hz(&mut self, hz: f64) -> Result<()> {
+        let before = self.lna_max_state();
         self.center = hz;
+        if self.lna_max_state() != before {
+            self.forget_ladder();
+        }
         self.handle.set_center_hz(hz);
+        self.apply_total_gain();
         Ok(())
     }
 
@@ -342,6 +433,7 @@ impl IqSource for SdrPlaySource {
     /// tuner having stopped, in which case the block goes through uncombined
     /// rather than combined against silence.
     fn read(&mut self, buf: &mut [Complex32]) -> Result<usize> {
+        self.learn_ladder();
         let need = buf.len() * 2;
         if self.rx_scratch.len() < need {
             self.rx_scratch.resize(need, 0.0);
@@ -392,7 +484,12 @@ impl IqSource for SdrPlaySource {
     /// new `Command` variant for settings only this backend has.
     fn set_gain_element(&mut self, name: &str, db: f64) -> Result<()> {
         match name {
+            SdrPlayConfig::TOTAL_GAIN_ELEMENT => {
+                self.total_gr_target = Some((-db).round() as i32);
+                self.apply_total_gain();
+            }
             SdrPlayConfig::IF_GAIN_ELEMENT => {
+                self.total_gr_target = None;
                 let gr = (-db).round() as i32;
                 let min = if self.extended_if_gr {
                     SdrPlayConfig::IF_GR_MIN_EXTENDED
@@ -403,6 +500,7 @@ impl IqSource for SdrPlaySource {
                 self.handle.set_if_gr_db(self.if_gr_db);
             }
             SdrPlayConfig::LNA_ELEMENT => {
+                self.total_gr_target = None;
                 let state = (-db).round().clamp(0.0, 255.0) as u8;
                 self.handle.set_lna_state(state);
             }
@@ -428,6 +526,7 @@ impl IqSource for SdrPlaySource {
             }
             SdrPlayConfig::HDR_ELEMENT => {
                 self.hdr = db >= 0.5;
+                self.forget_ladder();
                 self.handle.set_hdr(self.hdr);
                 // Switching HDR moves the LO offset by half a megahertz (see
                 // `lo_offset_hz`). Nothing has to be done about that here: the
@@ -523,9 +622,12 @@ impl IqSource for SdrPlaySource {
     /// after any per-band clamp.
     fn current_gains(&self) -> Vec<(String, f64)> {
         let gr = self.handle.effective_if_gr_db().unwrap_or(self.if_gr_db);
+        let state = self.handle.lna_state();
+        let lna_gr = self.handle.lna_gr_db().unwrap_or_else(|| self.ladder.gr_at(state));
         vec![
-            (SdrPlayConfig::LNA_ELEMENT.to_string(), -(self.handle.lna_state() as f64)),
+            (SdrPlayConfig::LNA_ELEMENT.to_string(), -(state as f64)),
             (SdrPlayConfig::IF_GAIN_ELEMENT.to_string(), -(gr as f64)),
+            (SdrPlayConfig::TOTAL_GAIN_ELEMENT.to_string(), -f64::from(lna_gr + gr)),
         ]
     }
 
@@ -561,7 +663,9 @@ impl IqSource for SdrPlaySource {
 
     fn set_antenna(&mut self, name: &str) -> Result<()> {
         self.antenna = name.to_string();
+        self.forget_ladder();
         self.handle.set_antenna(name);
+        self.apply_total_gain();
         Ok(())
     }
 

@@ -131,7 +131,8 @@ fn run_keyed(telem: TxTelemetry, limit: f32, guard: bool, key: Key, wait: Durati
         telem: Arc::clone(&telem),
         keyed: Arc::clone(&keyed),
     };
-    let cfg = EngineConfig { tx_bands_open: true,
+    let cfg = EngineConfig {
+        tx_bands_open: true,
         tx_ham_only: false,
         swr_guard: guard,
         swr_limit: limit,

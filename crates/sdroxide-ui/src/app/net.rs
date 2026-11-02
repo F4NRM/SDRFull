@@ -264,8 +264,11 @@ impl SdroxideApp {
         if merged.changed {
             persist_qso_log(&self.qso_log);
         }
-        self.wavelog_sync_status =
-            Some(tr!("net-wavelog-new-already-here", added = merged.added, matched = merged.matched));
+        self.wavelog_sync_status = Some(tr!(
+            "net-wavelog-new-already-here",
+            added = merged.added,
+            matched = merged.matched
+        ));
     }
 
     /// The network settings as the settings page has them, for a Test button
@@ -288,8 +291,7 @@ impl SdroxideApp {
         }
         let cfg = &self.net_cfg_edit.wavelog;
         if !cfg.is_configured() {
-            self.wavelog_sync_status =
-                Some(tr!("net-wavelog-fill-in-first"));
+            self.wavelog_sync_status = Some(tr!("net-wavelog-fill-in-first"));
             return;
         }
         let stations = if cfg.download_station_ids.is_empty() {
@@ -304,8 +306,7 @@ impl SdroxideApp {
         .filter(|s| *s != 0)
         .collect::<Vec<_>>();
         if stations.is_empty() {
-            self.wavelog_sync_status =
-                Some(tr!("net-wavelog-no-station-location"));
+            self.wavelog_sync_status = Some(tr!("net-wavelog-no-station-location"));
             return;
         }
         let starts = self.wavelog_sync.starts(&cfg.url, &stations);
@@ -509,10 +510,10 @@ mod tests {
         let file = vec![qso("19JV75", "11m", 1_789_279_546), qso("13WF01", "11m", 1_789_281_763)];
         let (first, skipped) = new_import_records(&[], file);
         assert_eq!((first.len(), skipped), (2, 0));
-        let (second, skipped) = new_import_records(&first, vec![
-            qso("19JV75", "11m", 1_789_279_546),
-            qso("13WF01", "11m", 1_789_281_763),
-        ]);
+        let (second, skipped) = new_import_records(
+            &first,
+            vec![qso("19JV75", "11m", 1_789_279_546), qso("13WF01", "11m", 1_789_281_763)],
+        );
         assert_eq!((second.len(), skipped), (0, 2));
     }
 

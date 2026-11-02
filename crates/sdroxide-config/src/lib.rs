@@ -3078,9 +3078,7 @@ pub fn cached_broadcast_sources() -> Vec<(sdroxide_types::ScheduleSource, Option
                         .map(|p| p.exists())
                         .unwrap_or(false)
             } else {
-                broadcast_cache_path_for(&season, source)
-                    .map(|p| p.exists())
-                    .unwrap_or(false)
+                broadcast_cache_path_for(&season, source).map(|p| p.exists()).unwrap_or(false)
             };
             (source, here.then(|| cached_schedule_for(source).map(|v| v.len()).unwrap_or(0)))
         })
@@ -3276,10 +3274,8 @@ fn aoki_season_from_path(path: &std::path::Path) -> Option<String> {
         .collect::<String>()
         .to_ascii_lowercase();
     let named = name.starts_with("xt") || name.starts_with("nc") || name.starts_with('b');
-    let has_season = name.len() >= 3
-        && name.len() <= 8
-        && named
-        && name.chars().any(|c| c.is_ascii_digit());
+    let has_season =
+        name.len() >= 3 && name.len() <= 8 && named && name.chars().any(|c| c.is_ascii_digit());
     has_season.then_some(name)
 }
 

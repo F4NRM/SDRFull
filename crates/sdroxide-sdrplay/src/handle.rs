@@ -757,6 +757,17 @@ impl SdrPlayHandle {
         }
     }
 
+    /// The LNA's own gain reduction in dB, as the last GainChange event
+    /// reported it for the state then in force. `None` until the first event.
+    /// Together with [`Self::lna_state`] this is one point of the band's LNA
+    /// ladder, which the source learns (see `ladder.rs`).
+    pub fn lna_gr_db(&self) -> Option<i32> {
+        match self.shared().ev_lna_gr_db.load(Ordering::Relaxed) {
+            i64::MIN => None,
+            v => Some(v as i32),
+        }
+    }
+
     /// The LNA state actually programmed, after any per-band clamp.
     pub fn lna_state(&self) -> u8 {
         self.shared().lna_state.load(Ordering::Relaxed)

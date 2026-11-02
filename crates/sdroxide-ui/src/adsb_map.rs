@@ -1326,8 +1326,11 @@ pub fn show(
     }
     // A click on an aircraft moves the pin there; a click on empty map closes it
     // (a beginner never looks for the ✕). The credit link is not empty map.
-    state.pinned =
-        pin_after_click(state.pinned, hover.map(|i| live[i].icao), resp.clicked() && !credit_clicked);
+    state.pinned = pin_after_click(
+        state.pinned,
+        hover.map(|i| live[i].icao),
+        resp.clicked() && !credit_clicked,
+    );
     if hover.is_some() && resp.clicked() {
         state.pin_owner = pin_owner_after(state.pin_owner, ui.id(), frame, true);
     }

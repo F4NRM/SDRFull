@@ -589,13 +589,7 @@ impl SdroxideApp {
             });
             ui.end_row();
             ui.label("");
-            ui.label(
-                RichText::new(
-                    tr!("ais-five-minutes-default-not-ads"),
-                )
-                .size(10.0)
-                .weak(),
-            );
+            ui.label(RichText::new(tr!("ais-five-minutes-default-not-ads")).size(10.0).weak());
             ui.end_row();
 
             ui.label(tr!("ais-drop-list-after"));
@@ -609,13 +603,7 @@ impl SdroxideApp {
             });
             ui.end_row();
             ui.label("");
-            ui.label(
-                RichText::new(
-                    tr!("ais-message-carrying-ship-s-name"),
-                )
-                .size(10.0)
-                .weak(),
-            );
+            ui.label(RichText::new(tr!("ais-message-carrying-ship-s-name")).size(10.0).weak());
             ui.end_row();
 
             ui.label(tr!("ais-trail-length"));
@@ -626,11 +614,7 @@ impl SdroxideApp {
             ui.end_row();
             ui.label("");
             ui.label(
-                RichText::new(
-                    tr!("ais-minutes-rather-than-points-because"),
-                )
-                .size(10.0)
-                .weak(),
+                RichText::new(tr!("ais-minutes-rather-than-points-because")).size(10.0).weak(),
             );
             ui.end_row();
 
@@ -654,24 +638,16 @@ impl SdroxideApp {
             ui.end_row();
 
             ui.label(tr!("ais-track-most"));
-            ui.add(egui::DragValue::new(&mut cfg.max_vessels).range(10..=5000).suffix(tr!("ais-vessels-2")));
+            ui.add(
+                egui::DragValue::new(&mut cfg.max_vessels)
+                    .range(10..=5000)
+                    .suffix(tr!("ais-vessels-2")),
+            );
             ui.end_row();
         });
         ui.separator();
-        ui.label(
-            RichText::new(
-                tr!("ais-ais-receive-only-here-always"),
-            )
-            .size(10.0)
-            .weak(),
-        );
-        ui.label(
-            RichText::new(
-                tr!("ais-fill-my-grid-digimode-setup"),
-            )
-            .size(10.0)
-            .weak(),
-        );
+        ui.label(RichText::new(tr!("ais-ais-receive-only-here-always")).size(10.0).weak());
+        ui.label(RichText::new(tr!("ais-fill-my-grid-digimode-setup")).size(10.0).weak());
     }
 }
 

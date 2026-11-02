@@ -1,5 +1,5 @@
-use eframe::egui::{self, RichText};
 use crate::i18n::tr;
+use eframe::egui::{self, RichText};
 use sdroxide_types::{Band, SignalProfile, identify, search_profiles};
 
 pub(in crate::app) struct SignalIdState {
@@ -30,10 +30,16 @@ impl super::SdroxideApp {
         if !self.signal_id.show {
             return;
         }
-        let show =
-            self.tool_window(ctx, "signal-id", &tr!("signalid-title"), [620.0, 520.0], true, |me, ui| {
+        let show = self.tool_window(
+            ctx,
+            "signal-id",
+            &tr!("signalid-title"),
+            [620.0, 520.0],
+            true,
+            |me, ui| {
                 me.signal_id_body(ui);
-            });
+            },
+        );
         self.signal_id.show = show;
     }
 
@@ -46,7 +52,9 @@ impl super::SdroxideApp {
         let band = Band::containing(dial_hz);
 
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new(tr!("signalid-tuned-now")).size(11.0).color(crate::theme::gray(150)));
+            ui.label(
+                RichText::new(tr!("signalid-tuned-now")).size(11.0).color(crate::theme::gray(150)),
+            );
             ui.label(
                 RichText::new(fmt_hz(freq_hz)).monospace().strong().color(crate::theme::CYAN()),
             );

@@ -56,9 +56,7 @@ fn entry_row(
     distance_km: Option<f64>,
     dead: bool,
 ) -> Option<PickAction> {
-    let blocked = e
-        .blocked_reason()
-        .or_else(|| dead.then(|| tr!("publicsdr-could-not-connect")));
+    let blocked = e.blocked_reason().or_else(|| dead.then(|| tr!("publicsdr-could-not-connect")));
     let mut action = None;
     let dim = crate::theme::gray(if blocked.is_some() { 100 } else { 170 });
     let net_col = match e.network {
@@ -434,9 +432,7 @@ impl SdroxideApp {
                 }
             }
             if crate::chrome::chip(ui, self.public_sdr_free_only, tr!("publicsdr-available"))
-                .on_hover_text(
-                    tr!("publicsdr-hide-receivers-are-full-ones"),
-                )
+                .on_hover_text(tr!("publicsdr-hide-receivers-are-full-ones"))
                 .clicked()
             {
                 self.public_sdr_free_only = !self.public_sdr_free_only;
@@ -448,9 +444,7 @@ impl SdroxideApp {
                 self.public_sdr_in_band = !self.public_sdr_in_band;
             }
             if crate::chrome::chip(ui, self.public_sdr_low_bw, tr!("publicsdr-low-bw"))
-                .on_hover_text(
-                    tr!("publicsdr-take-spyserver-low-bandwidth-shape"),
-                )
+                .on_hover_text(tr!("publicsdr-take-spyserver-low-bandwidth-shape"))
                 .clicked()
             {
                 self.public_sdr_low_bw = !self.public_sdr_low_bw;
@@ -509,7 +503,12 @@ impl SdroxideApp {
                 .collect::<Vec<_>>()
                 .join(" · ");
             ui.label(
-                RichText::new(tr!("publicsdr-receivers-fetched-ago", entries = dir.entries.len(), per_net = per_net, age = age))
+                RichText::new(tr!(
+                    "publicsdr-receivers-fetched-ago",
+                    entries = dir.entries.len(),
+                    per_net = per_net,
+                    age = age
+                ))
                 .size(11.0)
                 .color(crate::theme::gray(150)),
             );

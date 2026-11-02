@@ -71,7 +71,8 @@ fn caps() -> DeviceCaps {
 fn ptt_in_cw_keys_the_transmitter_without_a_carrier() {
     let log = Arc::new(Mutex::new(Log::default()));
     let (producer, _consumer) = sdroxide_radio::rtrb::RingBuffer::<f32>::new(48_000);
-    let cfg = EngineConfig { tx_bands_open: true,
+    let cfg = EngineConfig {
+        tx_bands_open: true,
         tx_ham_only: false,
         audio: Some(sdroxide_radio::AudioParams { producer, out_rate: 48_000.0 }),
         ..Default::default()

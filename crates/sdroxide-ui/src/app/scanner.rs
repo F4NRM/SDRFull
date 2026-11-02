@@ -43,9 +43,16 @@ impl SdroxideApp {
         // Edited in place and sent whole on any change, the way the skimmer's
         // settings are; the engine persists it and echoes it back.
         let mut cfg = self.scanner.clone();
-        let show = self.tool_window(ctx, "scanner", &tr!("scanner-scanner"), [420.0, 520.0], true, |me, ui| {
-            me.scanner_body(ui, &mut cfg, cmds);
-        });
+        let show = self.tool_window(
+            ctx,
+            "scanner",
+            &tr!("scanner-scanner"),
+            [420.0, 520.0],
+            true,
+            |me, ui| {
+                me.scanner_body(ui, &mut cfg, cmds);
+            },
+        );
         if cfg != self.scanner {
             self.scanner = cfg.clone();
             cmds.push(Command::SetScannerConfig(cfg));
@@ -53,7 +60,12 @@ impl SdroxideApp {
         self.show_scanner = show;
     }
 
-    fn scanner_body(&mut self, ui: &mut egui::Ui, cfg: &mut ScannerConfig, cmds: &mut Vec<Command>) {
+    fn scanner_body(
+        &mut self,
+        ui: &mut egui::Ui,
+        cfg: &mut ScannerConfig,
+        cmds: &mut Vec<Command>,
+    ) {
         let scan = self.state.scan;
 
         // What to scan.
@@ -106,7 +118,12 @@ impl SdroxideApp {
             let mut preset = |ui: &mut egui::Ui, name: &str, lo: f64, hi: f64| {
                 let on = (cfg.range_lo_hz - lo).abs() < 1.0 && (cfg.range_hi_hz - hi).abs() < 1.0;
                 if crate::chrome::chip(ui, on, name)
-                    .on_hover_text(tr!("scanner-scan-band-hover", name = name, lo = format!("{:.0}", lo / 1e3), hi = format!("{:.0}", hi / 1e3)))
+                    .on_hover_text(tr!(
+                        "scanner-scan-band-hover",
+                        name = name,
+                        lo = format!("{:.0}", lo / 1e3),
+                        hi = format!("{:.0}", hi / 1e3)
+                    ))
                     .clicked()
                 {
                     cfg.range_lo_hz = lo;
@@ -542,8 +559,8 @@ impl SdroxideApp {
         if !self.state.rx[0].mode.carries_speech() {
             ui.label(
                 RichText::new(tr!("scanner-mode-no-speech", mode = self.state.rx[0].mode.label()))
-                .size(10.5)
-                .weak(),
+                    .size(10.5)
+                    .weak(),
             );
             return;
         }
@@ -555,7 +572,11 @@ impl SdroxideApp {
             (tr!("scanner-voice-holding", score = v.score), crate::theme::GREEN())
         } else {
             (
-                tr!("scanner-voice-passed", mhz = format!("{:.4}", v.freq_hz as f64 / 1e6), score = v.score),
+                tr!(
+                    "scanner-voice-passed",
+                    mhz = format!("{:.4}", v.freq_hz as f64 / 1e6),
+                    score = v.score
+                ),
                 crate::theme::TEXT(),
             )
         };

@@ -14,9 +14,9 @@ use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, JobAction, Mode, RecordingJob, RecordingKind, RxId, Vfo};
 
 use crate::app::SdroxideApp;
-use crate::i18n::tr;
 use crate::app::persist::persist_recording_jobs;
 use crate::app::util::{date_str, parse_utc, time_str};
+use crate::i18n::tr;
 use crate::time::now_unix;
 
 /// The modes a listener is likely to schedule, as in the reception log.
@@ -202,7 +202,9 @@ impl SdroxideApp {
                 ui.label(RichText::new(s).size(11.0).color(crate::theme::CYAN()));
             }
             if self.jobs.running.is_some() {
-                ui.label(RichText::new(tr!("recjobs-recording")).size(11.0).color(crate::theme::ALERT()));
+                ui.label(
+                    RichText::new(tr!("recjobs-recording")).size(11.0).color(crate::theme::ALERT()),
+                );
             }
         });
         if self.jobs.edit.is_some() {
@@ -214,10 +216,7 @@ impl SdroxideApp {
             ui,
             |ui| {
                 if rows.is_empty() {
-                    ui.label(
-                        RichText::new(tr!("recjobs-none"))
-                            .color(crate::theme::gray(150)),
-                    );
+                    ui.label(RichText::new(tr!("recjobs-none")).color(crate::theme::gray(150)));
                 }
                 for j in &rows {
                     ui.horizontal(|ui| {
@@ -234,11 +233,15 @@ impl SdroxideApp {
                                 .color(crate::theme::gray(160)),
                         );
                         ui.label(
-                            RichText::new(kind_label(j.kind)).size(11.0).color(crate::theme::gray(160)),
+                            RichText::new(kind_label(j.kind))
+                                .size(11.0)
+                                .color(crate::theme::gray(160)),
                         );
                         if j.done {
                             ui.label(
-                                RichText::new(tr!("recjobs-done")).size(10.5).color(crate::theme::gray(130)),
+                                RichText::new(tr!("recjobs-done"))
+                                    .size(10.5)
+                                    .color(crate::theme::gray(130)),
                             );
                         }
                         if ui.small_button(tr!("recjobs-edit")).clicked() {

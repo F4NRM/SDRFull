@@ -433,37 +433,37 @@ fn grid_tracker_body<'a>(
         // at either.
         if ui
             .selectable_label(tracker.mode == TrackerMode::Grid, tr!("gridtracker-grid-ham"))
-            .on_hover_text(
-                tr!("gridtracker-maidenhead-squares-what-a-ham-log"),
-            )
+            .on_hover_text(tr!("gridtracker-maidenhead-squares-what-a-ham-log"))
             .clicked()
         {
             tracker.mode = TrackerMode::Grid;
         }
         if ui
             .selectable_label(tracker.mode == TrackerMode::Country, tr!("gridtracker-country-cb"))
-            .on_hover_text(
-                tr!("gridtracker-dxcc-countries-at-their-nominal"),
-            )
+            .on_hover_text(tr!("gridtracker-dxcc-countries-at-their-nominal"))
             .clicked()
         {
             tracker.mode = TrackerMode::Country;
         }
         ui.separator();
         ui.label(
-            egui::RichText::new(tr!("gridtracker-worked", worked = worked_n)).color(theme::YELLOW()).monospace(),
+            egui::RichText::new(tr!("gridtracker-worked", worked = worked_n))
+                .color(theme::YELLOW())
+                .monospace(),
         );
         ui.label(
-            egui::RichText::new(tr!("gridtracker-confirmed", confirmed = confirmed)).color(theme::GREEN()).monospace(),
+            egui::RichText::new(tr!("gridtracker-confirmed", confirmed = confirmed))
+                .color(theme::GREEN())
+                .monospace(),
         );
         if ui
             .selectable_label(
                 tracker.show_heard,
-                egui::RichText::new(tr!("gridtracker-heard", heard = heard_n)).color(theme::CYAN()).monospace(),
+                egui::RichText::new(tr!("gridtracker-heard", heard = heard_n))
+                    .color(theme::CYAN())
+                    .monospace(),
             )
-            .on_hover_text(
-                tr!("gridtracker-shade-squares-heard-live-decode"),
-            )
+            .on_hover_text(tr!("gridtracker-shade-squares-heard-live-decode"))
             .clicked()
         {
             tracker.show_heard = !tracker.show_heard;
@@ -473,11 +473,9 @@ fn grid_tracker_body<'a>(
     draw(ui, tracker, &data, home, ui.available_height());
     ui.separator();
     ui.label(
-        egui::RichText::new(
-            tr!("gridtracker-drag-pan-wheel-zoom-amber"),
-        )
-        .size(10.0)
-        .color(theme::gray(150)),
+        egui::RichText::new(tr!("gridtracker-drag-pan-wheel-zoom-amber"))
+            .size(10.0)
+            .color(theme::gray(150)),
     );
 }
 

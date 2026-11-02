@@ -282,13 +282,17 @@ impl SdroxideApp {
                 // offer a choice between two movers neither of which can run.
                 // `chip_enabled`, not a bare `add_enabled_ui`: this row is
                 // `horizontal_wrapped`, and a child Ui inside one does not wrap.
-                let auto_chip =
-                    crate::chrome::chip_enabled(ui, !held, auto && !held, &tr!("decodes-auto-tx-frq"))
-                        .on_hover_text(if held {
-                            tr!("decodes-overridden-hold-tx-lift-hold")
-                        } else {
-                            tr!("decodes-auto-tx-frequency-hint")
-                        });
+                let auto_chip = crate::chrome::chip_enabled(
+                    ui,
+                    !held,
+                    auto && !held,
+                    &tr!("decodes-auto-tx-frq"),
+                )
+                .on_hover_text(if held {
+                    tr!("decodes-overridden-hold-tx-lift-hold")
+                } else {
+                    tr!("decodes-auto-tx-frequency-hint")
+                });
                 if auto_chip.clicked() {
                     self.digi_cfg_edit.auto_tx_freq = !auto;
                     cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
@@ -1471,7 +1475,11 @@ impl SdroxideApp {
                                 RichText::new(tr!(
                                     "decodes-hz-slots",
                                     audio_hz = format!("{:.0}", s.audio_hz),
-                                    odd = if s.tx_even { tr!("decodes-slot-even") } else { tr!("decodes-slot-odd") }
+                                    odd = if s.tx_even {
+                                        tr!("decodes-slot-even")
+                                    } else {
+                                        tr!("decodes-slot-odd")
+                                    }
                                 ))
                                 .size(11.0)
                                 .color(crate::theme::gray(140)),
@@ -1501,7 +1509,11 @@ impl SdroxideApp {
                                         _ => tr!(
                                             "decodes-you-transmit-s-everyone-else",
                                             off = format!("{:.1}", off.abs()),
-                                            after = if off > 0.0 { tr!("decodes-before") } else { tr!("decodes-after") }
+                                            after = if off > 0.0 {
+                                                tr!("decodes-before")
+                                            } else {
+                                                tr!("decodes-after")
+                                            }
                                         ),
                                     }
                                 ));
@@ -1638,7 +1650,11 @@ impl SdroxideApp {
                     if crate::chrome::chip(ui, false, RichText::new(&q.call).size(11.5).color(col))
                         .on_hover_text(tr!(
                             "decodes-db-hz-click-remove",
-                            waiting = if i == 0 { tr!("decodes-queue-next") } else { tr!("decodes-queue-waiting") },
+                            waiting = if i == 0 {
+                                tr!("decodes-queue-next")
+                            } else {
+                                tr!("decodes-queue-waiting")
+                            },
                             snr_db = format!("{:+}", q.snr_db),
                             audio_hz = format!("{:.0}", q.audio_hz),
                             unwrap_or_default =
@@ -1866,14 +1882,23 @@ impl SdroxideApp {
                 // two chips run in sequence, is armed by the compact tick beside
                 // them. It is a role of its own rather than a modifier, because
                 // the operator asked that the other two not change meaning.
-                for role in [sdroxide_types::auto::AutoRole::Rx, sdroxide_types::auto::AutoRole::Cq] {
+                for role in [sdroxide_types::auto::AutoRole::Rx, sdroxide_types::auto::AutoRole::Cq]
+                {
                     let is_armed = armed == Some(role);
-                    if crate::chrome::chip_enabled(ui, tx_ok && auto_block.is_none(), is_armed, role.label())
-                        .on_hover_text(hover(role))
-                        .clicked()
+                    if crate::chrome::chip_enabled(
+                        ui,
+                        tx_ok && auto_block.is_none(),
+                        is_armed,
+                        role.label(),
+                    )
+                    .on_hover_text(hover(role))
+                    .clicked()
                     {
                         if is_armed {
-                            self.stop_auto(tr!("decodes-auto-stopped-by-operator", role = role.label()), cmds);
+                            self.stop_auto(
+                                tr!("decodes-auto-stopped-by-operator", role = role.label()),
+                                cmds,
+                            );
                         } else if self.arm_auto(ui.input(|i| i.time), role)
                             && !self.digi_cfg_edit.auto_seq
                         {
@@ -1895,7 +1920,10 @@ impl SdroxideApp {
                         .on_hover_text(hover(role));
                     if tick.changed() {
                         if armed == Some(role) {
-                            self.stop_auto(tr!("decodes-auto-stopped-by-operator", role = role.label()), cmds);
+                            self.stop_auto(
+                                tr!("decodes-auto-stopped-by-operator", role = role.label()),
+                                cmds,
+                            );
                         } else if self.arm_auto(ui.input(|i| i.time), role)
                             && !self.digi_cfg_edit.auto_seq
                         {
@@ -1919,7 +1947,8 @@ impl SdroxideApp {
                 if cq.inner.clicked() {
                     cmds.push(Command::DigiCallCq);
                 }
-                if crate::chrome::chip(ui, false, RichText::new(tr!("decodes-stop-qso")).size(14.0)).clicked()
+                if crate::chrome::chip(ui, false, RichText::new(tr!("decodes-stop-qso")).size(14.0))
+                    .clicked()
                 {
                     cmds.push(Command::DigiStopQso);
                 }
@@ -1942,11 +1971,8 @@ impl SdroxideApp {
                         .color(crate::theme::ALERT()),
                 );
                 // Pending caller queue (compact, one line).
-                let my_call = self
-                    .digi_status
-                    .as_ref()
-                    .map(|s| s.config.my_call.clone())
-                    .unwrap_or_default();
+                let my_call =
+                    self.digi_status.as_ref().map(|s| s.config.my_call.clone()).unwrap_or_default();
                 let pending = self.pending_callers(&my_call);
                 if !pending.is_empty() {
                     ui.label(

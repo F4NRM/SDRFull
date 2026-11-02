@@ -3336,7 +3336,11 @@ mod programs_colour_tests {
         assert_eq!(programs_colour("PROGRAMS-TEST-OTHER"), Some((9, 8, 7)));
         assert_eq!(spot_color_for(&spot(SpotKind::Broadcast, "PROGRAMS-TEST-ONE")), (1, 2, 3));
         let pota = spot(SpotKind::Pota, "PROGRAMS-TEST-ONE");
-        assert_eq!(spot_color_for(&pota), spot_color(SpotKind::Pota), "a POTA spot is not a station");
+        assert_eq!(
+            spot_color_for(&pota),
+            spot_color(SpotKind::Pota),
+            "a POTA spot is not a station"
+        );
         set_programs_colours(None, &Default::default());
         assert_eq!(programs_colour("PROGRAMS-TEST-ONE"), None);
         let bc = spot(SpotKind::Broadcast, "PROGRAMS-TEST-ONE");

@@ -19,8 +19,8 @@ use sdroxide_aircraft_history::watch::{Outcome, WatchEdit, WatchReply, Watchlist
 use sdroxide_aircraft_history::{FORMAT_VERSION, Status};
 
 use super::aircraft_history::Reason;
-use crate::i18n::tr;
 use super::aircraft_registry::AircraftCard;
+use crate::i18n::tr;
 
 /// How often the list is read again from the station.
 pub(in crate::app) const REFRESH_S: i64 = 120;

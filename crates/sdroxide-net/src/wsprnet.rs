@@ -601,10 +601,7 @@ mod tests {
             "HTTP 502: Bad Gateway",
             "a transient gateway error is not a block and keeps its real wording",
         );
-        assert_eq!(
-            friendly_download_error("connection refused"),
-            "connection refused",
-        );
+        assert_eq!(friendly_download_error("connection refused"), "connection refused",);
     }
 
     /// The upload format, checked here because the server will not check it for

@@ -13,10 +13,10 @@
 use sdroxide_aircraft_history::{AircraftReply, FORMAT_VERSION, Journal, RETENTION_S, Status};
 
 use super::aircraft_card::icao_hex;
-use crate::i18n::tr;
 use super::aircraft_online::{Badge, Row};
 use super::util::fmt_age;
 use crate::adsb_map::TrailSeg;
+use crate::i18n::tr;
 
 /// How often the record is fetched again while it is on.
 pub(in crate::app) const REFRESH_S: i64 = 30;

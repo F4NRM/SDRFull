@@ -241,7 +241,10 @@ pub fn padlock(ui: &mut Ui, size: egui::Vec2) -> Response {
 
     // The caption under the padlock while something is happening.
     let caption = if let Some(p) = s.hold_since.map(|t| hold_progress(t, now)) {
-        Some(tr!("touchlock-hold", s = format!("{:.0}", ((1.0 - p) as f64 * UNLOCK_HOLD_S).ceil().max(1.0))))
+        Some(tr!(
+            "touchlock-hold",
+            s = format!("{:.0}", ((1.0 - p) as f64 * UNLOCK_HOLD_S).ceil().max(1.0))
+        ))
     } else if flash.is_some() || s.unlocked_at.is_some_and(|t| now - t < FLASH_S) {
         Some(tr!("touchlock-unlocked"))
     } else if s.locked && s.hint_at.is_some_and(|t| now - t < HINT_S) {

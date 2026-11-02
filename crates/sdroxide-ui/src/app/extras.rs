@@ -264,8 +264,13 @@ impl super::SdroxideApp {
                 self.show_aircraft = !self.show_aircraft;
             }
             let rc_active = self.radio_classic_active();
-            let rc = crate::chrome::chip_sized(ui, rc_active, tr!("topbar-radio"), egui::vec2(SLOT_W, SLOT_H))
-                .on_hover_text(tr!("extras-radio-hint"));
+            let rc = crate::chrome::chip_sized(
+                ui,
+                rc_active,
+                tr!("topbar-radio"),
+                egui::vec2(SLOT_W, SLOT_H),
+            )
+            .on_hover_text(tr!("extras-radio-hint"));
             if rc.clicked() {
                 self.toggle_radio_classic();
             }
