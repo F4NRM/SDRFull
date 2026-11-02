@@ -8073,6 +8073,7 @@ impl RxRows {
 /// whose receive row is already full lifts nothing and is laid out exactly as
 /// before; a bare one comes out a third narrower, which is often the
 /// difference between the strip packing into two rows and taking a third.
+#[cfg(test)]
 fn rx_rows(
     ui: &egui::Ui,
     gain: bool,
