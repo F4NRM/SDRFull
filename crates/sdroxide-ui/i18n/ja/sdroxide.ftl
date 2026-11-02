@@ -8997,3 +8997,5 @@ topbar-rsp-total-gain-hint = RSPの総ゲインを1 dBステップで調整し�
 topbar-rsp-agc-set-point-hint = RSPのAGCがオンです。このスライダーは設定点(ループがコンバーターで保つdBFSのレベル)を動かします。dB単位の固定ゲインにするにはAGCをオフにしてください。
 
 topbar-rsp-lna-step-hint = RSPのLNAの状態です(1ステップにつき1段)。過負荷のフロントエンドを解消するのに使います。隣のゲインスライダーが微調整です。
+
+topbar-vol-db-hint = 音量をdB単位で調整します(1ステップ0.5 dB。左端は無音)。数値を入力すると正確に設定できます。

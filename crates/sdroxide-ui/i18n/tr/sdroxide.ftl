@@ -9049,3 +9049,5 @@ topbar-rsp-total-gain-hint = RSP'nin toplam kazancı, 1 dB adımlarla (azaltma o
 topbar-rsp-agc-set-point-hint = RSP'nin AGC'si açık: bu çubuk ayar noktasını, yani döngünün dönüştürücüde tuttuğu dBFS düzeyini oynatır. dB cinsinden sabit kazanç için AGC'yi kapatın.
 
 topbar-rsp-lna-step-hint = RSP'nin LNA durumu, adım başına bir konum. Aşırı yüklenmiş girişi rahatlatmak için kullanın; yanındaki Kazanç çubuğu ince ayardır.
+
+topbar-vol-db-hint = Desibel cinsinden ses düzeyi, adım başına 0,5 dB; sol uç sessizliktir. Tam değer için bir sayı yazın.

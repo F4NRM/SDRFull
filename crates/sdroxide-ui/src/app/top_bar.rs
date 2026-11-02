@@ -143,6 +143,24 @@ const TX_MIC_GAP: f32 = 16.0;
 /// SQL rails on purpose: these two carry a dB readout, and the box has to stay
 /// inside one row. See [`db_rail_w`].
 const RX_DB_RAIL_W: f32 = 76.0;
+/// The volume rail's floor, in dB: the rail's left end is silence.
+const VOL_FLOOR_DB: f32 = -60.0;
+/// One step of the volume and manual-gain rails, in dB.
+const VOL_STEP_DB: f32 = 0.5;
+const MAN_STEP_DB: f32 = 0.5;
+/// What the volume readout is priced at.
+const VOL_READOUT_SAMPLE: &str = "-60.0 dB";
+
+/// A volume (amplitude, 0..1) as its rail position in dB. Zero is the floor.
+pub(crate) fn volume_to_db(v: f32) -> f32 {
+    if v <= 0.0 { VOL_FLOOR_DB } else { (20.0 * v.log10()).clamp(VOL_FLOOR_DB, 0.0) }
+}
+
+/// The amplitude (0..1) a rail position in dB stands for. The floor is mute.
+pub(crate) fn db_to_volume(db: f32) -> f32 {
+    if db <= VOL_FLOOR_DB { 0.0 } else { 10f32.powf(db.min(0.0) / 20.0) }
+}
+
 /// The Gain and Man rails when the RSP's second gain control (the LNA step
 /// rail) shares the receive row: the same row, the same box, so the two dB
 /// rails give up the width the LNA rail takes.
@@ -3487,11 +3505,23 @@ impl SdroxideApp {
         // Receiver: volume, RF gain, AGC and the manual gain it falls back to,
         // then as much of the chip run as this row has been given.
         crate::chrome::control_row(ui, narrow, |ui| {
-            let mut vol = self.state.rx[0].volume;
+            // The volume is an amplitude on the wire (0..1) but the rail is in
+            // decibels: equal steps are equal steps of loudness, where a linear
+            // amplitude rail spends nearly all its length on the top few dB.
+            let mut vol_db = volume_to_db(self.state.rx[0].volume);
             ui.label(tr!("topbar-vol"));
-            if crate::chrome::slider(ui, Slider::new(&mut vol, 0.0..=1.0).show_value(false))
-                .changed()
+            if crate::chrome::slider_readout(
+                ui,
+                value_field_w(ui, VOL_READOUT_SAMPLE),
+                Slider::new(&mut vol_db, VOL_FLOOR_DB..=0.0)
+                    .step_by(f64::from(VOL_STEP_DB))
+                    .fixed_decimals(1)
+                    .suffix(" dB"),
+            )
+            .on_hover_text(tr!("topbar-vol-db-hint"))
+            .changed()
             {
+                let vol = db_to_volume(vol_db);
                 self.state.rx[0].volume = vol; // optimistic echo
                 cmds.push(Command::SetVolume { rx: RxId::Main, v: vol });
             }
@@ -3632,7 +3662,8 @@ impl SdroxideApp {
                                     value_field_w(ui, "-888.8 dB")
                                 },
                                 Slider::new(&mut db, 0.0..=sdroxide_types::MAX_MANUAL_GAIN_DB)
-                                    .step_by(1.0)
+                                    .step_by(f64::from(MAN_STEP_DB))
+                                    .fixed_decimals(1)
                                     .suffix(" dB"),
                             )
                         })
@@ -8075,7 +8106,8 @@ fn rx_rows_with(
 
     // Receive: volume, the front-end gain rail where the rig has one, the
     // decimation chip, the AGC chip, and the manual rail behind it.
-    let mut receive = label(&tr!("topbar-vol")) + g + rail;
+    let mut receive =
+        label(&tr!("topbar-vol")) + g + rail + g + value_field_w(ui, VOL_READOUT_SAMPLE);
     if gain {
         receive += g + label(&tr!("topbar-gain")) + g + db_rail(ui);
         if lna {
@@ -12452,6 +12484,29 @@ mod tests {
             let max = band_dock_room(tier, w).expect("room to dock");
             assert!((BAND_DOCK_MIN_W..=BAND_DOCK_MAX_W).contains(&max), "{w} pt: {max} pt column");
             assert!(w - max >= BAND_DOCK_WATERFALL_MIN_W, "{w} pt leaves {} pt", w - max);
+        }
+    }
+
+    #[test]
+    fn the_volume_rail_is_linear_in_decibels_and_round_trips() {
+        assert_eq!(volume_to_db(0.0), VOL_FLOOR_DB);
+        assert_eq!(db_to_volume(VOL_FLOOR_DB), 0.0, "the left end is mute");
+        assert_eq!(db_to_volume(0.0), 1.0);
+        assert_eq!(volume_to_db(1.0), 0.0);
+        // Out-of-range inputs stay on the rail.
+        assert_eq!(volume_to_db(7.0), 0.0);
+        assert_eq!(db_to_volume(6.0), 1.0);
+        assert_eq!(volume_to_db(1e-9), VOL_FLOOR_DB);
+        // Equal steps in dB are equal ratios of amplitude.
+        let r1 = db_to_volume(-10.0) / db_to_volume(-20.0);
+        let r2 = db_to_volume(-40.0) / db_to_volume(-50.0);
+        assert!((r1 - r2).abs() < 1e-4);
+        // Every half-dB position survives the trip through the amplitude.
+        let mut db = VOL_FLOOR_DB + VOL_STEP_DB;
+        while db <= 0.0 {
+            let back = volume_to_db(db_to_volume(db));
+            assert!((back - db).abs() < 1e-3, "{db} came back as {back}");
+            db += VOL_STEP_DB;
         }
     }
 

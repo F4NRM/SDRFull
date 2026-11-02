@@ -9057,3 +9057,5 @@ topbar-rsp-total-gain-hint = Totale versterking van de RSP, in stappen van 1 dB 
 topbar-rsp-agc-set-point-hint = De AGC van de RSP staat aan: deze schuif verplaatst het instelpunt, het niveau in dBFS dat de lus bij de omzetter houdt. Zet de AGC uit voor een vaste versterking in dB.
 
 topbar-rsp-lna-step-hint = De LNA-stand van de RSP, één positie per stap. Gebruik hem om een overstuurde ingang vrij te maken; de Gain-schuif ernaast is de fijne regeling.
+
+topbar-vol-db-hint = Volume in decibel, 0,5 dB per stap; het linkereinde is stilte. Typ een waarde om hem exact in te stellen.

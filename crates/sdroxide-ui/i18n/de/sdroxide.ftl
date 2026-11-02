@@ -9047,3 +9047,5 @@ topbar-rsp-total-gain-hint = Gesamtverstärkung des RSP in 1-dB-Schritten (als D
 topbar-rsp-agc-set-point-hint = Die AGC des RSP ist an: Dieser Regler verschiebt ihren Sollwert, den Pegel in dBFS, den die Regelschleife am Wandler hält. AGC ausschalten für eine feste Verstärkung in dB.
 
 topbar-rsp-lna-step-hint = Der LNA-Zustand des RSP, eine Stellung pro Stufe. Damit lässt sich ein übersteuerter Eingang befreien; der Regler Verstärkung daneben ist die Feineinstellung.
+
+topbar-vol-db-hint = Lautstärke in Dezibel, 0,5 dB pro Schritt; das linke Ende ist Stille. Einen Wert eintippen, um ihn genau einzustellen.

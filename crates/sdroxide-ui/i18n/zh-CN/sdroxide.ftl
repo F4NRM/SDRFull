@@ -8987,3 +8987,5 @@ topbar-rsp-total-gain-hint = RSP 的总增益,以 1 dB 为步进(按衰减量显
 topbar-rsp-agc-set-point-hint = RSP 的 AGC 已开启:此滑块调节其设定点,即环路在转换器处保持的 dBFS 电平。关闭 AGC 可使用以 dB 为单位的固定增益。
 
 topbar-rsp-lna-step-hint = RSP 的 LNA 状态,每步一档。用于解除前端过载;旁边的增益滑块是精细调节。
+
+topbar-vol-db-hint = 音量以分贝为单位,每步 0.5 dB;最左端为静音。输入数值可精确设定。

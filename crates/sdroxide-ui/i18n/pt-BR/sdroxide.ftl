@@ -9049,3 +9049,5 @@ topbar-rsp-total-gain-hint = Ganho total do RSP, em passos de 1 dB (mostrado com
 topbar-rsp-agc-set-point-hint = O AGC do RSP está ligado: este controle move o ponto de ajuste, o nível em dBFS que o laço mantém no conversor. Desligue o AGC para um ganho fixo em dB.
 
 topbar-rsp-lna-step-hint = O estado do LNA do RSP, uma posição por passo. Use-o para aliviar uma entrada sobrecarregada; o controle Ganho ao lado é o ajuste fino.
+
+topbar-vol-db-hint = Volume em decibéis, 0,5 dB por passo; a extremidade esquerda é o silêncio. Digite um valor para defini-lo exatamente.

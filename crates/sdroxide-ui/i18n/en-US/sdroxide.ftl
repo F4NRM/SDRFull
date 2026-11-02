@@ -9054,3 +9054,5 @@ topbar-rsp-total-gain-hint = Total gain of the RSP, in 1 dB steps (shown as the 
 topbar-rsp-agc-set-point-hint = The RSP's AGC is on: this rail moves its set point, the level in dBFS the loop holds at the converter. Switch the AGC off for a fixed gain in dB.
 
 topbar-rsp-lna-step-hint = The RSP's LNA state, one position per step. Use it to clear an overloaded front end; the Gain rail beside it is the fine control.
+
+topbar-vol-db-hint = Volume in decibels, 0.5 dB per step; the left end is silence. Type a value to set it exactly.

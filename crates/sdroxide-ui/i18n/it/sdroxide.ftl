@@ -9058,3 +9058,5 @@ topbar-rsp-total-gain-hint = Guadagno totale dell'RSP, a passi di 1 dB (mostrato
 topbar-rsp-agc-set-point-hint = L'AGC dell'RSP è attivo: questo cursore sposta il suo punto di lavoro, il livello in dBFS che l'anello mantiene al convertitore. Disattivare l'AGC per un guadagno fisso in dB.
 
 topbar-rsp-lna-step-hint = Lo stato dell'LNA dell'RSP, una posizione per passo. Serve a liberare uno stadio d'ingresso in sovraccarico; il cursore Guadagno accanto è la regolazione fine.
+
+topbar-vol-db-hint = Volume in decibel, passi di 0,5 dB; l'estremo sinistro è il silenzio. Digitare un valore per impostarlo con precisione.
