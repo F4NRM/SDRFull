@@ -1816,7 +1816,18 @@ fn chip_font(ui: &Ui, size: Option<f32>) -> egui::FontId {
 /// arithmetic [`chip`] does, for a caller that has to budget a row before
 /// drawing it. `size` is the text size where the chip sets one.
 pub fn chip_width(ui: &Ui, label: &str, size: Option<f32>) -> f32 {
-    text_width(ui, label, chip_font(ui, size)) + 2.0 * chip_padding(ui).x
+    chip_width_pad(ui, label, size, None)
+}
+
+/// [`chip_width`] for a chip drawn in a scope whose `button_padding.x` is
+/// `pad_x` (the style's own when `None`): the arithmetic [`chip`] will do.
+pub fn chip_width_pad(ui: &Ui, label: &str, size: Option<f32>, pad_x: Option<f32>) -> f32 {
+    let mut pad = chip_padding(ui).x;
+    if let Some(x) = pad_x {
+        // chip_padding is button_padding plus the Terminal style's brackets.
+        pad += x - ui.spacing().button_padding.x;
+    }
+    text_width(ui, label, chip_font(ui, size)) + 2.0 * pad
 }
 
 /// How tall a chip stands, padding included. A literal would be wrong the

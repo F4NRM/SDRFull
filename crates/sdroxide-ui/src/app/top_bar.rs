@@ -153,7 +153,7 @@ const VOL_READOUT_SAMPLE: &str = "-60.0";
 /// What the manual-gain readout is priced at on the RSP row.
 const MAN_READOUT_SAMPLE: &str = "88.8 dB";
 /// The SQL rail, as a share of the strip rail: shorter than Vol, which needs the length.
-const SQL_RAIL_SHARE: f32 = 0.5;
+const SQL_RAIL_SHARE: f32 = 0.7;
 
 /// A volume (amplitude, 0..1) as its rail position in dB. Zero is the floor.
 pub(crate) fn volume_to_db(v: f32) -> f32 {
@@ -168,9 +168,12 @@ pub(crate) fn db_to_volume(db: f32) -> f32 {
 /// The Gain and Man rails when the RSP's second gain control (the LNA step
 /// rail) shares the receive row: the same row, the same box, so the two dB
 /// rails give up the width the LNA rail takes.
-const RX_DB_RAIL_COMPACT_W: f32 = 22.0;
+const RX_DB_RAIL_COMPACT_W: f32 = 26.0;
+/// Side padding of the RX box's chips on the RSP, instead of the style's 7 pt:
+/// the room that pays for the second gain rail. RSP only.
+const RSP_CHIP_PAD_X: f32 = 2.0;
 /// The RSP's Vol rail: shorter than [`STRIP_RAIL_W`]; the box's stretch is still added.
-const RX_VOL_RAIL_RSP_W: f32 = 16.0;
+const RX_VOL_RAIL_RSP_W: f32 = 26.0;
 /// The LNA step rail beside the linear Gain rail. It counts a handful of
 /// states, so it needs no length.
 const RX_LNA_RAIL_W: f32 = 10.0;
@@ -3515,8 +3518,7 @@ impl SdroxideApp {
                             tight_field_w(ui, VOL_READOUT_SAMPLE),
                             Slider::new(&mut vol_db, VOL_FLOOR_DB..=0.0)
                                 .step_by(f64::from(VOL_STEP_DB))
-                                // No unit on the rail: the width is not there to
-                                // spare, and the hover text says decibels.
+                                // No unit: the hover text says decibels.
                                 .fixed_decimals(1),
                         )
                     })
@@ -3587,7 +3589,7 @@ impl SdroxideApp {
                             };
                         }
                         let readout_w = match (rsp_stage, stage_idx) {
-                            (true, 0) => tight_field_w(ui, "-100"),
+                            (true, 0) => tight_field_w(ui, "-100 dB"),
                             (true, _) => lna_field_w(ui),
                             _ => value_field_w(ui, "-888.8 dB"),
                         };
@@ -3606,11 +3608,7 @@ impl SdroxideApp {
                                     // in. Labelling a step index "dB" reported a
                                     // number three times too small, in a unit it
                                     // was not.
-                                    .suffix(if rsp_stage && stage_idx == 0 {
-                                        ""
-                                    } else {
-                                        g.suffix()
-                                    }),
+                                    .suffix(g.suffix()),
                             )
                         })
                         .inner
@@ -3628,7 +3626,12 @@ impl SdroxideApp {
                     cmds.push(Command::SetGain { dir: Direction::Rx, element: g.name.clone(), db });
                 }
             }
-            self.decim_chip(ui, cmds);
+            ui.scope(|ui| {
+                if linear.is_some() && !narrow {
+                    ui.spacing_mut().button_padding.x = RSP_CHIP_PAD_X;
+                }
+                self.decim_chip(ui, cmds);
+            });
             // A cycling chip rather than a combo: a combo inside a menu
             // opens a second popup layer, and clicking it counts as
             // "outside" and closes the menu it was opened from. Four
@@ -3638,10 +3641,21 @@ impl SdroxideApp {
             // (Mode::audio_agc) and the chip would do nothing.
             if self.state.rx[0].mode.audio_agc() {
                 let agc = self.state.rx[0].agc;
-                if crate::chrome::chip(ui, agc != AgcMode::Off, format!("AGC {}", agc.label()))
-                    .on_hover_text(tr!("topbar-agc-hang-time-click-cycle"))
-                    .clicked()
-                {
+                let agc_clicked = ui
+                    .scope(|ui| {
+                        if linear.is_some() && !narrow {
+                            ui.spacing_mut().button_padding.x = RSP_CHIP_PAD_X;
+                        }
+                        crate::chrome::chip(
+                            ui,
+                            agc != AgcMode::Off,
+                            format!("AGC {}", agc.label()),
+                        )
+                        .on_hover_text(tr!("topbar-agc-hang-time-click-cycle"))
+                        .clicked()
+                    })
+                    .inner;
+                if agc_clicked {
                     cmds.push(Command::SetAgc { rx: RxId::Main, agc: agc.next() });
                 }
                 // With the AGC off the audio rides on this fixed gain instead.
@@ -3895,6 +3909,24 @@ impl SdroxideApp {
     /// the NR chip stands in for a picker that cannot be opened from inside a
     /// menu.
     pub(in crate::app) fn rx_chip(
+        &mut self,
+        ui: &mut egui::Ui,
+        cmds: &mut Vec<Command>,
+        chip: RxChip,
+        narrow: bool,
+    ) {
+        // The RSP's chips sit closer to their letters (see [`RSP_CHIP_PAD_X`]).
+        if !narrow && self.rsp_linear_gain().is_some() {
+            ui.scope(|ui| {
+                ui.spacing_mut().button_padding.x = RSP_CHIP_PAD_X;
+                self.rx_chip_inner(ui, cmds, chip, narrow);
+            });
+        } else {
+            self.rx_chip_inner(ui, cmds, chip, narrow);
+        }
+    }
+
+    fn rx_chip_inner(
         &mut self,
         ui: &mut egui::Ui,
         cmds: &mut Vec<Command>,
@@ -7610,9 +7642,22 @@ fn sql_rail(ui: &mut egui::Ui, rsp: bool, readout_w: f32, slider: Slider<'_>) ->
     ui.scope(|ui| {
         let w = ui.spacing().slider_width * if rsp { SQL_RAIL_SHARE } else { 1.0 };
         ui.spacing_mut().slider_width = w;
-        crate::chrome::slider_readout(ui, readout_w, slider)
+        if rsp {
+            crate::chrome::slider_readout_tight(ui, sql_readout_tight_w(ui), slider)
+        } else {
+            crate::chrome::slider_readout(ui, readout_w, slider)
+        }
     })
     .inner
+}
+
+/// The SQL readout on the RSP row, cut to its text: the deepest threshold, the
+/// radio's percentage, or the word for a wide-open gate, whichever is longest.
+fn sql_readout_tight_w(ui: &egui::Ui) -> f32 {
+    let deepest = format!("{:.0}", sdroxide_types::SQUELCH_OPEN_DB);
+    tight_field_w(ui, &deepest)
+        .max(tight_field_w(ui, "100%"))
+        .max(tight_field_w(ui, &tr!("topbar-squelch-open")))
 }
 
 /// A readout cut to its text ([`crate::chrome::slider_readout_tight`]).
@@ -7645,7 +7690,7 @@ fn db_rail_w(ui: &egui::Ui) -> f32 {
 /// [`db_rail_w`] with the LNA rail in the row: the shorter rail, and a readout
 /// that only has to hold the longest figure these rails take (`-88.8 dB`).
 fn db_rail_compact_w(ui: &egui::Ui) -> f32 {
-    RX_DB_RAIL_COMPACT_W + MODULE_ROW_SPACING + tight_field_w(ui, "-100")
+    RX_DB_RAIL_COMPACT_W + MODULE_ROW_SPACING + tight_field_w(ui, "-100 dB")
 }
 
 /// The LNA step rail and its two-figure readout.
@@ -7656,8 +7701,7 @@ fn lna_rail_w(ui: &egui::Ui) -> f32 {
 /// The LNA readout: one or two figures, so it is not held to the style's
 /// minimum field width.
 fn lna_field_w(ui: &egui::Ui) -> f32 {
-    crate::chrome::text_width(ui, "-88", egui::TextStyle::Body.resolve(ui.style()))
-        + 2.0 * ui.spacing().button_padding.x
+    tight_field_w(ui, "-88")
 }
 
 /// The strip's **SQL** label: the word itself, in green while it is holding the
@@ -7822,6 +7866,11 @@ impl RxChip {
     }
 
     fn width(self, ui: &egui::Ui) -> f32 {
+        self.width_pad(ui, None)
+    }
+
+    /// [`Self::width`] for a chip drawn with `pad_x` of side padding (the RSP's).
+    fn width_pad(self, ui: &egui::Ui, pad_x: Option<f32>) -> f32 {
         if self == Self::Defaults {
             return defaults_chip_side(ui);
         }
@@ -7832,10 +7881,10 @@ impl RxChip {
             // move the whole box on the way to the other.
             return ["BW 888", "BW 8.8k", "BW 888k", "BW 8.8M"]
                 .iter()
-                .map(|s| crate::chrome::chip_width(ui, s, None))
+                .map(|s| crate::chrome::chip_width_pad(ui, s, None, pad_x))
                 .fold(0.0, f32::max);
         }
-        crate::chrome::chip_width(ui, &self.width_label(), None)
+        crate::chrome::chip_width_pad(ui, &self.width_label(), None, pad_x)
     }
 }
 
@@ -8154,7 +8203,8 @@ fn rx_rows_with(
     let rail = STRIP_RAIL_W;
     let label =
         |s: &str| crate::chrome::text_width(ui, s, egui::TextStyle::Body.resolve(ui.style()));
-    let chip = |s: &str| crate::chrome::chip_width(ui, s, None);
+    let chip_pad = if lna { Some(RSP_CHIP_PAD_X) } else { None };
+    let chip = |s: &str| crate::chrome::chip_width_pad(ui, s, None, chip_pad);
 
     // Receive: volume, the front-end gain rail where the rig has one, the
     // decimation chip, the AGC chip, and the manual rail behind it.
@@ -8199,13 +8249,16 @@ fn rx_rows_with(
     // be swapped under a running window (`Engine::adopt_source`), so a box
     // sized for one of them would change width when the operator applied a new
     // interface.
-    let noise =
-        label("SQL") + g + rail * if lna { SQL_RAIL_SHARE } else { 1.0 } + g + sql_readout_w(ui);
+    let noise = label("SQL")
+        + g
+        + rail * if lna { SQL_RAIL_SHARE } else { 1.0 }
+        + g
+        + if lna { sql_readout_tight_w(ui) } else { sql_readout_w(ui) };
 
     // Then the run itself. Each chip is priced at its widest label, so the box
     // does not breathe as a decode comes and goes (see [`RxChip::width_label`])
     // and the run does not re-break under the operator's cursor.
-    let chips: Vec<f32> = rx_chips(mode, listener).iter().map(|c| g + c.width(ui)).collect();
+    let chips: Vec<f32> = rx_chips(mode, listener).iter().map(|c| g + c.width_pad(ui, chip_pad)).collect();
     let all: f32 = chips.iter().sum();
     // Ties keep a chip where it is, so the layout every rig has always had —
     // the whole run under the SQL rail — is what comes back unless lifting a
@@ -12608,6 +12661,7 @@ mod tests {
 
     /// The panel keeps its size: other rigs are priced exactly as `main` did,
     /// and the RSP (dB Vol readout, second gain rail) is never wider. Prints each shape so a regression shows its size.
+
     #[test]
     fn the_rx_box_is_never_wider_than_it_was() {
         let (ctx, input) = desktop_ctx();
