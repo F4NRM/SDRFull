@@ -8182,7 +8182,13 @@ fn rx_rows_with(
         receive +=
             g + AgcMode::ALL.iter().map(|a| chip(&format!("AGC {}", a.tr()))).fold(0.0, f32::max);
         if agc_off {
-            receive += g + label(&tr!("topbar-man")) + g + db_rail(ui);
+            receive += g + label(&tr!("topbar-man")) + g;
+            // The RSP's Man rail is the short one, with its own readout.
+            receive += if lna {
+                RX_DB_RAIL_COMPACT_W + g + tight_field_w(ui, MAN_READOUT_SAMPLE)
+            } else {
+                db_rail(ui)
+            };
         }
     }
 
