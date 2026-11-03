@@ -21,6 +21,8 @@ v2.2.3.5_brown (pre-release). Open PRs: 2 (#417 and the BW chip PR). Open issues
 
 ## Now
 
+- PR #432 — WEFAX page ran 6½ minutes past its chart: DWD is off the air between transmissions on 3855, so the schedule chart of 14:25 UTC ended up 2286 lines with the bottom third noise; neither the stop tone nor the rephase could fire (nothing being sent) and the blank rule cannot help because noise has ink. The page now ends after 90 s without the subcarrier, and silence counts as no carrier. Test verified red; 52 wefax tests green (found at the bench by madmedicnl, owned by Claude; F4NRM's area, so a PR). Wacht op F4NRM's review.
+
 - PR #426 — WEFAX pages closed a minute early, cutting the chart's footer: "blank" meant a line whose mean brightness cleared 0.9, which a chart's nearly-white footer does with ink on it. Blank now also demands no ink, and the fallback limit went 60 s → 120 s. Test verified red on the old rule (reported from the bench by madmedicnl, owned by Claude; decoder, so a PR). Wacht op F4NRM's review.
 
 - PR #425 — Dynamic DNS: one provider update URL and an interval, off unless an address is set (no thread, no request), the URL never logged and shown masked, and only the *applied* address used. `NetworkConfig` gained two fields at the end, so PROTO_VERSION 260 → 261 (owner: Claude, asked by madmedicnl). Wacht op F4NRM's review.
