@@ -570,12 +570,6 @@ pub struct WefaxRx {
     /// [`WefaxRx::note_phasing_line`].
     rephase_lines: u32,
     rephase_skew: f64,
-    /// Whether any line of the picture in progress was not blank, and the
-    /// white lines in a row since, tolerating short fades. See
-    /// [`BLANK_END_S`].
-    had_content: bool,
-    blank_run: u32,
-    blank_gap: u32,
 
     start_det: ToneDetect,
     stop_det: ToneDetect,
@@ -654,32 +648,6 @@ const STOP_RUN: u32 = 7;
 /// or a noise burst inside the tone does not throw away the windows already
 /// matched.
 const STOP_MISS_TOL: u32 = 2;
-/// How long an automatically begun page may carry nothing but a white carrier,
-/// after chart content, before it is ended. Stations keep a white carrier up
-/// after a chart; if the stop tone was missed it is the only way out of the
-/// picture, and it would otherwise hide every later start tone.
-///
-/// **Two minutes, not one.** A chart's own footer is very nearly white — the
-/// wind-scale box of a GYA chart ran a minute and a half of near-white before
-/// the transmission ended — and a minute closed the page in the middle of it
-/// (bench, 2026-11-03). The stop tone ends a page long before this; this rule
-/// is the fallback for a station that keeps a carrier up instead, and being
-/// slow costs a listener nothing.
-const BLANK_END_S: f64 = 120.0;
-/// Brightness a line's mean must reach to count as blank (white carrier).
-const BLANK_MEAN: f32 = 0.9;
-/// Brightness below which a sample is **ink** rather than white paper.
-const INK_LEVEL: f32 = 0.25;
-/// How many ink samples a line needs before it counts as content.
-///
-/// One is too few: a noisy white carrier throws the odd dark speckle and those
-/// must not keep a page open for ever. Two is enough to catch what a chart
-/// actually puts in its own whitespace — the ruled border of a scale box, a
-/// caption — because a vertical rule runs through *every* line of the block it
-/// encloses (bench, 2026-11-03).
-const INK_SAMPLES: usize = 2;
-/// Non-blank lines in a row (fading) that restart the blank count.
-const BLANK_GAP_LINES: u32 = 6;
 /// How far a measured crossing rate may be from the nominal one, as a fraction.
 const TONE_TOL: f64 = 0.18;
 /// Pitch of a start signal sent as a plain audio tone, Hz — the 300 Hz of
@@ -867,9 +835,6 @@ impl WefaxRx {
             start_run: 0,
             stop_run: 0,
             stop_miss: 0,
-            had_content: false,
-            blank_run: 0,
-            blank_gap: 0,
             start_ioc: Ioc::default(),
             audio_tone: AudioToneDetect::new(rate),
             audio_start_run: 0,
@@ -1074,9 +1039,6 @@ impl WefaxRx {
         self.lead_skipped = 0;
         self.reset_idle();
         self.rephase_lines = 0;
-        self.had_content = false;
-        self.blank_run = 0;
-        self.blank_gap = 0;
         self.start_det.reset();
         self.start_run = 0;
         self.stop_det.reset();
@@ -1446,40 +1408,6 @@ impl WefaxRx {
         self.rephase_lines >= REPHASE_LINES
     }
 
-    /// Track a white carrier after the chart. Returns true once an automatic
-    /// page has had nothing but white for [`BLANK_END_S`]. Only white *after*
-    /// content counts, so a chart's own white margin never ends it, and a fade
-    /// shorter than [`BLANK_GAP_LINES`] does not restart the count.
-    fn note_blank_line(&mut self, line: &[f32]) -> bool {
-        let n = line.len().max(1) as f32;
-        let mean = line.iter().sum::<f32>() / n;
-        // A carrier left on after the chart is blank wherever it sits: above
-        // white it reads as white, but one that has drifted (or a station on a
-        // slightly different frequency) is steady at some other brightness.
-        let std = (line.iter().map(|l| (l - mean) * (l - mean)).sum::<f32>() / n).sqrt();
-        // **White paper is not blank if it has ink on it.** A chart's footer is
-        // very nearly white — mean well over BLANK_MEAN — with only the ruled
-        // border of a scale box drawn across it, and the mean alone read that
-        // as the end of the page: the chart was closed a minute early, mid-box
-        // (bench, 2026-11-03, GYA 4608 kHz). A white carrier has no ink in it
-        // at all, which is exactly the difference.
-        let ink = line.iter().filter(|l| **l < INK_LEVEL).count();
-        let blank = ink < INK_SAMPLES
-            && (mean >= BLANK_MEAN || (std <= FLAT_STD && mean >= FLAT_MEAN));
-        if blank {
-            self.blank_gap = 0;
-            self.blank_run += 1;
-        } else {
-            self.had_content = true;
-            self.blank_gap += 1;
-            if self.blank_gap > BLANK_GAP_LINES {
-                self.blank_run = 0;
-            }
-        }
-        let blank_s = f64::from(self.blank_run) * self.samples_per_line() / self.rate;
-        self.had_content && blank_s >= BLANK_END_S
-    }
-
     /// Receiving: accumulate the line, watch for the stop tone — and for the
     /// next transmission arriving on top of this one.
     fn step_receiving(&mut self, level: f32, out: &mut Vec<WefaxEvent>) {
@@ -1615,13 +1543,6 @@ impl WefaxRx {
                         return;
                     }
                     self.lead_phasing = None;
-                }
-                if self.auto_begun && self.note_blank_line(&line) {
-                    let gray = resample_line(&line, self.ioc.width() as usize);
-                    out.push(WefaxEvent::Line { y: self.line_no, gray });
-                    self.line_no = self.line_no.saturating_add(1);
-                    self.finish(false, out);
-                    return;
                 }
                 let gray = resample_line(&line, self.ioc.width() as usize);
                 out.push(WefaxEvent::Line { y: self.line_no, gray });
@@ -2444,43 +2365,49 @@ mod tests {
         assert!(rx.receiving(), "the page should be under way: {ev:?}");
         let spl = rx.samples_per_line();
         ev.extend(drain(&mut rx, &white_carrier_with_a_rule(150.0, spl)));
-        assert_eq!(
-            completes(&ev),
-            0,
-            "a ruled footer is ink, not a white carrier: {ev:?}"
-        );
+        assert_eq!(completes(&ev), 0, "a ruled footer ended the page: {ev:?}");
         assert!(rx.receiving(), "the page is still open");
-
-        // ...and the carrier that really follows it still closes it.
-        ev.extend(drain(&mut rx, &white_carrier(130.0, false)));
-        assert_eq!(completes(&ev), 1, "a clean white carrier ends the page: {ev:?}");
     }
 
-    /// The station keeps a white carrier up after the chart and the stop tone
-    /// was missed: the page ends, and the next start tone begins another.
+    /// [`MAX_LINES`] is the backstop that needs no signal at all: a page that
+    /// is never told to stop still cannot run for ever.
     #[test]
-    fn a_white_carrier_after_the_chart_ends_an_automatic_page() {
+    fn a_page_that_is_never_told_to_stop_ends_at_the_line_limit() {
+        let lpm = Lpm::L120;
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_lpm(lpm);
+        let mut ev = into_image(&mut rx, lpm);
+        // A picture longer than the limit, in one go: one line per line.
+        ev.extend(drain(&mut rx, &ramp_picture(lpm, MAX_LINES as usize + 20)));
+        assert!(
+            ev.iter().any(|e| matches!(e, WefaxEvent::Complete { by_tone: false, .. })),
+            "the page never reached MAX_LINES"
+        );
+    }
+
+    /// **White does not end a page.** Charts carry large blank areas, and the
+    /// station's white carrier between them is not a stop tone: the page ends on
+    /// a stop tone, on the next transmission's start tone, or at [`MAX_LINES`],
+    /// and on nothing else (DK8JV, 2026-11-03, comparing against JVComm32).
+    #[test]
+    fn a_white_carrier_does_not_end_a_page() {
         let lpm = Lpm::L120;
         let mut rx = WefaxRx::new(RATE);
         rx.set_lpm(lpm);
         let mut ev = auto_page(&mut rx, lpm, 20);
         assert!(rx.receiving(), "the page should be under way: {ev:?}");
-        ev.extend(drain(&mut rx, &white_carrier(130.0, false)));
-        assert_eq!(completes(&ev), 1, "the white carrier should end the page: {ev:?}");
-        assert!(!rx.receiving());
+        ev.extend(drain(&mut rx, &white_carrier(150.0, false)));
+        assert_eq!(completes(&ev), 0, "a white carrier ended the page: {ev:?}");
+        assert!(rx.receiving(), "the page is still open");
+
+        // The stop tone is what ends it.
+        ev.extend(drain(&mut rx, &tone(STOP_TONE_HZ, 4.0)));
+        assert!(
+            ev.iter().any(|e| matches!(e, WefaxEvent::Complete { by_tone: true, .. })),
+            "the stop tone did not end the page: {ev:?}"
+        );
         let next = auto_page(&mut rx, lpm, 6);
         assert!(rx.receiving(), "a new start tone should begin a page: {next:?}");
-    }
-
-    /// Fades in the carrier do not restart the count.
-    #[test]
-    fn a_fading_white_carrier_still_ends_the_page() {
-        let lpm = Lpm::L120;
-        let mut rx = WefaxRx::new(RATE);
-        rx.set_lpm(lpm);
-        let mut ev = auto_page(&mut rx, lpm, 20);
-        ev.extend(drain(&mut rx, &white_carrier(150.0, true)));
-        assert_eq!(completes(&ev), 1, "the fading carrier should end the page: {ev:?}");
     }
 
     /// A white stretch shorter than the limit is chart, not an ending.
@@ -3423,20 +3350,21 @@ mod carrier_tests {
         );
     }
 
-    /// A carrier left on after the chart is blank wherever it sits. Only one
-    /// above white read as white, so one that had drifted down into the scale
-    /// kept the page open for good.
+    /// A carrier left on after the chart — above white or drifted below it —
+    /// is **not** an ending either: it is not a stop tone and not a new
+    /// transmission. The page closes on one of those or at [`MAX_LINES`].
     #[test]
-    fn a_carrier_below_white_still_ends_an_automatic_page() {
+    fn a_carrier_left_on_does_not_end_a_page() {
         let mut rx = WefaxRx::new(RATE);
         let mut audio = fm(&phasing(12, 0.95, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
         audio.extend(fm(&ramp(30), BLACK_HZ, WHITE_HZ));
         audio.extend(carrier(2100.0, 150.0));
         let ev = feed(&mut rx, &audio);
         assert!(
-            ev.iter().any(|e| matches!(e, WefaxEvent::Complete { by_tone: false, .. })),
-            "a steady carrier at 2100 Hz did not end the page"
+            !ev.iter().any(|e| matches!(e, WefaxEvent::Complete { .. })),
+            "a steady carrier at 2100 Hz ended the page"
         );
+        assert!(rx.receiving());
     }
 
     /// The few seconds of phasing-like lines a chart ends on are not the start
