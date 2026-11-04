@@ -4,8 +4,8 @@ Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 263 (0x53). Latest release
 v2.2.3.6.2_brown (pre-release). Open PRs: 1 (#453 decoded CW over UDP, blocked on
-AJ6CU's round-trip test; #456 the noise blanker's count). Open issues: 5
-(re-measured 2026-11-04).
+AJ6CU's round-trip test; #456 the noise blanker's count; #458 the CW click
+grid). Open issues: 5 (re-measured 2026-11-04).
 
 ## Task tracking rules
 
@@ -22,6 +22,7 @@ AJ6CU's round-trip test; #456 the noise blanker's count). Open issues: 5
 
 ## Now
 
+- **PR #458 — the CW click grid is fine in CW** (added by drdatapi via #439, owned by Claude): a 1000 Hz grid set for SSB made every CW click up to half a kilohertz wrong, with the click, the readout and the arithmetic all blameless. CW now caps the grid at the 10 Hz default, a finer choice is kept, and the setting's hover text says so in eleven languages. The temporary `cw click:` log line that #439 needed is removed with it — it reached `main` by mistake, swept in by #450's `git add -A`. Test verified red with the cap removed.
 - **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the reporter came back: the blanker works on strong noise and not on weak, and his Kiwi's 20 kHz stream behaves differently from the Airspy at 768 kHz. The promised count is built (**PR #456**): the blanker reports, once a second, how many samples it zeroed and how close the strongest came to its 5× bar, with the device rate. A simulation of the shipped rule says the dependence is real and in our code — at the same impulse strength 20.3 kHz blanked 14 of 258 bursts where 768 kHz blanked 207 of 297 — but the reporter's own log lines decide the fix, and he gets them in the next pre-release.
 - **#388 HL2 datagram loss** (added by DK8JV, owned by Claude) — the reporter confirms it gone in v2.2.3.6.1; today's WEFAX findings are posted there. Closes when his fax test comes back clean.
 - **WEFAX bench test — stopped 2026-11-03 21:20 UTC**: propagation went before the night half could run; the DWD 3855 sweep of 2026-11-04 ran 14:20–16:10 UTC and gave five complete charts, and WEFAX is finished from our side. Logs: `/tmp/wefax-dwd3855.log`.
