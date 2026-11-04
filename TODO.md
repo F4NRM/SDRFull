@@ -4,7 +4,7 @@ Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 263 (0x53). Latest release
 v2.2.3.6.2_brown (pre-release). Open PRs: 1 (#453 decoded CW over UDP, blocked on
-AJ6CU's round-trip test; #456 the noise blanker's count). Open issues: 6
+AJ6CU's round-trip test; #456 the noise blanker's count). Open issues: 5
 (re-measured 2026-11-04).
 
 ## Task tracking rules
@@ -22,7 +22,6 @@ AJ6CU's round-trip test; #456 the noise blanker's count). Open issues: 6
 
 ## Now
 
-- **#439 CW click lands 370 Hz low** (added by drdatapi via #439, owned by Claude) — does not reproduce: four clicks on the bench put the dial at pointer − pitch on the 10 Hz grid and the readout on the pointer, the operator confirmed the same on his own screen, and v2.2.3.6.3's code for that path is identical to `main` (diffed). Asked on the issue for the pitch box's value at the moment it happens; that is the only arithmetic that fits.
 - **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the reporter came back: the blanker works on strong noise and not on weak, and his Kiwi's 20 kHz stream behaves differently from the Airspy at 768 kHz. The promised count is built (**PR #456**): the blanker reports, once a second, how many samples it zeroed and how close the strongest came to its 5× bar, with the device rate. A simulation of the shipped rule says the dependence is real and in our code — at the same impulse strength 20.3 kHz blanked 14 of 258 bursts where 768 kHz blanked 207 of 297 — but the reporter's own log lines decide the fix, and he gets them in the next pre-release.
 - **#388 HL2 datagram loss** (added by DK8JV, owned by Claude) — the reporter confirms it gone in v2.2.3.6.1; today's WEFAX findings are posted there. Closes when his fax test comes back clean.
 - **WEFAX bench test — stopped 2026-11-03 21:20 UTC**: propagation went before the night half could run; the DWD 3855 sweep of 2026-11-04 ran 14:20–16:10 UTC and gave five complete charts, and WEFAX is finished from our side. Logs: `/tmp/wefax-dwd3855.log`.
@@ -89,6 +88,7 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Recently done
 
+- 2026-11-04 — #439 closed as user error (added by drdatapi, owned by Claude, the operator's call): the click, the readout and the release's code were all right; his **Click-tune rounding** was set to 1000 Hz for hunting SSB, and in CW that is a one-kilohertz grid, so a click landed up to half of it away. His 1.6.11 comparison is explained by that install still having 10 Hz. Open question left with the operator: should the grid fall to the fine one whenever the CW decoder is in front, so the coarse setting cannot bite there.
 - 2026-11-04 — #132 (wrong frequency display) closed (added by emi83170, owned by Claude, the operator's call): the answer was already in the thread — the Brick2's I/Q polarity (`Settings → Radio → Swap I/Q`) for the mirrored stations, and IARU Region 2 for the 7.200 MHz band edge — and it has been quiet since 28 October. The close asks for a reopen if it is still there, which keeps the videos and the history together.
 - 2026-11-04 — #402 closed as a duplicate of #283 (added by kvenl, owned by Claude, the operator's call): a pointer to a closed issue cannot be worked from; a fresh report with the version and what is actually seen is what gets it looked at. #419 (DRM) answered the same day: not in the queue now, a PR would be reviewed, otherwise F4NRM's to pick up — with a line on what "not working" means asked for so it is actionable.
 - 2026-11-04 — AJ6CU's rigctl set merged (added by AJ6CU, owned by Claude): **#451** a new width in the mode already running sets the filter and leaves the mode alone, with the `PKT` guard so a digital session still ignores WSJT-X's periodic write; **#452** squelch, AGC and NR strength as Hamlib levels, and `U NR 1` now restores the engine and strength last on instead of always the spectral NR at medium; **#454** the front-end gain as `RF`, advertised in `\dump_state` only where a gain stage exists. Checked on a local build before merging: gate silent, `sdroxide-rigctld` 48 tests, and `l RF` moves the same element the top bar's slider moves. **#453** (decoded CW over UDP) is blocked on its `WsjtxConfig` round-trip test — see Waiting on other people.
