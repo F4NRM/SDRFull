@@ -4,7 +4,8 @@ Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 263 (0x53). Latest release
 v2.2.3.6.2_brown (pre-release). Open PRs: 1 (#453 decoded CW over UDP, blocked on
-AJ6CU's round-trip test). Open issues: 6 (re-measured 2026-11-04).
+AJ6CU's round-trip test; #456 the noise blanker's count). Open issues: 6
+(re-measured 2026-11-04).
 
 ## Task tracking rules
 
@@ -22,7 +23,7 @@ AJ6CU's round-trip test). Open issues: 6 (re-measured 2026-11-04).
 ## Now
 
 - **#439 CW click lands 370 Hz low** (added by drdatapi via #439, owned by Claude) — does not reproduce: four clicks on the bench put the dial at pointer − pitch on the 10 Hz grid and the readout on the pointer, the operator confirmed the same on his own screen, and v2.2.3.6.3's code for that path is identical to `main` (diffed). Asked on the issue for the pitch box's value at the moment it happens; that is the only arithmetic that fits.
-- **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the reporter came back: the blanker works on strong noise and not on weak, and its threshold is in samples, so it means something different at 20 kHz than at 768 kHz. A build that counts what it removes was promised.
+- **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the reporter came back: the blanker works on strong noise and not on weak, and his Kiwi's 20 kHz stream behaves differently from the Airspy at 768 kHz. The promised count is built (**PR #456**): the blanker reports, once a second, how many samples it zeroed and how close the strongest came to its 5× bar, with the device rate. A simulation of the shipped rule says the dependence is real and in our code — at the same impulse strength 20.3 kHz blanked 14 of 258 bursts where 768 kHz blanked 207 of 297 — but the reporter's own log lines decide the fix, and he gets them in the next pre-release.
 - **#388 HL2 datagram loss** (added by DK8JV, owned by Claude) — the reporter confirms it gone in v2.2.3.6.1; today's WEFAX findings are posted there. Closes when his fax test comes back clean.
 - **WEFAX bench test — stopped 2026-11-03 21:20 UTC**: propagation went before the night half could run; the DWD 3855 sweep of 2026-11-04 ran 14:20–16:10 UTC and gave five complete charts, and WEFAX is finished from our side. Logs: `/tmp/wefax-dwd3855.log`.
 - SWL users group requests (added by the SWL users group, owned by Roy) — point **4** is still ours: CTR ratchets the span down on keyboard tuning while the user cannot widen it again, exposed by #397's per-rate usable span; needs a `ctr_zoom_sim` case with `usable < rate`. Points 1 and 3 are in (#409, #406); 2 (start in Listening/Operating per radio) is parked.
