@@ -11,6 +11,7 @@
 use crate::i18n::tr;
 use eframe::egui::{Align2, Color32, FontId, Sense, Stroke, Ui, pos2, vec2};
 use sdroxide_types::SondeTrack;
+use sdroxide_types::sonde_predict::{self, Basis, Landing};
 
 use crate::hfdl_map::target_view;
 use crate::theme;
@@ -102,6 +103,14 @@ pub fn show(
     let placed: Vec<(&SondeTrack, f64, f64)> =
         sondes.iter().filter_map(|s| Some((s, s.lat?, s.lon?))).collect();
 
+    // Where each sonde still in the air is expected to land (an estimate).
+    let landings: Vec<Option<Landing>> = placed
+        .iter()
+        .map(|(s, _, _)| {
+            if phase(s, now) == Phase::Silent { None } else { sonde_predict::predict(s) }
+        })
+        .collect();
+
     // ── the view ──
     let aspect = (rect.height() / rect.width()) as f64;
     let mut pts: Vec<(f64, f64)> = Vec::new();
@@ -110,6 +119,7 @@ pub fn show(
         // The whole track frames, not just the head, so a long flight fits.
         pts.extend(s.track.iter().step_by(30).map(|q| (q.lat, q.lon)));
     }
+    pts.extend(landings.iter().flatten().map(|l| (l.lat, l.lon)));
     let (t_clat, t_clon, t_span) = target_view(home, &pts, aspect);
     let view = &mut state.view;
     if !view.initialized {
@@ -189,6 +199,26 @@ pub fn show(
         }
     }
 
+    // ── the estimated landing, dashed from the sonde to the spot ──
+    for (i, (_, lat, lon)) in placed.iter().enumerate() {
+        let Some(l) = &landings[i] else { continue };
+        let (a, b) = (project(*lat, *lon), project(l.lat, l.lon));
+        let ink = alpha(map.dx, 200.0);
+        if (a.x - b.x).abs() < rect.width() * 0.5 {
+            p.extend(eframe::egui::Shape::dashed_line(&[a, b], Stroke::new(1.0, ink), 5.0, 4.0));
+        }
+        p.circle_stroke(b, 4.0, (1.4, ink));
+        p.line_segment([b + vec2(-3.0, 0.0), b + vec2(3.0, 0.0)], (1.2, ink));
+        p.line_segment([b + vec2(0.0, -3.0), b + vec2(0.0, 3.0)], (1.2, ink));
+        p.text(
+            b + vec2(7.0, 0.0),
+            Align2::LEFT_CENTER,
+            tr!("sondemap-landing", min = (l.eta_s / 60.0).round() as i64),
+            FontId::monospace(9.0),
+            ink,
+        );
+    }
+
     // ── marks and labels ──
     let mut labels = Vec::new();
     for (i, (s, lat, lon)) in placed.iter().enumerate() {
@@ -264,8 +294,7 @@ pub fn show(
         if let Some(v) = s.speed_ms {
             tip.push_str(&format!("\n{:.0} km/h", v * 3.6));
         }
-        tip.push_str(&format!("
-{:.3} MHz", s.freq_hz / 1e6));
+        tip.push_str(&format!("\n{:.3} MHz", s.freq_hz / 1e6));
         if let Some(v) = s.battery_v {
             tip.push_str(&format!("\n{v:.1} V"));
         }
@@ -276,6 +305,19 @@ pub fn show(
                 "\n{}   {bear:.0}°",
                 sdroxide_types::AirUnits::current().distance(km)
             ));
+        }
+        if let Some(l) = &landings[i] {
+            let min = (l.eta_s / 60.0).round() as i64;
+            tip.push('\n');
+            match (l.basis, l.burst_alt_m) {
+                (Basis::Climbing, Some(b)) => tip.push_str(&tr!(
+                    "sondemap-landing-assumed",
+                    min = min,
+                    alt = format!("{b:.0}")
+                )),
+                _ => tip.push_str(&tr!("sondemap-landing", min = min)),
+            }
+            tip.push_str(&format!("\n{:.4}, {:.4}", l.lat, l.lon));
         }
         resp.clone().on_hover_text(tip);
         if resp.clicked() {

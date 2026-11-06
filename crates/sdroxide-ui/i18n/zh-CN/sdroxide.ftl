@@ -9103,3 +9103,7 @@ sonde-col-speed = 速度
 sonde-col-battery = 电池
 
 sonde-col-heard = 接收
+
+sondemap-landing = 落地约 { $min } 分钟
+
+sondemap-landing-assumed = 落地约 { $min } 分钟（估算：假定在 { $alt } 米处爆裂）

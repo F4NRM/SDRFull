@@ -9163,3 +9163,7 @@ sonde-col-speed = Geschwindigkeit
 sonde-col-battery = Batterie
 
 sonde-col-heard = Gehört
+
+sondemap-landing = Landung ≈ { $min } min
+
+sondemap-landing-assumed = Landung ≈ { $min } min (Schätzung: Platzen bei { $alt } m angenommen)

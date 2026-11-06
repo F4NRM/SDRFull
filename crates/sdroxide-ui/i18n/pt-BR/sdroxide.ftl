@@ -9165,3 +9165,7 @@ sonde-col-speed = Velocidade
 sonde-col-battery = Bateria
 
 sonde-col-heard = Recebida
+
+sondemap-landing = Pouso ≈ { $min } min
+
+sondemap-landing-assumed = Pouso ≈ { $min } min (estimativa: estouro presumido a { $alt } m)
