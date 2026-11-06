@@ -36,11 +36,13 @@ pub enum SondeModel {
     Mk2a,
     /// Meisei RS-11G and iMS-100.
     Meisei,
+    /// Shanghai Changwang C34 and C50.
+    C34,
 }
 
 impl SondeModel {
     /// Every model decoded, in the order a lane tries them.
-    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm, SondeModel::M10, SondeModel::M20, SondeModel::Imet4, SondeModel::Mrz, SondeModel::Lms6, SondeModel::Mts01, SondeModel::Imet54, SondeModel::Mk2a, SondeModel::Meisei];
+    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm, SondeModel::M10, SondeModel::M20, SondeModel::Imet4, SondeModel::Mrz, SondeModel::Lms6, SondeModel::Mts01, SondeModel::Imet54, SondeModel::Mk2a, SondeModel::Meisei, SondeModel::C34];
 
     /// The type as printed in the track table and sent to SondeHub.
     pub fn name(self) -> &'static str {
@@ -56,6 +58,7 @@ impl SondeModel {
             SondeModel::Imet54 => "iMet-54",
             SondeModel::Mk2a => "Mk2a",
             SondeModel::Meisei => "Meisei",
+            SondeModel::C34 => "C34/C50",
         }
     }
 }
@@ -164,6 +167,7 @@ pub fn decoder_for(
         SondeModel::Imet54 => Ok(Box::new(crate::imet54::Imet54Decoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::Mk2a => Ok(Box::new(crate::mk2a::Mk2aDecoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::Meisei => Ok(Box::new(crate::meisei::MeiseiDecoder::new(input_rate, freq_offset_hz)?)),
+        SondeModel::C34 => Ok(Box::new(crate::c34::C34Decoder::new(input_rate, freq_offset_hz)?)),
     }
 }
 

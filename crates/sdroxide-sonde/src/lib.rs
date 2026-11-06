@@ -21,6 +21,7 @@ pub mod mrz;
 pub mod mts01;
 pub mod mk2a;
 pub mod meisei;
+pub mod c34;
 pub mod model;
 pub mod rs41meteo;
 pub mod rs255;
