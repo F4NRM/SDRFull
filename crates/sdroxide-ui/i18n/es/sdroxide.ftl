@@ -9164,3 +9164,7 @@ sonde-col-speed = Velocidad
 sonde-col-battery = Batería
 
 sonde-col-heard = Oída
+
+sondemap-landing = Aterrizaje ≈ { $min } min
+
+sondemap-landing-assumed = Aterrizaje ≈ { $min } min (estimación: reventón supuesto a { $alt } m)

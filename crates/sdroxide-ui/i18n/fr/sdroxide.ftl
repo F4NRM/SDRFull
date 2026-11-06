@@ -9176,3 +9176,7 @@ sonde-col-speed = Vitesse
 sonde-col-battery = Batterie
 
 sonde-col-heard = Reçue
+
+sondemap-landing = Atterrissage ≈ { $min } min
+
+sondemap-landing-assumed = Atterrissage ≈ { $min } min (estimation : éclatement supposé à { $alt } m)

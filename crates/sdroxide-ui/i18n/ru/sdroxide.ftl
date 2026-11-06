@@ -9180,3 +9180,7 @@ sonde-col-speed = Скорость
 sonde-col-battery = Батарея
 
 sonde-col-heard = Принято
+
+sondemap-landing = Посадка ≈ { $min } мин
+
+sondemap-landing-assumed = Посадка ≈ { $min } мин (оценка: разрыв шара предполагается на { $alt } м)

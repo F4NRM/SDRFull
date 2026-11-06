@@ -44,6 +44,7 @@ mod geo;
 mod hd;
 mod hfdl;
 mod sonde;
+pub mod sonde_predict;
 mod ibp;
 mod input;
 mod ism;

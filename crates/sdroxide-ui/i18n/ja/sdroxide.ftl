@@ -9113,3 +9113,7 @@ sonde-col-speed = 速度
 sonde-col-battery = 電池
 
 sonde-col-heard = 受信
+
+sondemap-landing = 着地まで約 { $min } 分
+
+sondemap-landing-assumed = 着地まで約 { $min } 分（推定：{ $alt } m で破裂と仮定）

@@ -9165,3 +9165,7 @@ sonde-col-speed = Hız
 sonde-col-battery = Pil
 
 sonde-col-heard = Alındı
+
+sondemap-landing = İniş ≈ { $min } dk
+
+sondemap-landing-assumed = İniş ≈ { $min } dk (tahmin: patlama { $alt } m'de varsayıldı)

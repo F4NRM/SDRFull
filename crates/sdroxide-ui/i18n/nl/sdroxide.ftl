@@ -9173,3 +9173,7 @@ sonde-col-speed = Snelheid
 sonde-col-battery = Batterij
 
 sonde-col-heard = Ontvangen
+
+sondemap-landing = Landing ≈ { $min } min
+
+sondemap-landing-assumed = Landing ≈ { $min } min (schatting: knappen aangenomen op { $alt } m)

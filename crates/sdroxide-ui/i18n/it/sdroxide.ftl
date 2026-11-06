@@ -9174,3 +9174,7 @@ sonde-col-speed = Velocità
 sonde-col-battery = Batteria
 
 sonde-col-heard = Ricevuta
+
+sondemap-landing = Atterraggio ≈ { $min } min
+
+sondemap-landing-assumed = Atterraggio ≈ { $min } min (stima: scoppio ipotizzato a { $alt } m)

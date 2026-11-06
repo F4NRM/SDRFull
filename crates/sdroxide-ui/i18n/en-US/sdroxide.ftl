@@ -9188,3 +9188,7 @@ sonde-col-speed = Speed
 sonde-col-battery = Battery
 
 sonde-col-heard = Heard
+
+sondemap-landing = Landing ≈ { $min } min
+
+sondemap-landing-assumed = Landing ≈ { $min } min (estimate: burst assumed at { $alt } m)
