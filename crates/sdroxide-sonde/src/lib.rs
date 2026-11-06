@@ -23,6 +23,7 @@ pub mod mk2a;
 pub mod meisei;
 pub mod c34;
 pub mod weathex;
+pub mod cf06;
 pub mod model;
 pub mod rs41meteo;
 pub mod rs255;
