@@ -9175,6 +9175,16 @@ sonde-col-battery = Batteria
 
 sonde-col-heard = Ricevuta
 
+sonde-scan = Scansione
+
+sonde-scan-hover = Cerca sonde in tutta la finestra di campionamento e ne decodifica fino a quattro insieme, invece di ascoltare un solo canale. La finestra deve coprirle: il campo Canale centra la radio.
+settings-audio-radio-out-level = Livello mixer TX
+
+settings-audio-radio-out-level-hint = Livello di riproduzione ALSA del dispositivo di uscita audio del radio. Alzalo per un rig USB (SS9900v) per far scattare il suo VOX. Solo Linux.
+
+settings-audio-radio-in-level = Livello mixer RX
+
+settings-audio-radio-in-level-hint = Livello di cattura ALSA del dispositivo di ingresso audio del radio. Solo Linux.
 sonde-online = Online (SondeHub)
 
 sonde-online-hover = Mostra anche le sonde ricevute da altre stazioni, dall'elenco pubblico di SondeHub. Solo lettura: vengono inviati il locatore arrotondato a 0,1° e un raggio di 400 km; non viene caricato nulla. Disattivato finché non lo attiva.

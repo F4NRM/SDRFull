@@ -5396,6 +5396,7 @@ dependencies = [
 name = "sdroxide-audio"
 version = "2.2.0"
 dependencies = [
+ "alsa",
  "cpal",
  "rtrb",
  "sdroxide-dsp",
@@ -6035,6 +6036,7 @@ name = "sdroxide-sonde"
 version = "2.2.0"
 dependencies = [
  "crossbeam-channel",
+ "rustfft",
  "sdroxide-dsp",
  "sdroxide-types",
  "tracing",

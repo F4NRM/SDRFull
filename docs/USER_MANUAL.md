@@ -6277,7 +6277,11 @@ flight (the newest if none is selected) as a **KML** track for Google Earth or a
 table for a spreadsheet. The *Online (SondeHub)* box, off until you tick it, also
 shows the sondes other stations have heard within 400 km (hollow blue diamonds): it only
 reads SondeHub's public list, sending your locator rounded to 0.1° and the radius, and
-uploads nothing; it needs the locator set in the digital-mode setup. The decoder needs a wideband source (a receiver that sends
+uploads nothing; it needs the locator set in the digital-mode setup. The *Scan* box looks across the whole sample window for sonde
+carriers instead of listening on one channel, and decodes up to four sondes at once, one
+lane per carrier (a lane is dropped two minutes after its carrier goes; what it heard
+stays listed). The window has to cover the sondes: centre the radio with the *Channel*
+box, and note that a 2.4 MS/s receiver sees about 2.4 MHz of the 5.85 MHz band. The decoder needs a wideband source (a receiver that sends
 I/Q); it is off for a rig that only hands over audio. The setting is kept in `sonde.json`.
 
 **Export.** The **CSV** and **JSON** buttons under *Export* in the AIRCRAFT window

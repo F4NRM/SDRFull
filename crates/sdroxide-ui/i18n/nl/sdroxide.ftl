@@ -9174,6 +9174,16 @@ sonde-col-battery = Batterij
 
 sonde-col-heard = Ontvangen
 
+sonde-scan = Scan
+
+sonde-scan-hover = Zoekt in het hele samplevenster naar sondes en decodeert er tot vier tegelijk, in plaats van op één kanaal te luisteren. Het venster moet ze bestrijken: het kanaalveld centreert de radio.
+settings-audio-radio-out-level = TX-mixerniveau
+
+settings-audio-radio-out-level-hint = ALSA-afspeelniveau van het audio-uitvoerapparaat van de radio. Verhoog voor een USB-rig (SS9900v) zodat de VOX triggert. Alleen Linux.
+
+settings-audio-radio-in-level = RX-mixerniveau
+
+settings-audio-radio-in-level-hint = ALSA-opnameniveau van het audio-invoerapparaat van de radio. Alleen Linux.
 sonde-online = Online (SondeHub)
 
 sonde-online-hover = Toont ook sondes die andere stations hebben ontvangen, uit de openbare lijst van SondeHub. Alleen lezen: uw locator op 0,1° afgerond en een straal van 400 km worden verstuurd; er wordt niets geüpload. Uit tot u het inschakelt.

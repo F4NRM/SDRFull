@@ -9164,6 +9164,16 @@ sonde-col-battery = Batterie
 
 sonde-col-heard = Gehört
 
+sonde-scan = Suche
+
+sonde-scan-hover = Sucht im ganzen Abtastfenster nach Sonden und dekodiert bis zu vier gleichzeitig, statt auf einem Kanal zu hören. Das Fenster muss sie abdecken: das Kanalfeld zentriert das Radio.
+settings-audio-radio-out-level = TX-Mixer-Pegel
+
+settings-audio-radio-out-level-hint = ALSA-Wiedergabepegel des Audioausgabegerats des Funkgerats. Fur ein USB-Rig (SS9900v) anheben, damit dessen VOX auslost. Nur Linux.
+
+settings-audio-radio-in-level = RX-Mixer-Pegel
+
+settings-audio-radio-in-level-hint = ALSA-Aufnahmepegel des Audioeingabegerats des Funkgerats. Nur Linux.
 sonde-online = Online (SondeHub)
 
 sonde-online-hover = Zeigt auch Sonden, die andere Stationen gehört haben, aus der öffentlichen Liste von SondeHub. Nur lesend: Ihr Locator auf 0,1° gerundet und ein Radius von 400 km werden gesendet; nichts wird hochgeladen. Aus, bis Sie es einschalten.

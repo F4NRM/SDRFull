@@ -9114,6 +9114,16 @@ sonde-col-battery = 電池
 
 sonde-col-heard = 受信
 
+sonde-scan = スキャン
+
+sonde-scan-hover = 1 つのチャンネルを聞く代わりに、サンプリングウィンドウ全体からゾンデを探し、最大 4 つを同時にデコードします。ウィンドウがそれらを含む必要があります。チャンネル欄で無線機の中心を合わせます。
+settings-audio-radio-out-level = TXミキサーレベル
+
+settings-audio-radio-out-level-hint = ラジオの音声出力デバイスのALSA再生レベル。VOXをトリガーするためUSBリグ（SS9900v）では上げてください。Linuxのみ。
+
+settings-audio-radio-in-level = RXミキサーレベル
+
+settings-audio-radio-in-level-hint = ラジオの音声入力デバイスのALSAキャプチャレベル。Linuxのみ。
 sonde-online = オンライン（SondeHub）
 
 sonde-online-hover = 他の局が受信したゾンデも SondeHub の公開リストから表示します。読み取りのみ：0.1° に丸めたロケーターと半径 400 km を送信し、何もアップロードしません。オンにするまでオフです。
