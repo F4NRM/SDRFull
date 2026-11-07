@@ -161,6 +161,9 @@ enum StripAction {
     /// screen in one press.
     #[cfg(not(target_arch = "wasm32"))]
     UndockAll,
+    /// A click on the name of the radio a pane shows, where that radio is a
+    /// public receiver: Public SDRs opens on the map, at that receiver.
+    ShowOnMap(u32),
 }
 
 /// A detachable module's name in the Windows menu, in the interface language.
@@ -838,6 +841,11 @@ impl MultiApp {
                     }
                 }
                 StripAction::Power { id, on } => self.set_power(id, on),
+                StripAction::ShowOnMap(id) => {
+                    if let Some(t) = self.tabs.iter_mut().find(|t| t.id == id) {
+                        t.app.show_self_on_public_map();
+                    }
+                }
                 // The main window's strip only ever offers this machine's own
                 // roster — it is drawn on every pane and a menu there would be
                 // in the way. Adding a radio at a station is one screen away,
@@ -1016,7 +1024,32 @@ impl MultiApp {
                     if !tab.enabled {
                         label = label.weak();
                     }
-                    ui.label(label);
+                    // The name of the radio this pane shows is a link to the
+                    // map, where that radio is a public receiver: underlined
+                    // while the pointer is on it, as a link reads. Anywhere
+                    // else a click on the tab is what it always was.
+                    // Why: HDZ 2026-11-04: "wenn du linken kannst, kannst du den
+                    //      Link auch ohne Symbol an den Namen heften"; only on
+                    //      the tab already shown, because a click on any other
+                    //      tab shows that radio.
+                    if here && tab.app.on_public_sdr() {
+                        let name = ui.add(egui::Label::new(label).sense(egui::Sense::click()));
+                        let name = if name.hovered() {
+                            ui.painter().hline(
+                                name.rect.x_range(),
+                                name.rect.bottom() - 1.0,
+                                egui::Stroke::new(1.0, crate::theme::CYAN()),
+                            );
+                            name.on_hover_cursor(egui::CursorIcon::PointingHand)
+                        } else {
+                            name
+                        };
+                        if name.on_hover_text(tr!("multi-show-on-map")).clicked() {
+                            actions.push(StripAction::ShowOnMap(id));
+                        }
+                    } else {
+                        ui.label(label);
+                    }
                     // On the air: the one thing worth seeing from any tab.
                     if tab.app.tab_tx_on() {
                         ui.label(
