@@ -114,6 +114,22 @@ def convert(sdrpp):
             "label": name,
         })
 
+    # Add missing amateur/listening bands from IARU so they appear in the
+    # band menu (bands without segments won't show on the waterfall)
+    IARU_EDGES = {
+        "M160": (1.81, 2.0), "M80": (3.5, 3.8), "M60": (5.3515, 5.3665),
+        "M40": (7.0, 7.2), "M30": (10.1, 10.15), "M20": (14.0, 14.35),
+        "M17": (18.068, 18.168), "M15": (21.0, 21.45), "M12": (24.89, 24.99),
+        "M10": (28.0, 29.7), "M11": (26.965, 27.86), "M6": (50.0, 52.0), "M4": (70.0, 70.5),
+        "M2": (144.0, 146.0), "M70": (430.0, 440.0), "Cm23": (1240.0, 1300.0),
+        "Cm13": (2300.0, 2450.0), "Cm9": (3400.0, 3475.0), "Cm6": (5650.0, 5850.0),
+        "Cm3": (10489.5, 10490.0), "M125": (220.0, 225.0), "Cm33": (902.0, 928.0),
+        "Lw": (0.1485, 0.2835), "Mw": (0.5265, 1.6065), "Fm": (87.5, 108.0),
+    }
+    for band_name, (lo, hi) in IARU_EDGES.items():
+        if band_name not in amateur_bands:
+            amateur_bands[band_name] = (int(lo * 1e6), int(hi * 1e6))
+
     band_list = []
     for band_name, (start, end) in amateur_bands.items():
         band_list.append({

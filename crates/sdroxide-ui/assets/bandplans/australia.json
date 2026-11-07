@@ -60,6 +60,76 @@
         "band": "Cm3",
         "lo_mhz": 10000.0,
         "hi_mhz": 10500.0
+      },
+      {
+        "band": "M160",
+        "lo_mhz": 1.81,
+        "hi_mhz": 2.0
+      },
+      {
+        "band": "M80",
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M11",
+        "lo_mhz": 26.965,
+        "hi_mhz": 27.86
+      },
+      {
+        "band": "M6",
+        "lo_mhz": 50.0,
+        "hi_mhz": 52.0
+      },
+      {
+        "band": "M4",
+        "lo_mhz": 70.0,
+        "hi_mhz": 70.5
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "M70",
+        "lo_mhz": 430.0,
+        "hi_mhz": 440.0
+      },
+      {
+        "band": "Cm13",
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0
+      },
+      {
+        "band": "Cm9",
+        "lo_mhz": 3400.0,
+        "hi_mhz": 3475.0
+      },
+      {
+        "band": "M125",
+        "lo_mhz": 220.0,
+        "hi_mhz": 225.0
+      },
+      {
+        "band": "Cm33",
+        "lo_mhz": 902.0,
+        "hi_mhz": 928.0
+      },
+      {
+        "band": "Lw",
+        "lo_mhz": 0.1485,
+        "hi_mhz": 0.2835
+      },
+      {
+        "band": "Mw",
+        "lo_mhz": 0.5265,
+        "hi_mhz": 1.6065
       }
     ],
     "segments": [
@@ -471,6 +541,76 @@
         "band": "Cm3",
         "lo_mhz": 10000.0,
         "hi_mhz": 10500.0
+      },
+      {
+        "band": "M160",
+        "lo_mhz": 1.81,
+        "hi_mhz": 2.0
+      },
+      {
+        "band": "M80",
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M11",
+        "lo_mhz": 26.965,
+        "hi_mhz": 27.86
+      },
+      {
+        "band": "M6",
+        "lo_mhz": 50.0,
+        "hi_mhz": 52.0
+      },
+      {
+        "band": "M4",
+        "lo_mhz": 70.0,
+        "hi_mhz": 70.5
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "M70",
+        "lo_mhz": 430.0,
+        "hi_mhz": 440.0
+      },
+      {
+        "band": "Cm13",
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0
+      },
+      {
+        "band": "Cm9",
+        "lo_mhz": 3400.0,
+        "hi_mhz": 3475.0
+      },
+      {
+        "band": "M125",
+        "lo_mhz": 220.0,
+        "hi_mhz": 225.0
+      },
+      {
+        "band": "Cm33",
+        "lo_mhz": 902.0,
+        "hi_mhz": 928.0
+      },
+      {
+        "band": "Lw",
+        "lo_mhz": 0.1485,
+        "hi_mhz": 0.2835
+      },
+      {
+        "band": "Mw",
+        "lo_mhz": 0.5265,
+        "hi_mhz": 1.6065
       }
     ],
     "segments": [
@@ -882,6 +1022,76 @@
         "band": "Cm3",
         "lo_mhz": 10000.0,
         "hi_mhz": 10500.0
+      },
+      {
+        "band": "M160",
+        "lo_mhz": 1.81,
+        "hi_mhz": 2.0
+      },
+      {
+        "band": "M80",
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M11",
+        "lo_mhz": 26.965,
+        "hi_mhz": 27.86
+      },
+      {
+        "band": "M6",
+        "lo_mhz": 50.0,
+        "hi_mhz": 52.0
+      },
+      {
+        "band": "M4",
+        "lo_mhz": 70.0,
+        "hi_mhz": 70.5
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "M70",
+        "lo_mhz": 430.0,
+        "hi_mhz": 440.0
+      },
+      {
+        "band": "Cm13",
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0
+      },
+      {
+        "band": "Cm9",
+        "lo_mhz": 3400.0,
+        "hi_mhz": 3475.0
+      },
+      {
+        "band": "M125",
+        "lo_mhz": 220.0,
+        "hi_mhz": 225.0
+      },
+      {
+        "band": "Cm33",
+        "lo_mhz": 902.0,
+        "hi_mhz": 928.0
+      },
+      {
+        "band": "Lw",
+        "lo_mhz": 0.1485,
+        "hi_mhz": 0.2835
+      },
+      {
+        "band": "Mw",
+        "lo_mhz": 0.5265,
+        "hi_mhz": 1.6065
       }
     ],
     "segments": [
