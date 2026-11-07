@@ -561,6 +561,7 @@ pub fn save_band_plan(plan: &sdroxide_types::BandPlan) -> Result<(), ConfigError
         let _ = fs::copy(&path, &bak);
     }
     write_atomic(&dir, BAND_PLAN_FILE, &plan.to_json_document())
+<<<<<<< HEAD
 }
 
 /// Parse a band plan from JSON text, returning `None` when it does not fit
@@ -571,6 +572,8 @@ pub fn parse_band_plan(text: &str) -> Option<sdroxide_types::BandPlan> {
         return None;
     }
     Some(plan)
+=======
+>>>>>>> 0ca4fe3 (fix(bandplan): validate on import, backup previous, reset TX bands, ImportBandPlan command (#546 feedback))
 }
 
 /// The operator's own receive filter presets (`filter_presets.json`), each
