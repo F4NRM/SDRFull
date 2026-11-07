@@ -922,6 +922,7 @@ impl eframe::App for SdroxideApp {
         #[cfg(not(target_arch = "wasm32"))]
         self.update.poll();
         self.poll_adif_import();
+        self.sync_qso_log();
         self.poll_settings_import();
         self.refresh_band_conditions(now);
 
@@ -2335,7 +2336,14 @@ impl eframe::App for SdroxideApp {
             // On wasm this is the logbook's persistence; on native it's a
             // harmless backup (the authoritative copy is written to the config
             // dir on change).
-            eframe::set_value(storage, "qso_log", &self.qso_log);
+            // In the browser the station keeps the logbook once it has handed it
+            // over (`qso_sync`): the copy in the page's own storage is emptied,
+            // after what it held has been sent. Before that it is all there is.
+            if cfg!(target_arch = "wasm32") && self.qso_sync.synced {
+                eframe::set_value(storage, "qso_log", &Vec::<sdroxide_types::QsoRecord>::new());
+            } else {
+                eframe::set_value(storage, "qso_log", &self.qso_log);
+            }
             // Same split: authoritative on native is config.toml (written on
             // change).
             // The browser keeps nothing of PROGRAMS (TOUT, stars, filters,
@@ -4039,6 +4047,7 @@ impl SdroxideApp {
                     // know now which profile to save it to.
                 }
                 RadioEvent::ClientAcks(acks) => self.apply_client_acks(acks),
+                RadioEvent::QsoLog(station) => self.adopt_station_qso_log(station),
                 RadioEvent::ClientBindings { profile, bindings } => {
                     // Applied and written out at once, so the restored keys
                     // survive a reload the same way a rebind does.

@@ -3825,6 +3825,46 @@ pub(crate) fn adif_field(name: &str, value: &str) -> String {
     format!("<{}:{}>{}", name, value.len(), value)
 }
 
+/// Apply a client's changes to the station's logbook, which the station keeps.
+///
+/// `delete` ids go first, then every record of `upsert` is stored: a record
+/// with id 0 is new and gets the next free id; one whose id is free is added;
+/// one whose id is taken replaces that record when it is the same contact (same
+/// call and start time), and otherwise **keeps both**: two clients that each
+/// numbered a contact `max + 1` before hearing of the other's would otherwise
+/// write one contact away. The colliding one is given the next free id.
+///
+/// Returns how many records were added or replaced.
+pub fn apply_qso_changes(log: &mut Vec<QsoRecord>, upsert: Vec<QsoRecord>, delete: &[u64]) -> usize {
+    if !delete.is_empty() {
+        let gone: std::collections::HashSet<u64> = delete.iter().copied().collect();
+        log.retain(|q| !gone.contains(&q.id));
+    }
+    let mut next = log.iter().map(|q| q.id).max().unwrap_or(0) + 1;
+    let mut at: std::collections::HashMap<u64, usize> =
+        log.iter().enumerate().map(|(i, q)| (q.id, i)).collect();
+    let mut changed = 0;
+    for mut rec in upsert {
+        if rec.id != 0
+            && let Some(&i) = at.get(&rec.id)
+            && log[i].call == rec.call
+            && log[i].start_utc == rec.start_utc
+        {
+            log[i] = rec;
+            changed += 1;
+            continue;
+        }
+        if rec.id == 0 || at.contains_key(&rec.id) {
+            rec.id = next;
+        }
+        next = next.max(rec.id + 1);
+        at.insert(rec.id, log.len());
+        log.push(rec);
+        changed += 1;
+    }
+    changed
+}
+
 /// Render a session's QSOs as an ADIF (.adi) document importable into
 /// standard logging software.
 ///
@@ -5078,6 +5118,34 @@ mod tests {
         m.text = "NAVAREA ONE".into();
         assert_eq!(m.body_time_utc(), None);
     }
+
+    fn q(id: u64, call: &str, start: i64) -> QsoRecord {
+        QsoRecord { id, call: call.into(), start_utc: start, ..Default::default() }
+    }
+
+    #[test]
+    fn a_change_to_the_logbook_adds_replaces_and_deletes() {
+        let mut log = vec![q(1, "W1AW", 100), q(2, "EA1AB", 200)];
+        let mut edited = q(2, "EA1AB", 200);
+        edited.comment = "edited".into();
+        let n = apply_qso_changes(&mut log, vec![edited, q(0, "F4ABC", 300), q(9, "DL1XX", 400)], &[1]);
+        assert_eq!(n, 3);
+        let ids: Vec<u64> = log.iter().map(|r| r.id).collect();
+        assert_eq!(ids, [2, 3, 9], "1 deleted, 2 kept, 0 numbered, 9 kept as sent");
+        assert_eq!(log[0].comment, "edited");
+        // The next number goes past the highest, so 9 is not handed out again.
+        apply_qso_changes(&mut log, vec![q(0, "ON4ZZ", 500)], &[]);
+        assert_eq!(log.last().unwrap().id, 10);
+    }
+
+    #[test]
+    fn two_clients_numbering_the_same_id_keep_both_contacts() {
+        let mut log = vec![q(5, "W1AW", 100)];
+        apply_qso_changes(&mut log, vec![q(5, "EA1AB", 200)], &[]);
+        assert_eq!(log.len(), 2, "a different contact on a taken id is not a replacement");
+        assert_eq!(log[1].call, "EA1AB");
+        assert_ne!(log[1].id, 5);
+    }
 }
 
 /// `#[serde(default)]` helper: a bool that defaults to true.
@@ -5214,4 +5282,5 @@ mod stanag_status_tests {
         let back: DigiStatus = postcard::from_bytes(&bytes).expect("decode");
         assert_eq!(back.stanag, None);
     }
+
 }

@@ -338,6 +338,10 @@ pub enum RadioEvent {
     /// The radiosonde decoder's level and the sondes it has heard, with their
     /// tracks. Bridged to remote and web clients as `ServerMsg::SondeStatus`.
     SondeStatus(Box<crate::SondeStatus>),
+    /// The station's whole logbook, the answer to a browser client's request
+    /// (`Controller::request_qso_log`). Carried by `ServerMsg::QsoLog`, not
+    /// produced by the engine.
+    QsoLog(Vec<crate::QsoRecord>),
     /// The VOR beacon the receiver is parked on: radial, ident and how well the
     /// two 30 Hz signals are heard. Rides `ServerMsg::VorStatus`.
     VorStatus(Box<crate::VorStatus>),
@@ -546,6 +550,15 @@ pub trait RadioController {
     /// against its profile. Defaulted to nothing: the in-process engine has no
     /// server, and its answers live in its own `config.toml`.
     fn send_client_acks(&mut self, _acks: crate::ClientAcks) {}
+
+    /// Ask a remote station for its logbook (answered with
+    /// [`RadioEvent::QsoLog`]). Defaulted to nothing: an in-process engine's
+    /// logbook is the file this client reads itself.
+    fn request_qso_log(&mut self) {}
+
+    /// Hand a remote station changes to its logbook, to keep in its
+    /// `qso_log.json`. Defaulted to nothing, like [`Self::request_qso_log`].
+    fn send_qso_log_apply(&mut self, _upsert: Vec<crate::QsoRecord>, _delete: Vec<u64>) {}
 
     /// Non-blocking; the UI drains this each frame until `None`.
     fn poll_event(&mut self) -> Option<RadioEvent>;
