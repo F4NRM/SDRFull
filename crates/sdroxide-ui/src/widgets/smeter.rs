@@ -22,7 +22,7 @@ use eframe::egui::{
     epaint::{Mesh, Vertex, WHITE_UV},
     pos2, vec2,
 };
-use sdroxide_types::Meters;
+use sdroxide_types::{Meters, TxMeters, TxPower};
 
 /// Scale endpoints: S0 = -127 dBm … S9+60 = -13 dBm.
 const DBM_LO: f32 = -127.0;
@@ -175,11 +175,26 @@ pub fn hover_text(meters: Option<&Meters>, audio_level: bool) -> String {
     let mut out = String::new();
     if let Some(tx) = meters.and_then(|m| m.tx.as_ref()) {
         out.push_str(&tr!("smeter-alc-how-hard-transmitter-being"));
-        match tx.fwd_w {
-            Some(w) => {
+        // With no forward power the face shows a "~" figure, and the line that
+        // says what it is replaces the one that says there is no watts reading:
+        // the old line described the ALC text that used to sit there.
+        match (tx.fwd_w, tx.power()) {
+            (Some(w), _) => {
                 out.push_str(&tr!("smeter-forward-power-w-measured-radio", w = format!("{:.1}", w)))
             }
-            None => out.push_str(&tr!("smeter-radio-reports-no-forward-power")),
+            (None, TxPower::EstimatedW(w)) => {
+                out.push_str("\n\n");
+                out.push_str(&tr!(
+                    "smeter-estimated-power-w",
+                    w = estimated_watts(w),
+                    pct = format!("{:.0}", tx.set_pct.unwrap_or(0.0))
+                ));
+            }
+            (None, TxPower::EstimatedPct(p)) => {
+                out.push_str("\n\n");
+                out.push_str(&tr!("smeter-estimated-drive-pct", pct = format!("{p:.0}")));
+            }
+            (None, _) => out.push_str(&tr!("smeter-radio-reports-no-forward-power")),
         }
         if let Some(po) = tx.po {
             out.push_str(&tr!(
@@ -679,6 +694,24 @@ struct Reading {
     right_alert: bool,
 }
 
+/// Estimated watts as they are written on the face: one decimal under 10 W,
+/// where the tenths are the whole signal, and none above.
+fn estimated_watts(w: f32) -> String {
+    if w < 10.0 { format!("{w:.1}") } else { format!("{w:.0}") }
+}
+
+/// Where the power needle sits, `0.0..=1.0`, when there is any figure for it:
+/// the rig's own power meter, else the drive in force. `None` when the radio
+/// reports neither and the engine has no drive figure either (a measured
+/// forward power alone has no full scale to be a fraction of).
+fn tx_needle(tx: &TxMeters) -> Option<f32> {
+    match (tx.po, tx.set_pct) {
+        (Some(p), _) if p.is_finite() => Some(p.clamp(0.0, 1.0)),
+        (_, Some(s)) if s.is_finite() => Some((s / 100.0).clamp(0.0, 1.0)),
+        _ => None,
+    }
+}
+
 fn reading(meters: Option<&Meters>) -> Reading {
     if let Some(tx) = meters.and_then(|m| m.tx.as_ref()) {
         // The rig's ALC, or a dash when it has not reported one. A false "0%"
@@ -689,10 +722,19 @@ fn reading(meters: Option<&Meters>) -> Reading {
             Some(a) => format!("ALC {:.0}%", a.clamp(0.0, 1.0) * 100.0),
             None => "ALC —".to_string(),
         };
-        let power = match tx.fwd_w {
-            Some(w) => format!("{w:.1} W"),
-            None => alc_text,
+        // The power, best source first, and a "~" on anything that is a guess:
+        // watts a device measured, the rig's own needle, watts worked out from
+        // the drive and the band power the operator stated, the drive in per
+        // cent. A radio with no sensor used to fall through to the ALC text and
+        // an idle needle while it was plainly transmitting.
+        let power_text = match tx.power() {
+            TxPower::Measured(w) => format!("{w:.1} W"),
+            TxPower::Needle(p) => format!("PO {:.0}%", p * 100.0),
+            TxPower::EstimatedW(w) => format!("~{} W", estimated_watts(w)),
+            TxPower::EstimatedPct(p) => format!("~{p:.0} %"),
+            TxPower::Unknown => alc_text,
         };
+        let power = power_text;
         return match tx.swr {
             Some(swr) => Reading {
                 scale: swr_scale(),
@@ -703,17 +745,24 @@ fn reading(meters: Option<&Meters>) -> Reading {
                 right_strong: true,
                 right_alert: false,
             },
-            // No SWR bridge: the needle falls back to the engine's own drive
-            // level, which is the only TX quantity every backend reports.
-            None => Reading {
-                scale: alc_scale(),
-                frac: tx.alc.unwrap_or(0.0).clamp(0.0, 1.0),
-                chip: "TX".to_string(),
-                accent: RED(),
-                right: power,
-                right_strong: true,
-                right_alert: false,
-            },
+            // No SWR bridge. The needle follows the power where there is any
+            // figure for it — the rig's own meter, or the drive in force — and
+            // the ALC only when there is nothing else to show.
+            None => {
+                let (scale, frac) = match tx_needle(tx) {
+                    Some(f) => (po_scale(), f),
+                    None => (alc_scale(), tx.alc.unwrap_or(0.0).clamp(0.0, 1.0)),
+                };
+                Reading {
+                    scale,
+                    frac,
+                    chip: "TX".to_string(),
+                    accent: RED(),
+                    right: power,
+                    right_strong: true,
+                    right_alert: false,
+                }
+            }
         };
     }
 
@@ -1107,7 +1156,10 @@ fn show_bar(ui: &mut Ui, meters: Option<&Meters>, size: Vec2, outline: bool) -> 
         let lower = match (tx.po, tx.swr) {
             (Some(po), _) => Some(("PO", po_scale(), po.clamp(0.0, 1.0), None)),
             (None, Some(_)) => Some(("SWR", swr_scale(), r.frac, peak)),
-            (None, None) => None,
+            // Neither a power meter nor an SWR bridge: the drive in force takes
+            // the row, so a radio with no sensor still shows that it is
+            // transmitting.
+            (None, None) => tx_needle(&tx).map(|f| ("DRV", po_scale(), f, None)),
         };
         let (drive_rect, lower_rect) = match lower {
             Some(_) => (row(20.0, 33.0), Some(row(36.0, 49.0))),
@@ -1455,7 +1507,15 @@ mod tests {
             adc_overload: None,
             adc_peak_dbfs: -30.0,
             adc_clip: 0.0,
-            tx: Some(TxMeters { fwd_w: None, swr: None, alc, po: None, rfl_w: None }),
+            tx: Some(TxMeters {
+                fwd_w: None,
+                swr: None,
+                alc,
+                po: None,
+                rfl_w: None,
+                set_pct: None,
+                set_w: None,
+            }),
             stereo: false,
             tone: None,
             passband_dbfs: f32::NEG_INFINITY,
@@ -1464,6 +1524,85 @@ mod tests {
         assert_eq!(reading(Some(&keyed(None))).right, "ALC —", "a missing reading must say so");
         assert_eq!(reading(Some(&keyed(Some(0.0)))).right, "ALC 0%", "a real zero is a zero");
         assert_eq!(reading(Some(&keyed(Some(0.5)))).right, "ALC 50%");
+    }
+
+    fn on_air(tx: TxMeters) -> Meters {
+        Meters {
+            s_dbm: -127.0,
+            pa_temp_c: None,
+            adc_overload: None,
+            adc_peak_dbfs: -30.0,
+            adc_clip: 0.0,
+            tx: Some(tx),
+            stereo: false,
+            tone: None,
+            passband_dbfs: f32::NEG_INFINITY,
+            puresignal: None,
+        }
+    }
+
+    fn silent_rig() -> TxMeters {
+        TxMeters {
+            fwd_w: None,
+            swr: None,
+            alc: None,
+            po: None,
+            rfl_w: None,
+            set_pct: None,
+            set_w: None,
+        }
+    }
+
+    /// **A radio with no power sensor still shows that it is transmitting.** It
+    /// used to read "ALC —" on an idle needle (a WSPR over, an I/Q radio): the
+    /// fallback order is measured watts, the rig's own needle, estimated watts
+    /// with a "~", the drive in per cent with a "~", and only then the ALC text.
+    #[test]
+    fn a_silent_radio_shows_its_estimated_power() {
+        let est_w = TxMeters { set_pct: Some(50.0), set_w: Some(25.0), ..silent_rig() };
+        let r = reading(Some(&on_air(est_w)));
+        assert_eq!(r.right, "~25 W");
+        assert_eq!(r.chip, "TX", "no SWR was measured, so no SWR chip");
+        assert!((r.frac - 0.5).abs() < 1e-6, "the needle follows the drive: {}", r.frac);
+
+        let small = TxMeters { set_pct: Some(10.0), set_w: Some(2.5), ..silent_rig() };
+        assert_eq!(reading(Some(&on_air(small))).right, "~2.5 W");
+
+        let pct_only = TxMeters { set_pct: Some(40.0), ..silent_rig() };
+        let r = reading(Some(&on_air(pct_only)));
+        assert_eq!(r.right, "~40 %");
+        assert!((r.frac - 0.4).abs() < 1e-6);
+
+        let nothing = reading(Some(&on_air(silent_rig())));
+        assert_eq!(nothing.right, "ALC —", "no figure at all keeps the old text");
+    }
+
+    /// What a device measured wins over every estimate, and the rig's own
+    /// needle wins over a guess; an SWR chip appears only for a measured SWR.
+    #[test]
+    fn a_measurement_beats_the_estimate() {
+        let measured =
+            TxMeters { fwd_w: Some(4.6), set_pct: Some(50.0), set_w: Some(25.0), ..silent_rig() };
+        assert_eq!(reading(Some(&on_air(measured))).right, "4.6 W");
+
+        let needle = TxMeters { po: Some(0.6), set_pct: Some(50.0), set_w: Some(25.0), ..silent_rig() };
+        let r = reading(Some(&on_air(needle)));
+        assert_eq!(r.right, "PO 60%");
+        assert!((r.frac - 0.6).abs() < 1e-6);
+
+        let with_swr = TxMeters { swr: Some(1.4), set_pct: Some(50.0), ..silent_rig() };
+        let r = reading(Some(&on_air(with_swr)));
+        assert_eq!(r.chip, "SWR 1.4");
+        assert_eq!(r.right, "~50 %", "the power is still worked out beside a real SWR");
+    }
+
+    /// Reception is untouched: no transmit meters, no transmit text.
+    #[test]
+    fn reception_is_unchanged() {
+        let rx = Meters { tx: None, s_dbm: -73.0, ..on_air(silent_rig()) };
+        let r = reading(Some(&rx));
+        assert_eq!(r.chip, "S9");
+        assert!(!r.right.contains('~'), "{}", r.right);
     }
 
     /// **A demod-audio radio's "S-meter" is its audio level**, and the hover has

@@ -9242,3 +9242,7 @@ vor-tune-hover = この VOR を AM で同調
 tx-bands-power-hint = Drive を最大にしたときのこのバンドの最大出力(W)。不明な場合は — のままにしてください。
 
 tx-bands-power-note = 任意。パワーメーターのない無線機は、この値を使って送信出力をSメーターにワットで表示します。未設定の場合は Drive の設定をパーセントで表示します。
+
+smeter-estimated-power-w = 推定出力:約 { $w } W(Drive { $pct } %、このバンドに設定した出力から算出)。無線機は何も測定していません。
+
+smeter-estimated-drive-pct = 適用中の Drive:最大の { $pct } %。無線機は何も測定しておらず、このバンドの出力も未設定です(設定、送信バンド)。

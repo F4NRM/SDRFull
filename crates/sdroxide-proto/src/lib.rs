@@ -2238,8 +2238,14 @@ use sdroxide_types::{
 /// `ServerMsg::RadioConfig` and `Command::SetRadioConfig` whole, so the appended
 /// field moves its layout. `#[serde(default)]`, so a `radio.json` written before
 /// this loads unchanged. `PROTO_VERSION` 272 → 273, `VERSION_BYTE` 0x5C → 0x5D.
-pub const PROTO_VERSION: u16 = 273;
-const VERSION_BYTE: u8 = 0x5D;
+/// v274: **the transmit power fallback.** [`sdroxide_types::TxMeters`] gains
+/// `set_pct` and `set_w` at its tail: the drive in force and the watts worked out
+/// from it and the band power of v273, so a radio with no power sensor can show
+/// what it transmits. `TxMeters` sits inside `Meters`, in the middle of
+/// `ServerMsg::Meters`, so a v273 peer reads the extra bytes as the start of the
+/// next field. `PROTO_VERSION` 273 → 274, `VERSION_BYTE` 0x5D → 0x5E.
+pub const PROTO_VERSION: u16 = 274;
+const VERSION_BYTE: u8 = 0x5E;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3862,6 +3868,38 @@ mod tests {
     /// Filled in rather than defaulted, and across several backends at once: a
     /// field-order slip only shows where two neighbouring fields hold different
     /// values, and `Default` is mostly zeros and empty strings.
+    #[test]
+    fn transmit_meters_with_the_power_estimate_round_trip() {
+        // The two estimate fields are the tail of `TxMeters`, which sits inside
+        // `Meters`: every field after it moves if they are mispositioned, so
+        // the neighbours hold distinct values.
+        let m = sdroxide_types::Meters {
+            s_dbm: -127.0,
+            adc_peak_dbfs: -20.0,
+            pa_temp_c: Some(41.5),
+            adc_clip: 0.25,
+            adc_overload: Some(true),
+            tx: Some(sdroxide_types::TxMeters {
+                fwd_w: Some(4.5),
+                swr: Some(1.5),
+                alc: Some(0.25),
+                po: Some(0.75),
+                rfl_w: Some(0.125),
+                set_pct: Some(62.5),
+                set_w: Some(38.75),
+            }),
+            stereo: true,
+            tone: None,
+            passband_dbfs: -55.0,
+            puresignal: None,
+        };
+        let bytes = encode(&ServerMsg::Meters(m)).unwrap();
+        match decode::<ServerMsg>(&bytes).unwrap() {
+            ServerMsg::Meters(back) => assert_eq!(back, m),
+            other => panic!("meters did not round-trip: {other:?}"),
+        }
+    }
+
     #[test]
     fn roundtrip_radio_config() {
         use sdroxide_types::{

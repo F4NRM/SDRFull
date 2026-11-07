@@ -9317,3 +9317,7 @@ vor-tune-hover = Tune this VOR in AM
 tx-bands-power-hint = The most power this band makes with Drive at its top, in watts. Leave at — if you do not know.
 
 tx-bands-power-note = Optional. A radio with no power meter uses these figures to show its transmit power in watts on the S-meter; with none, it shows the Drive setting as a percentage.
+
+smeter-estimated-power-w = Estimated power: about { $w } W (drive { $pct } %, from the power you set for this band). The radio measures nothing.
+
+smeter-estimated-drive-pct = Drive in force: { $pct } % of full. The radio measures nothing, and no power is set for this band (Settings, transmit bands).

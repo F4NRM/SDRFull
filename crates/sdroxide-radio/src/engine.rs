@@ -3218,6 +3218,10 @@ struct Engine {
     /// the same reason as `drive_trim`: a key-down cannot go back to the store.
     tx_band_enable: Vec<Band>,
     tx_bands_confirmed: bool,
+    /// What the operator says the station makes on each band at full drive —
+    /// [`sdroxide_types::RadioConfig::tx_band_power_w`]. Held for the S-meter's
+    /// transmit fallback, which is computed once per meter tick.
+    tx_band_power_w: Vec<sdroxide_types::BandPower>,
     /// [`EngineConfig::tx_bands_open`], for tests.
     tx_bands_open: bool,
     /// The operator's fixed receive-audio trim, in dB — the other part of
@@ -5106,6 +5110,7 @@ fn engine_thread(
         tx_drive_max: radio_cfg.tx_drive_ceiling(),
         tx_band_enable: radio_cfg.tx_band_enable.clone().unwrap_or_default(),
         tx_bands_confirmed: radio_cfg.tx_bands_confirmed,
+        tx_band_power_w: radio_cfg.tx_band_power_w.clone(),
         rx_af_gain_db: radio_cfg.rx_audio_gain_db,
         swap_iq: radio_cfg.swaps_iq(),
         tx_center_hz: 0.0,
@@ -6107,6 +6112,12 @@ fn engine_thread(
                     }
                 }
                 let (adc_peak_dbfs, adc_clip) = engine.adc.read();
+                // What this transmission can be said to be doing when the
+                // radio measures nothing: the drive in force, and watts where
+                // the operator stated the band's power. Only here, in the
+                // transmit branch — reception, and a radio that cannot
+                // transmit at all, never reach it.
+                let (set_pct, set_w) = engine.tx_estimate();
                 Some(Meters {
                     s_dbm: -127.0,
                     pa_temp_c,
@@ -6119,6 +6130,8 @@ fn engine_thread(
                         alc,
                         po: tele.po,
                         rfl_w: tele.rfl_w,
+                        set_pct: Some(set_pct),
+                        set_w,
                     }),
                     stereo: false,
                     tone: None,
@@ -12047,6 +12060,7 @@ impl Engine {
                 self.drive_trim = cfg.tx_drive_trim.clone();
                 self.tx_band_enable = cfg.tx_band_enable.clone().unwrap_or_default();
                 self.tx_bands_confirmed = cfg.tx_bands_confirmed;
+                self.tx_band_power_w = cfg.tx_band_power_w.clone();
                 // And the ceiling beside it, live rather than at the next
                 // reopen: the operator setting one is very likely doing it
                 // because the radio is making too much power *now*.
@@ -19134,6 +19148,22 @@ impl Engine {
     /// drive.
     fn tx_power_level(&self) -> f32 {
         if self.state.tx.tune { self.tx_tune_level() } else { self.tx_drive() }
+    }
+
+    /// The S-meter's transmit fallback: `(drive in force in per cent, estimated
+    /// watts)`. The drive is [`Self::tx_power_level`] — the very value the
+    /// hardware is given, calibration and ceilings included, so what the meter
+    /// says cannot drift from what the transmitter is asked to do. Watts need
+    /// the operator's stated power for the band the transmit frequency is in;
+    /// without it they are `None` and the meter shows the per cent.
+    fn tx_estimate(&self) -> (f32, Option<f32>) {
+        let band_w = if self.tx_band_power_w.is_empty() {
+            None
+        } else {
+            let band = Band::containing(self.tx_target_hz());
+            self.tx_band_power_w.iter().find(|p| p.band == band).and_then(|p| p.watts())
+        };
+        TxMeters::estimate(self.tx_power_level(), band_w, self.source.commands_tx_power())
     }
 
     /// The drive actually used: the operator's setting, calibrated for the band

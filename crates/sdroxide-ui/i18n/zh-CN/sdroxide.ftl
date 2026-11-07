@@ -9232,3 +9232,7 @@ vor-tune-hover = 用调幅调谐此 VOR
 tx-bands-power-hint = 此波段在 Drive 调到最大时的最大功率(瓦)。不清楚请保持为 —。
 
 tx-bands-power-note = 可选。没有功率计的电台会用这些数值在 S 表上以瓦显示发射功率;未填写时,以百分比显示 Drive 设置。
+
+smeter-estimated-power-w = 估算功率:约 { $w } W(Drive { $pct } %,依据为此波段设置的功率)。电台不进行任何测量。
+
+smeter-estimated-drive-pct = 当前 Drive:最大值的 { $pct } %。电台不进行任何测量,且未为此波段设置功率(设置,发射波段)。
