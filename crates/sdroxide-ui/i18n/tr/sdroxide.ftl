@@ -9218,6 +9218,7 @@ settings-general-band-plan-built-in = Yerleşik IARU
 
 settings-general-band-plan-germany-nrw = Almanya (NRW, SWL)
 
+settings-general-band-plan-own = İstasyonun kendi
 
 settings-general-band-plan-hint = Birlikte gelen bir bant planı seçin. bandplan.json dosyasını değiştirir; yerleşik IARU tabloları varsayılan olarak kalır.
 
@@ -9293,8 +9294,33 @@ tx-bands-power-hint = Drive en üstteyken bu bantta elde edilen en yüksek güç
 
 tx-bands-power-note = İsteğe bağlı. Güç ölçeri olmayan bir telsiz, S-metrede iletim gücünü watt olarak göstermek için bu değerleri kullanır; yoksa Drive ayarını yüzde olarak gösterir.
 
+band-plan-title = Bu telsizin bant planı
 
+band-plan-col-tx = TX
 
+band-plan-col-rx = RX
+
+rx-bands-note = RX'i yalnızca bu telsizin dinlemesi gereken bantlarda EVET yapın. Telsiz HAYIR olan bir banda asla ayarlanmaz ve RX listesi onaylanana kadar hiç ayarlanmaz. TX ve RX birbirinden bağımsızdır: bir bant TX HAYIR ve RX EVET olabilir.
+
+rx-bands-title = Alış bantları
+
+rx-bands-check-again = RX'İ KONTROL ET
+
+rx-bands-check-again-hint = Alış listesini yeniden kontrol etmek için onayı geri alır. Herhangi bir bandı değiştirmek bunu zaten kendiliğinden yapar.
+
+rx-bands-confirmed = ✓ Bu telsiz için alış bantları onaylandı
+
+rx-bands-ack = Bu alış bantlarını telsizimle karşılaştırdım
+
+rx-bands-confirm = Bu alış bantlarını onayla
+
+rx-bands-confirm-hint = Önce kutuyu işaretleyin: onay her telsiz için bir kez verilir.
+
+rx-bands-notice = Alış bandı listesi onaylanmadı: alış bantlarını bir kez kontrol edip onaylayana kadar telsiz ayarlanmaz.
+
+rx-bands-out-of-range = Bu telsizin bildirilen aralığı bu banda ulaşmıyor.
+
+rx-bands-band-off = Bu telsizin bant planında (Ayarlar) bu bantta alış kapalı ya da alış listesi henüz onaylanmadı.
 
 settings-general-band-plan-sdrpp-australia = Australia
 
@@ -9329,5 +9355,3 @@ settings-general-band-plan-sdrpp-turkey = Turkey
 settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
 
 settings-general-band-plan-sdrpp-usa = USA
-
-settings-general-band-plan-own = Station's own

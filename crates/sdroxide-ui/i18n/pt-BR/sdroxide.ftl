@@ -9218,6 +9218,7 @@ settings-general-band-plan-built-in = IARU integrado
 
 settings-general-band-plan-germany-nrw = Alemanha (NRW, SWL)
 
+settings-general-band-plan-own = Próprio da estação
 
 settings-general-band-plan-hint = Escolha um plano de bandas incluído. Ele substitui bandplan.json; as tabelas IARU integradas continuam sendo o padrão.
 
@@ -9293,8 +9294,33 @@ tx-bands-power-hint = A potência máxima nesta banda com o Drive no máximo, em
 
 tx-bands-power-note = Opcional. Um rádio sem medidor de potência usa estes valores para mostrar a potência de transmissão em watts no S-meter; sem eles, mostra o ajuste de Drive em porcentagem.
 
+band-plan-title = Plano de bandas deste rádio
 
+band-plan-col-tx = TX
 
+band-plan-col-rx = RX
+
+rx-bands-note = Coloque RX em SIM apenas nas bandas em que este rádio deve escutar. O rádio nunca sintoniza uma banda em NÃO e não sintoniza de forma alguma até que a lista RX seja confirmada. TX e RX são independentes: uma banda pode ser TX NÃO e RX SIM.
+
+rx-bands-title = Bandas de recepção
+
+rx-bands-check-again = VERIFICAR RX
+
+rx-bands-check-again-hint = Retira a confirmação para revisar a lista de recepção. Mudar uma banda já faz isso sozinho.
+
+rx-bands-confirmed = ✓ Bandas de recepção confirmadas para este rádio
+
+rx-bands-ack = Verifiquei estas bandas de recepção com o meu rádio
+
+rx-bands-confirm = Confirmar estas bandas de recepção
+
+rx-bands-confirm-hint = Marque primeiro a caixa: a confirmação é feita uma vez por rádio.
+
+rx-bands-notice = Lista de bandas de recepção não confirmada: o rádio não sintoniza até que você verifique e confirme uma vez as bandas de recepção.
+
+rx-bands-out-of-range = A faixa informada deste rádio não alcança esta banda.
+
+rx-bands-band-off = A recepção está desligada nesta banda no plano de bandas deste rádio (Configurações), ou a lista de recepção ainda não foi confirmada.
 
 settings-general-band-plan-sdrpp-australia = Australia
 
@@ -9329,5 +9355,3 @@ settings-general-band-plan-sdrpp-turkey = Turkey
 settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
 
 settings-general-band-plan-sdrpp-usa = USA
-
-settings-general-band-plan-own = Station's own

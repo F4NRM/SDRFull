@@ -9217,6 +9217,7 @@ settings-general-band-plan-built-in = IARU integrado
 
 settings-general-band-plan-germany-nrw = Alemania (NRW, SWL)
 
+settings-general-band-plan-own = Propio de la estación
 
 settings-general-band-plan-hint = Elige un plan de bandas incluido. Sustituye a bandplan.json; las tablas IARU integradas siguen siendo el valor por defecto.
 
@@ -9292,8 +9293,33 @@ tx-bands-power-hint = La potencia máxima en esta banda con el Drive al máximo,
 
 tx-bands-power-note = Opcional. Una radio sin medidor de potencia usa estas cifras para mostrar su potencia de transmisión en vatios en el S-metro; sin ellas, muestra el ajuste de Drive en porcentaje.
 
+band-plan-title = Plan de bandas de esta radio
 
+band-plan-col-tx = TX
 
+band-plan-col-rx = RX
+
+rx-bands-note = Ponga RX en SÍ solo en las bandas que esta radio debe escuchar. La radio nunca se sintoniza en una banda en NO, y no se sintoniza en absoluto hasta que se confirme la lista RX. TX y RX son independientes: una banda puede estar en TX NO y RX SÍ.
+
+rx-bands-title = Bandas de recepción
+
+rx-bands-check-again = REVISAR RX
+
+rx-bands-check-again-hint = Retira la confirmación para revisar de nuevo la lista de recepción. Cambiar una banda ya lo hace solo.
+
+rx-bands-confirmed = ✓ Bandas de recepción confirmadas para esta radio
+
+rx-bands-ack = He comprobado estas bandas de recepción con mi radio
+
+rx-bands-confirm = Confirmar estas bandas de recepción
+
+rx-bands-confirm-hint = Marque primero la casilla: se confirma una vez por radio.
+
+rx-bands-notice = Lista de bandas de recepción sin confirmar: la radio no se sintonizará hasta que revise y confirme una vez las bandas de recepción.
+
+rx-bands-out-of-range = El rango publicado de esta radio no llega a esta banda.
+
+rx-bands-band-off = La recepción está desactivada en esta banda en el plan de bandas de esta radio (Ajustes), o la lista de recepción aún no está confirmada.
 
 settings-general-band-plan-sdrpp-australia = Australia
 
@@ -9328,5 +9354,3 @@ settings-general-band-plan-sdrpp-turkey = Turkey
 settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
 
 settings-general-band-plan-sdrpp-usa = USA
-
-settings-general-band-plan-own = Station's own
