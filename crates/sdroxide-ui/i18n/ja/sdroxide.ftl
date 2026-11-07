@@ -9158,3 +9158,11 @@ settings-general-band-plan-germany-nrw = ドイツ（NRW、SWL）
 settings-general-band-plan-own = 局独自
 
 settings-general-band-plan-hint = 同梱のバンドプランを選択します。bandplan.json を置き換えますが、内蔵IARUテーブルが常に既定です。
+
+settings-general-band-plan-import-hint = JSONファイルからバンドプランを読み込み、この局のプランにします。bandplan.json を置き換えます（ファイルを直接編集した場合と同じです）。現在のプランを残したい場合は先にエクスポートしてください。
+
+settings-general-band-plan-export-hint = 使用中のプランを JSON ファイルに書き出し、保存したり他の人に渡したりできます。
+
+settings-general-band-plan-imported = バンドプランをインポートしました。この局はそのプランで動作しています。
+
+settings-general-band-plan-import-not-a-plan = このファイルはバンドプランではありません — 読み取れませんでした。何も変更していません。

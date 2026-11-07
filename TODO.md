@@ -18,6 +18,7 @@ State: `main` at crate 2.3.0, PROTO_VERSION 271 (0x10F). Latest release v2.2.3.6
   kept current in the state line.
 
 ## Now
+- **Band plan: IARU first, import/export, waterfall bottom-up on a fresh install** (added by madmedicnl, owned by Claude) - PR (number on opening): the chooser always lists the built-in IARU tables first and opens on them after a fresh install; the reload button moved under the menu; IMPORT/EXPORT bring a band-plan JSON in and out, so a national plan needs no code change. A fresh install also reads the waterfall bottom-up; a saved view keeps its direction. Tests: chooser order and own-plan mapping, `waterfall_flip` default, both verified red on the unfixed code. Four messages in eleven languages. Built on #534.
 - S-meter during TX on CAT radios (added by Roy, owned by Roy) - PR #513 open.
 
 - **PR #493 â€” radiosondes 1/6: the RS41 decoder on its own lane** (added by F4NRM, owned by Claude): the AIRCRAFT hint promised radiosondes and nothing decoded them. `xng-mode-sonde` (clean-room, anchored on rs1729/RS) joins the workspace next to `xng-mode-hfdl`; new `sdroxide-sonde` crate (worker thread, bounded I/Q queue, one track per serial); engine lane `sonde_ddc` (48 kS/s, resampled onto the decoder's exact rate like HFDL), `Command::SetSondeConfig`, `sonde.json`, `RadioEvent::SondeStatus`. Not a `Mode`: the radio keeps its mode, so no CAT crate changes. Wire 269 â†’ **270** (`0x5A`), postcard round trip. Tests on synthetic GFSK IQ of the rs1729 frame (serial, position, altitude); not run on air here.

@@ -9218,3 +9218,11 @@ settings-general-band-plan-germany-nrw = Duitsland (NRW, SWL)
 settings-general-band-plan-own = Eigen van de station
 
 settings-general-band-plan-hint = Kies een meegeleverd bandplan. Het vervangt bandplan.json; de ingebouwde IARU-tabellen blijven de standaard.
+
+settings-general-band-plan-import-hint = Lees een bandplan uit een JSON-bestand en maak het het plan van dit station. Het vervangt bandplan.json, precies alsof je het bestand zelf had bewerkt — exporteer eerst het huidige als je dat wilt bewaren.
+
+settings-general-band-plan-export-hint = Schrijf het plan dat in gebruik is naar een JSON-bestand, om te bewaren of aan iemand anders te sturen.
+
+settings-general-band-plan-imported = Bandplan geïmporteerd. Het station draait erop.
+
+settings-general-band-plan-import-not-a-plan = Dat bestand is geen bandplan — het kon niet worden gelezen. Er is niets gewijzigd.

@@ -9148,3 +9148,11 @@ settings-general-band-plan-germany-nrw = 德国（NRW，SWL）
 settings-general-band-plan-own = 本站自有
 
 settings-general-band-plan-hint = 选择一个随附的波段计划。它会替换 bandplan.json；内置IARU表始终是默认值。
+
+settings-general-band-plan-import-hint = 从 JSON 文件读取波段计划，作为本电台的计划。它会替换 bandplan.json，就像你亲手编辑该文件一样——想保留当前计划，请先导出。
+
+settings-general-band-plan-export-hint = 将正在使用的计划写入 JSON 文件，便于保存或发送给他人。
+
+settings-general-band-plan-imported = 波段计划已导入，本电台正在使用它。
+
+settings-general-band-plan-import-not-a-plan = 该文件不是波段计划——无法解析。未做任何更改。

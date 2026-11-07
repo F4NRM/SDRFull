@@ -9210,3 +9210,11 @@ settings-general-band-plan-germany-nrw = Almanya (NRW, SWL)
 settings-general-band-plan-own = İstasyonun kendi
 
 settings-general-band-plan-hint = Birlikte gelen bir bant planı seçin. bandplan.json dosyasını değiştirir; yerleşik IARU tabloları varsayılan olarak kalır.
+
+settings-general-band-plan-import-hint = Bir JSON dosyasından bant planı okuyup bu istasyonun planı yap. bandplan.json'un yerine geçer, tıpkı dosyayı kendin düzenlemişsin gibi — mevcut planı saklamak istiyorsan önce dışa aktar.
+
+settings-general-band-plan-export-hint = Kullanımdaki planı saklamak veya birine göndermek için bir JSON dosyasına yaz.
+
+settings-general-band-plan-imported = Bant planı içe aktarıldı. İstasyon artık onu kullanıyor.
+
+settings-general-band-plan-import-not-a-plan = Bu dosya bir bant planı değil — okunamadı. Hiçbir şey değiştirilmedi.

@@ -9225,3 +9225,11 @@ settings-general-band-plan-germany-nrw = Германия (NRW, SWL)
 settings-general-band-plan-own = Свой план станции
 
 settings-general-band-plan-hint = Выберите поставляемый план диапазонов. Он заменяет bandplan.json; встроенные таблицы IARU остаются по умолчанию.
+
+settings-general-band-plan-import-hint = Прочитать план диапазонов из файла JSON и сделать его планом этой станции. Он заменит bandplan.json — так же, как если бы вы отредактировали файл. Сначала экспортируйте текущий план, если хотите его сохранить.
+
+settings-general-band-plan-export-hint = Записать используемый план в файл JSON — чтобы сохранить или передать кому-то.
+
+settings-general-band-plan-imported = План диапазонов импортирован. Станция работает по нему.
+
+settings-general-band-plan-import-not-a-plan = Этот файл — не план диапазонов: его не удалось прочитать. Ничего не изменено.
