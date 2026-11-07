@@ -7492,6 +7492,7 @@ mod tests {
         app.radio_cfg = Some(RadioConfig {
             tx_band_enable: Some(vec![Band::M80, Band::M40]),
             tx_bands_confirmed: true,
+            rx_bands_confirmed: true,
             ..RadioConfig::default()
         });
         let tune = |app: &mut SdroxideApp, hz: f64| {
@@ -7544,6 +7545,7 @@ mod tests {
         let cfg = RadioConfig {
             tx_band_enable: Some(vec![Band::M80]),
             tx_bands_confirmed: true,
+            rx_bands_confirmed: true,
             ..RadioConfig::default()
         };
         app.radio_cfg = Some(cfg.clone());
