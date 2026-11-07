@@ -28,6 +28,7 @@ pub fn parse_plan(json: &str) -> Option<BandPlan> {
         return None;
     }
     Some(plan)
+    serde_json::from_str::<BandPlan>(json).ok()
 }
 
 /// Whether `plan` is exactly the Germany (NRW) preset, so the chooser can name
