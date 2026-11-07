@@ -2003,6 +2003,13 @@ fn pulse_region(line: &[f32], strict: bool) -> Option<PulseRegion> {
         // White for most of the line is a bright picture, not a pulse.
         return None;
     }
+    if strict && width > pulse * 2 {
+        // A phasing pulse is five per cent of the line, give or take the
+        // edges. A chart's own dark bar carries a wider bright patch (its
+        // border or lettering) that the checks above can still read as a
+        // pulse, and it is not one (#444).
+        return None;
+    }
     if strict {
         // A phasing line is black outside its one pulse. A chart's thick black
         // bar with white lettering carries several bright patches, and the run
