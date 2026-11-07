@@ -48,6 +48,35 @@ mod tests {
         assert!(plan.problems().is_empty(), "{:?}", plan.problems());
     }
 
+    /// The chooser opens on the built-in tables and lists the German plan
+    /// after them. The order is the contract: an entry added above the
+    /// built-in one puts a national plan on a fresh install.
+    #[test]
+    fn the_built_in_plan_is_the_first_choice() {
+        assert_eq!(CHOICES, 19, "built-in + Germany (NRW) + 17 SDR++ plans");
+        assert_eq!(choice_of(&BandPlan::default()), 0, "a fresh install reads built-in");
+        assert!(
+            plan_for_choice(0).is_some_and(|p| p.is_default()),
+            "the first entry must write the built-in tables"
+        );
+        let german = parse_plan(GERMANY_NRW).expect("preset");
+        assert_eq!(choice_of(&german), 1, "the German plan is second, after the IARU tables");
+        assert_eq!(plan_for_choice(1), Some(german));
+    }
+
+    /// A plan the station edited is named as its own and writes nothing: the
+    /// chooser must not offer to replace the operator's file with a preset.
+    #[test]
+    fn an_edited_plan_is_the_station_s_own() {
+        let text = BandPlan::default()
+            .to_json_document()
+            .replace(r#""band": "M20", "lo_mhz": 14.0"#, r#""band": "M20", "lo_mhz": 14.01"#);
+        let own: BandPlan = serde_json::from_str(&text).expect("an edited plan still parses");
+        assert!(!own.is_default(), "the edit has to land for this test to mean anything");
+        assert_eq!(choice_of(&own), 19);
+        assert_eq!(plan_for_choice(19), None);
+    }
+
     /// The 11 m stretch is the freeband/CB block, named as such — not a
     /// personal remark about pirates.
     #[test]
