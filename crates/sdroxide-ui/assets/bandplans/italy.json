@@ -6,11 +6,6 @@
   "region1": {
     "bands": [
       {
-        "band": "M2200",
-        "lo_mhz": 0.1355,
-        "hi_mhz": 0.1378
-      },
-      {
         "band": "Lw",
         "lo_mhz": 0.1485,
         "hi_mhz": 0.2835
@@ -1212,11 +1207,6 @@
   "region2": {
     "bands": [
       {
-        "band": "M2200",
-        "lo_mhz": 0.1355,
-        "hi_mhz": 0.1378
-      },
-      {
         "band": "Lw",
         "lo_mhz": 0.1485,
         "hi_mhz": 0.2835
@@ -2417,11 +2407,6 @@
   },
   "region3": {
     "bands": [
-      {
-        "band": "M2200",
-        "lo_mhz": 0.1355,
-        "hi_mhz": 0.1378
-      },
       {
         "band": "Lw",
         "lo_mhz": 0.1485,

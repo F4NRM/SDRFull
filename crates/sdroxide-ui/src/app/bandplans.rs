@@ -158,7 +158,7 @@ mod tests {
     /// built-in one puts a national plan on a fresh install.
     #[test]
     fn the_built_in_plan_is_the_first_choice() {
-        assert_eq!(CHOICES, 2, "only the built-in and the shipped plans are entries");
+        assert_eq!(CHOICES, 19, "built-in + Germany (NRW) + 17 SDR++ plans");
         assert_eq!(choice_of(&BandPlan::default()), 0, "a fresh install reads built-in");
         assert!(
             plan_for_choice(0).is_some_and(|p| p.is_default()),
@@ -178,8 +178,8 @@ mod tests {
             .replace(r#""band": "M20", "lo_mhz": 14.0"#, r#""band": "M20", "lo_mhz": 14.01"#);
         let own: BandPlan = serde_json::from_str(&text).expect("an edited plan still parses");
         assert!(!own.is_default(), "the edit has to land for this test to mean anything");
-        assert_eq!(choice_of(&own), 2);
-        assert_eq!(plan_for_choice(2), None);
+        assert_eq!(choice_of(&own), 19);
+        assert_eq!(plan_for_choice(19), None);
     }
 
     /// The 11 m stretch is the freeband/CB block, named as such — not a

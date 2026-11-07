@@ -32,7 +32,7 @@ TYPE_TO_KIND = {
 
 # Amateur band frequency ranges (Hz) -> sdroxide Band enum
 AMATEUR_BANDS = [
-    (135700, 137800, "M2200"),  # 2200m (not in our enum, skip)
+    (135700, 137800, None),  # 2200m (not in our enum, skip)
     (472000, 479000, None),  # 630m (not in our enum)
     (1810000, 2000000, "M160"),
     (3500000, 3800000, "M80"),
