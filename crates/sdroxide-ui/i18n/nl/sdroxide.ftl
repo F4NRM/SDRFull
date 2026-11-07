@@ -9302,3 +9302,7 @@ vor-tune-hover = Dit VOR afstemmen in AM
 tx-bands-power-hint = Het maximale vermogen op deze band met Drive op het maximum, in watt. Laat op — staan als u het niet weet.
 
 tx-bands-power-note = Optioneel. Een radio zonder vermogensmeter gebruikt deze waarden om het zendvermogen in watt op de S-meter te tonen; zonder toont hij de Drive-instelling in procenten.
+
+smeter-estimated-power-w = Geschat vermogen: ongeveer { $w } W (drive { $pct } %, uit het voor deze band ingestelde vermogen). De radio meet niets.
+
+smeter-estimated-drive-pct = Toegepaste drive: { $pct } % van het maximum. De radio meet niets en voor deze band is geen vermogen ingesteld (Instellingen, zendbanden).

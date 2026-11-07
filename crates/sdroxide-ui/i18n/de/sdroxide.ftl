@@ -9292,3 +9292,7 @@ vor-tune-hover = Dieses VOR in AM abstimmen
 tx-bands-power-hint = Die höchste Leistung auf diesem Band bei voll aufgedrehtem Drive, in Watt. Bei — lassen, wenn unbekannt.
 
 tx-bands-power-note = Optional. Ein Funkgerät ohne Leistungsmesser nutzt diese Werte, um seine Sendeleistung in Watt am S-Meter anzuzeigen; ohne sie zeigt es die Drive-Einstellung in Prozent.
+
+smeter-estimated-power-w = Geschätzte Leistung: etwa { $w } W (Drive { $pct } %, aus der für dieses Band eingestellten Leistung). Das Funkgerät misst nichts.
+
+smeter-estimated-drive-pct = Anliegender Drive: { $pct } % des Maximums. Das Funkgerät misst nichts, und für dieses Band ist keine Leistung eingestellt (Einstellungen, Sendebänder).

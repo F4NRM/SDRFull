@@ -250,7 +250,7 @@ pub use limerfe::{
     resolve as rfe_resolve, rx_port_check, tx_port_check,
 };
 pub use memory::{BandStackEntry, MemoryChannel, MemoryFolder, MemorySort, RttyMemory};
-pub use meters::{Meters, OVERLOAD_FRACTION, PsMeter, TxMeters, TxTelemetry};
+pub use meters::{Meters, OVERLOAD_FRACTION, PsMeter, TxMeters, TxPower, TxTelemetry};
 pub use mode::{
     AgcMode, CustomFilterPreset, Mode, NrEngine, NrLevel, NrStrength, SlotTiming,
     filter_memory_slot, filter_presets_with,

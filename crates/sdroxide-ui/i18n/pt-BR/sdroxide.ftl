@@ -9294,3 +9294,7 @@ vor-tune-hover = Sintonizar este VOR em AM
 tx-bands-power-hint = A potência máxima nesta banda com o Drive no máximo, em watts. Deixe em — se não souber.
 
 tx-bands-power-note = Opcional. Um rádio sem medidor de potência usa estes valores para mostrar a potência de transmissão em watts no S-meter; sem eles, mostra o ajuste de Drive em porcentagem.
+
+smeter-estimated-power-w = Potência estimada: cerca de { $w } W (drive { $pct } %, a partir da potência definida para esta banda). O rádio não mede nada.
+
+smeter-estimated-drive-pct = Drive aplicado: { $pct } % do máximo. O rádio não mede nada e não há potência definida para esta banda (Configurações, bandas de transmissão).

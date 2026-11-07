@@ -9294,3 +9294,7 @@ vor-tune-hover = Bu VOR'u AM'de ayarla
 tx-bands-power-hint = Drive en üstteyken bu bantta elde edilen en yüksek güç, watt cinsinden. Bilmiyorsanız — olarak bırakın.
 
 tx-bands-power-note = İsteğe bağlı. Güç ölçeri olmayan bir telsiz, S-metrede iletim gücünü watt olarak göstermek için bu değerleri kullanır; yoksa Drive ayarını yüzde olarak gösterir.
+
+smeter-estimated-power-w = Tahmini güç: yaklaşık { $w } W (Drive % { $pct }, bu bant için ayarladığınız güçten). Telsiz hiçbir şey ölçmüyor.
+
+smeter-estimated-drive-pct = Uygulanan Drive: maksimumun % { $pct }'si. Telsiz hiçbir şey ölçmüyor ve bu bant için güç ayarlanmamış (Ayarlar, iletim bantları).

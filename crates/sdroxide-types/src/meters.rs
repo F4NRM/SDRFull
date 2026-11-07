@@ -39,6 +39,82 @@ pub struct TxMeters {
     /// [`TxTelemetry::rfl_w`]. Appended last, as the wire requires.
     #[serde(default)]
     pub rfl_w: Option<f32>,
+    /// The drive actually in force on this transmission, as `0.0..=100.0` per
+    /// cent of full drive: the operator's Drive (or TUNE) setting after the
+    /// band calibration and every ceiling, which is exactly what the engine
+    /// hands the modulator or the rig. Filled by the engine on every
+    /// transmission, whether or not the radio can measure anything, so a radio
+    /// with no power sensor still has something true to show. Appended last, as
+    /// the wire requires.
+    #[serde(default)]
+    pub set_pct: Option<f32>,
+    /// That drive turned into an estimate of watts, when the operator has stated
+    /// what the station makes on this band at full drive
+    /// ([`RadioConfig::tx_band_power_w`](crate::RadioConfig::tx_band_power_w)).
+    /// An estimate and nothing more: a rig that commands its own power
+    /// (CAT, LAN, TCI) takes drive as a fraction of its rated power, so the
+    /// estimate goes as drive; an I/Q radio scales an amplitude, so it goes as
+    /// drive squared. `None` where no power is stated for the band. Appended
+    /// last, as the wire requires.
+    #[serde(default)]
+    pub set_w: Option<f32>,
+}
+
+/// What a transmission reads as power, from the best source available.
+///
+/// Measured beats estimated, and the order is the point: a figure a device
+/// measured is a claim about the antenna, a drive setting is only a claim about
+/// what was asked of the transmitter, and the meter must not present the second
+/// as the first. See [`TxMeters::power`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TxPower {
+    /// Watts a device measured (`fwd_w`).
+    Measured(f32),
+    /// The rig's own power meter, `0.0..=1.0` of its scale. Not watts.
+    Needle(f32),
+    /// Watts estimated from the drive and the band power the operator stated.
+    EstimatedW(f32),
+    /// The drive in force, per cent of full. All that is known on a band whose
+    /// power was never stated.
+    EstimatedPct(f32),
+    /// Nothing at all: no measurement and no drive figure.
+    Unknown,
+}
+
+impl TxMeters {
+    /// The two estimate fields, `(set_pct, set_w)`, for a drive `level` in
+    /// `0.0..=1.0` — the level the engine hands the hardware, calibration and
+    /// ceilings already applied.
+    ///
+    /// `band_w` is what the operator stated for the band at full drive.
+    /// `drive_is_power` is the same question [`BandDriveTrim::factor_for`]
+    /// asks: a control that is a fraction of the rig's rated power goes as the
+    /// level, one that scales the modulated I/Q amplitude goes as its square.
+    /// A NaN or out-of-range level is held to the range rather than shown.
+    ///
+    /// [`BandDriveTrim::factor_for`]: crate::BandDriveTrim::factor_for
+    pub fn estimate(level: f32, band_w: Option<f32>, drive_is_power: bool) -> (f32, Option<f32>) {
+        let level = if level.is_finite() { level.clamp(0.0, 1.0) } else { 0.0 };
+        let share = if drive_is_power { level } else { level * level };
+        (level * 100.0, band_w.filter(|w| w.is_finite() && *w > 0.0).map(|w| w * share))
+    }
+
+    /// The power of this transmission, best source first: measured watts, the
+    /// rig's own power needle, estimated watts, estimated per cent.
+    pub fn power(&self) -> TxPower {
+        let ok = |v: f32| v.is_finite() && v >= 0.0;
+        if let Some(w) = self.fwd_w.filter(|v| ok(*v)) {
+            TxPower::Measured(w)
+        } else if let Some(p) = self.po.filter(|v| ok(*v)) {
+            TxPower::Needle(p.min(1.0))
+        } else if let Some(w) = self.set_w.filter(|v| ok(*v)) {
+            TxPower::EstimatedW(w)
+        } else if let Some(p) = self.set_pct.filter(|v| ok(*v)) {
+            TxPower::EstimatedPct(p.min(100.0))
+        } else {
+            TxPower::Unknown
+        }
+    }
 }
 
 /// TX-side telemetry a rig reports out-of-band (CAT / TCI): forward power,
@@ -224,5 +300,76 @@ impl Meters {
             let units = 9.0 + over / 6.0;
             (units.max(0.0) as u8, 0.0)
         }
+    }
+}
+
+#[cfg(test)]
+mod tx_power_tests {
+    use super::*;
+
+    fn silent() -> TxMeters {
+        TxMeters {
+            fwd_w: None,
+            swr: None,
+            alc: None,
+            po: None,
+            rfl_w: None,
+            set_pct: None,
+            set_w: None,
+        }
+    }
+
+    /// Best source first: measured watts, the rig's needle, estimated watts,
+    /// estimated per cent, nothing.
+    #[test]
+    fn the_power_comes_from_the_best_source_there_is() {
+        let all = TxMeters {
+            fwd_w: Some(5.0),
+            po: Some(0.5),
+            set_w: Some(20.0),
+            set_pct: Some(40.0),
+            ..silent()
+        };
+        assert_eq!(all.power(), TxPower::Measured(5.0));
+        assert_eq!(TxMeters { fwd_w: None, ..all }.power(), TxPower::Needle(0.5));
+        assert_eq!(TxMeters { fwd_w: None, po: None, ..all }.power(), TxPower::EstimatedW(20.0));
+        assert_eq!(
+            TxMeters { fwd_w: None, po: None, set_w: None, ..all }.power(),
+            TxPower::EstimatedPct(40.0)
+        );
+        assert_eq!(silent().power(), TxPower::Unknown);
+        // A NaN from somewhere is not a reading.
+        assert_eq!(TxMeters { fwd_w: Some(f32::NAN), ..silent() }.power(), TxPower::Unknown);
+    }
+
+    /// An I/Q radio scales an amplitude, so power goes as drive squared; a rig
+    /// that takes drive as a fraction of its rated power goes as drive.
+    #[test]
+    fn the_estimate_follows_how_the_drive_control_works() {
+        let (pct, w) = TxMeters::estimate(0.5, Some(100.0), false);
+        assert_eq!(pct, 50.0);
+        assert_eq!(w, Some(25.0), "half the amplitude is a quarter of the power");
+        let (pct, w) = TxMeters::estimate(0.5, Some(100.0), true);
+        assert_eq!(pct, 50.0);
+        assert_eq!(w, Some(50.0), "half the rated power setting is half the watts");
+        assert_eq!(TxMeters::estimate(0.5, None, false), (50.0, None), "no band power: no watts");
+        assert_eq!(TxMeters::estimate(0.5, Some(0.0), false).1, None);
+        assert_eq!(TxMeters::estimate(2.0, Some(10.0), true), (100.0, Some(10.0)), "held to full");
+        assert_eq!(TxMeters::estimate(f32::NAN, Some(10.0), true), (0.0, Some(0.0)));
+    }
+
+    /// The new fields travel: appended last, and a frame without them (an
+    /// older `radio.json`-style JSON) loads with both empty.
+    #[test]
+    fn the_estimate_fields_round_trip_and_default_to_none() {
+        let tx = TxMeters { set_pct: Some(33.0), set_w: Some(7.5), ..silent() };
+        let json = serde_json::to_string(&tx).unwrap();
+        assert_eq!(serde_json::from_str::<TxMeters>(&json).unwrap(), tx);
+        let mut v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let o = v.as_object_mut().unwrap();
+        o.remove("set_pct");
+        o.remove("set_w");
+        let old: TxMeters = serde_json::from_value(v).unwrap();
+        assert_eq!((old.set_pct, old.set_w), (None, None));
     }
 }
