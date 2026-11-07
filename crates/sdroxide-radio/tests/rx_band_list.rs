@@ -5,7 +5,7 @@
 //! (the real frequency decides, "Other" included), and a refusal leaves the
 //! radio on its last frequency. The list is independent of the transmit one.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use sdroxide_radio::{Complex32, EngineConfig, IqSource, Result, start_engine};
 use sdroxide_types::{Band, Command, DeviceCaps, RadioConfig, RadioEvent, Vfo};
@@ -78,23 +78,17 @@ fn dial_after(cfg: RadioConfig, dials: &[f64]) -> Vec<f64> {
     let thread = h.thread.take();
     h.cmd_tx.send(Command::SetRadioConfig { cfg: Box::new(cfg), reopen: false }).unwrap();
     std::thread::sleep(Duration::from_millis(150));
+    // The engine publishes a state when something changed, so a refused request
+    // publishes nothing: the dial is the last one seen.
+    let mut dial = f64::NAN;
     let mut out = Vec::new();
     for &hz in dials {
         h.cmd_tx.send(Command::SetVfo { vfo: Vfo::A, hz }).unwrap();
-        // Let the engine publish a state after the request.
-        std::thread::sleep(Duration::from_millis(200));
-        let mut dial = f64::NAN;
-        let deadline = Instant::now() + Duration::from_millis(800);
-        while Instant::now() < deadline {
-            while let Ok(ev) = h.event_rx.try_recv() {
-                if let RadioEvent::State(s) = ev {
-                    dial = s.vfo_a_hz;
-                }
+        std::thread::sleep(Duration::from_millis(300));
+        while let Ok(ev) = h.event_rx.try_recv() {
+            if let RadioEvent::State(s) = ev {
+                dial = s.vfo_a_hz;
             }
-            if !dial.is_nan() {
-                break;
-            }
-            std::thread::sleep(Duration::from_millis(20));
         }
         out.push(dial);
     }
@@ -109,7 +103,7 @@ fn dial_after(cfg: RadioConfig, dials: &[f64]) -> Vec<f64> {
 fn an_unconfirmed_receive_list_does_not_tune() {
     let cfg = list(&[Band::M40, Band::M20], false);
     let dial = dial_after(cfg, &[7_074_000.0]);
-    assert_ne!(dial[0], 7_074_000.0, "unconfirmed: the radio must stay where it was");
+    assert_eq!(dial[0], 14_074_000.0, "unconfirmed: the radio must stay where it was");
 }
 
 #[test]
