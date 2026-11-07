@@ -3,6 +3,7 @@
     "Converted from SDR++ bandplan.",
     "Edit, save, then press RELOAD BAND PLAN on the General tab."
   ],
+  "complete": true,
   "region1": {
     "bands": [
       {
@@ -535,12 +536,6 @@
         "label": "2m Sat"
       },
       {
-        "lo_mhz": 151.7125,
-        "hi_mhz": 156.0125,
-        "kind": "All",
-        "label": "Train communications"
-      },
-      {
         "lo_mhz": 156.0,
         "hi_mhz": 162.025,
         "kind": "Phone",
@@ -1062,7 +1057,9 @@
         "kind": "All",
         "label": "1mm"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region2": {
     "bands": [
@@ -1596,12 +1593,6 @@
         "label": "2m Sat"
       },
       {
-        "lo_mhz": 151.7125,
-        "hi_mhz": 156.0125,
-        "kind": "All",
-        "label": "Train communications"
-      },
-      {
         "lo_mhz": 156.0,
         "hi_mhz": 162.025,
         "kind": "Phone",
@@ -2123,7 +2114,9 @@
         "kind": "All",
         "label": "1mm"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region3": {
     "bands": [
@@ -2657,12 +2650,6 @@
         "label": "2m Sat"
       },
       {
-        "lo_mhz": 151.7125,
-        "hi_mhz": 156.0125,
-        "kind": "All",
-        "label": "Train communications"
-      },
-      {
         "lo_mhz": 156.0,
         "hi_mhz": 162.025,
         "kind": "Phone",
@@ -3184,6 +3171,8 @@
         "kind": "All",
         "label": "1mm"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   }
 }

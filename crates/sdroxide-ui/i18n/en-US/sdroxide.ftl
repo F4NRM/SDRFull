@@ -9315,11 +9315,8 @@ vor-tune-hover = Tune this VOR in AM
 tx-bands-power-hint = The most power this band makes with Drive at its top, in watts. Leave at — if you do not know.
 
 tx-bands-power-note = Optional. A radio with no power meter uses these figures to show its transmit power in watts on the S-meter; with none, it shows the Drive setting as a percentage.
-settings-general-band-plan-import-hint = Read a band plan from a JSON file and make it this station's plan. It replaces bandplan.json, exactly as if you had edited the file — export the current one first if you want to keep it.
 
-settings-general-band-plan-export-hint = Write the plan in use to a JSON file, to keep or to send to someone else.
 
-settings-general-band-plan-imported = Band plan imported. The station is running on it.
 
 
 settings-general-band-plan-sdrpp-australia = Australia
@@ -9355,3 +9352,5 @@ settings-general-band-plan-sdrpp-turkey = Turkey
 settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
 
 settings-general-band-plan-sdrpp-usa = USA
+
+settings-general-band-plan-own = Station's own

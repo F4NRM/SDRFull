@@ -9307,11 +9307,8 @@ vor-tune-hover = Настроить этот VOR в АМ
 tx-bands-power-hint = Максимальная мощность на этом диапазоне при Drive на максимуме, в ваттах. Оставьте —, если не знаете.
 
 tx-bands-power-note = Необязательно. Радио без измерителя мощности использует эти значения, чтобы показывать мощность передачи в ваттах на S-метре; без них показывается уровень Drive в процентах.
-settings-general-band-plan-import-hint = Прочитать план диапазонов из файла JSON и сделать его планом этой станции. Он заменит bandplan.json — так же, как если бы вы отредактировали файл. Сначала экспортируйте текущий план, если хотите его сохранить.
 
-settings-general-band-plan-export-hint = Записать используемый план в файл JSON — чтобы сохранить или передать кому-то.
 
-settings-general-band-plan-imported = План диапазонов импортирован. Станция работает по нему.
 
 
 settings-general-band-plan-sdrpp-australia = Australia
@@ -9347,3 +9344,5 @@ settings-general-band-plan-sdrpp-turkey = Turkey
 settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
 
 settings-general-band-plan-sdrpp-usa = USA
+
+settings-general-band-plan-own = Station's own

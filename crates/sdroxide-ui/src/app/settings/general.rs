@@ -359,13 +359,7 @@ impl SdroxideApp {
         #[cfg(not(target_arch = "wasm32"))]
         if !self.ctrl.engine_is_remote() {
             let plan = sdroxide_types::band_plan();
-            let current = if plan.is_default() {
-                0
-            } else if crate::app::bandplans::is_germany_nrw(plan) {
-                1
-            } else {
-                2
-            };
+            let current = crate::app::bandplans::choice_of(plan);
             let names = [
                 tr!("settings-general-band-plan-built-in"),
                 tr!("settings-general-band-plan-germany-nrw"),
@@ -391,9 +385,13 @@ impl SdroxideApp {
             ui.horizontal_wrapped(|ui| {
                 ui.label(RichText::new(tr!("settings-general-band-plan")).size(10.5).weak());
                 ComboBox::from_id_salt("band-plan-preset")
-                    .selected_text(names[choice].as_str())
+                    .selected_text(if choice < names.len() {
+                        names[choice].clone()
+                    } else {
+                        tr!("settings-general-band-plan-own").to_string()
+                    })
                     .show_ui(ui, |ui| {
-                        for i in 0..2 {
+                        for i in 0..crate::app::bandplans::CHOICES {
                             ui.selectable_value(&mut choice, i, names[i].as_str());
                         }
                     });
@@ -401,11 +399,7 @@ impl SdroxideApp {
             .response
             .on_hover_text(tr!("settings-general-band-plan-hint"));
             if choice != current {
-                let picked = match choice {
-                    0 => Some(sdroxide_types::BandPlan::default()),
-                    1 => crate::app::bandplans::parse_plan(crate::app::bandplans::GERMANY_NRW),
-                    _ => None,
-                };
+                let picked = crate::app::bandplans::plan_for_choice(choice);
                 match picked {
                     Some(p) => match sdroxide_config::save_band_plan(&p) {
                         Ok(()) => cmds.push(Command::ReloadBandPlan),

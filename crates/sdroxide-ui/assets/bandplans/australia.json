@@ -3,6 +3,7 @@
     "Converted from SDR++ bandplan.",
     "Edit, save, then press RELOAD BAND PLAN on the General tab."
   ],
+  "complete": true,
   "region1": {
     "bands": [
       {
@@ -145,12 +146,6 @@
         "hi_mhz": 7.3,
         "kind": "All",
         "label": "40m Ham Band"
-      },
-      {
-        "lo_mhz": 7.2,
-        "hi_mhz": 7.45,
-        "kind": "Phone",
-        "label": "Shortwave Broadcast"
       },
       {
         "lo_mhz": 9.4,
@@ -351,12 +346,6 @@
         "label": "2.4GHz WiFi (ISM Band)"
       },
       {
-        "lo_mhz": 2400.0,
-        "hi_mhz": 2450.0,
-        "kind": "All",
-        "label": "13cm Ham Band"
-      },
-      {
         "lo_mhz": 3300.0,
         "hi_mhz": 3400.0,
         "kind": "All",
@@ -371,12 +360,6 @@
       {
         "lo_mhz": 5150.0,
         "hi_mhz": 5590.0,
-        "kind": "All",
-        "label": "5GHz WiFi (ISM Band)"
-      },
-      {
-        "lo_mhz": 5650.0,
-        "hi_mhz": 5835.0,
         "kind": "All",
         "label": "5GHz WiFi (ISM Band)"
       },
@@ -428,7 +411,9 @@
         "kind": "All",
         "label": "241-250GHz Ham Band"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region2": {
     "bands": [
@@ -574,12 +559,6 @@
         "label": "40m Ham Band"
       },
       {
-        "lo_mhz": 7.2,
-        "hi_mhz": 7.45,
-        "kind": "Phone",
-        "label": "Shortwave Broadcast"
-      },
-      {
         "lo_mhz": 9.4,
         "hi_mhz": 9.9,
         "kind": "Phone",
@@ -778,12 +757,6 @@
         "label": "2.4GHz WiFi (ISM Band)"
       },
       {
-        "lo_mhz": 2400.0,
-        "hi_mhz": 2450.0,
-        "kind": "All",
-        "label": "13cm Ham Band"
-      },
-      {
         "lo_mhz": 3300.0,
         "hi_mhz": 3400.0,
         "kind": "All",
@@ -798,12 +771,6 @@
       {
         "lo_mhz": 5150.0,
         "hi_mhz": 5590.0,
-        "kind": "All",
-        "label": "5GHz WiFi (ISM Band)"
-      },
-      {
-        "lo_mhz": 5650.0,
-        "hi_mhz": 5835.0,
         "kind": "All",
         "label": "5GHz WiFi (ISM Band)"
       },
@@ -855,7 +822,9 @@
         "kind": "All",
         "label": "241-250GHz Ham Band"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region3": {
     "bands": [
@@ -1001,12 +970,6 @@
         "label": "40m Ham Band"
       },
       {
-        "lo_mhz": 7.2,
-        "hi_mhz": 7.45,
-        "kind": "Phone",
-        "label": "Shortwave Broadcast"
-      },
-      {
         "lo_mhz": 9.4,
         "hi_mhz": 9.9,
         "kind": "Phone",
@@ -1205,12 +1168,6 @@
         "label": "2.4GHz WiFi (ISM Band)"
       },
       {
-        "lo_mhz": 2400.0,
-        "hi_mhz": 2450.0,
-        "kind": "All",
-        "label": "13cm Ham Band"
-      },
-      {
         "lo_mhz": 3300.0,
         "hi_mhz": 3400.0,
         "kind": "All",
@@ -1225,12 +1182,6 @@
       {
         "lo_mhz": 5150.0,
         "hi_mhz": 5590.0,
-        "kind": "All",
-        "label": "5GHz WiFi (ISM Band)"
-      },
-      {
-        "lo_mhz": 5650.0,
-        "hi_mhz": 5835.0,
         "kind": "All",
         "label": "5GHz WiFi (ISM Band)"
       },
@@ -1282,6 +1233,8 @@
         "kind": "All",
         "label": "241-250GHz Ham Band"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   }
 }

@@ -99,6 +99,11 @@ pub struct BandPlan {
     /// does no I/O: the loader prints them, and a bad row is dropped rather
     /// than allowed to take the whole file down with it.
     problems: Vec<String>,
+    /// When set, the plan is complete: missing bands are *not* filled in
+    /// from the built-in tables. An SDR++ import sets this, because its
+    /// band list is authoritative rather than a partial edit of the IARU
+    /// tables. Defaults to false, so older files keep the old behaviour.
+    complete: bool,
 }
 
 impl Default for BandPlan {
@@ -117,6 +122,7 @@ impl BandPlan {
             r2: RegionPlan::iaru_default(Region::R2),
             r3: RegionPlan::iaru_default(Region::R3),
             problems: Vec::new(),
+            complete: false,
         }
     }
 
@@ -277,6 +283,12 @@ struct PlanFile {
     region1: RegionFile,
     region2: RegionFile,
     region3: RegionFile,
+    /// When set, the file is a complete plan: missing bands are *not* filled
+    /// in from the built-in tables. An SDR++ import sets this, because its
+    /// band list is authoritative rather than a partial edit of the IARU
+    /// tables. Defaults to false, so older files keep the old behaviour.
+    #[serde(default)]
+    complete: bool,
 }
 
 /// The self-documentation written into a freshly seeded file.
@@ -332,6 +344,7 @@ impl From<BandPlan> for PlanFile {
             region1: (&p.r1).into(),
             region2: (&p.r2).into(),
             region3: (&p.r3).into(),
+            complete: p.complete,
         }
     }
 }
@@ -430,21 +443,23 @@ impl TryFrom<PlanFile> for BandPlan {
         let mut r1 = RegionPlan::from_file(&f.region1, Region::R1, &mut problems)?;
         let mut r2 = RegionPlan::from_file(&f.region2, Region::R2, &mut problems)?;
         let mut r3 = RegionPlan::from_file(&f.region3, Region::R3, &mut problems)?;
-        for band in BANDS_ADDED_SINCE_THE_FILE {
-            let named = [&f.region1, &f.region2, &f.region3]
-                .iter()
-                .any(|r| r.bands.iter().any(|row| row.band == *band));
-            if named {
-                continue;
-            }
-            let Some(i) = Band::ALL.iter().position(|b| b == band) else { continue };
-            for (plan, region) in
-                [(&mut r1, Region::R1), (&mut r2, Region::R2), (&mut r3, Region::R3)]
-            {
-                plan.edges[i] = band.iaru_default_edges_in(region);
+        if !f.complete {
+            for band in BANDS_ADDED_SINCE_THE_FILE {
+                let named = [&f.region1, &f.region2, &f.region3]
+                    .iter()
+                    .any(|r| r.bands.iter().any(|row| row.band == *band));
+                if named {
+                    continue;
+                }
+                let Some(i) = Band::ALL.iter().position(|b| b == band) else { continue };
+                for (plan, region) in
+                    [(&mut r1, Region::R1), (&mut r2, Region::R2), (&mut r3, Region::R3)]
+                {
+                    plan.edges[i] = band.iaru_default_edges_in(region);
+                }
             }
         }
-        Ok(BandPlan { r1, r2, r3, problems })
+        Ok(BandPlan { r1, r2, r3, problems, complete: f.complete })
     }
 }
 

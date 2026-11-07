@@ -3,6 +3,7 @@
     "Converted from SDR++ bandplan.",
     "Edit, save, then press RELOAD BAND PLAN on the General tab."
   ],
+  "complete": true,
   "region1": {
     "bands": [
       {
@@ -63,12 +64,6 @@
         "hi_mhz": 0.519,
         "kind": "Phone",
         "label": "Long Wave"
-      },
-      {
-        "lo_mhz": 0.472,
-        "hi_mhz": 0.479,
-        "kind": "All",
-        "label": "630m Band"
       },
       {
         "lo_mhz": 0.525,
@@ -239,12 +234,6 @@
         "label": "TV Channels 2-4"
       },
       {
-        "lo_mhz": 76.0,
-        "hi_mhz": 88.0,
-        "kind": "Phone",
-        "label": "TV Channels 5-6"
-      },
-      {
         "lo_mhz": 87.5,
         "hi_mhz": 108.0,
         "kind": "Phone",
@@ -323,22 +312,10 @@
         "label": "Military Air"
       },
       {
-        "lo_mhz": 240.0,
-        "hi_mhz": 270.0,
-        "kind": "Phone",
-        "label": "Military Sat"
-      },
-      {
         "lo_mhz": 420.0,
         "hi_mhz": 450.0,
         "kind": "All",
         "label": "70cm Ham Band"
-      },
-      {
-        "lo_mhz": 446.0,
-        "hi_mhz": 446.2,
-        "kind": "All",
-        "label": "PMR446"
       },
       {
         "lo_mhz": 462.55,
@@ -394,7 +371,9 @@
         "kind": "All",
         "label": "13cm Ham Band"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region2": {
     "bands": [
@@ -458,12 +437,6 @@
         "label": "Long Wave"
       },
       {
-        "lo_mhz": 0.472,
-        "hi_mhz": 0.479,
-        "kind": "All",
-        "label": "630m Band"
-      },
-      {
         "lo_mhz": 0.525,
         "hi_mhz": 1.705,
         "kind": "Phone",
@@ -632,12 +605,6 @@
         "label": "TV Channels 2-4"
       },
       {
-        "lo_mhz": 76.0,
-        "hi_mhz": 88.0,
-        "kind": "Phone",
-        "label": "TV Channels 5-6"
-      },
-      {
         "lo_mhz": 87.5,
         "hi_mhz": 108.0,
         "kind": "Phone",
@@ -716,22 +683,10 @@
         "label": "Military Air"
       },
       {
-        "lo_mhz": 240.0,
-        "hi_mhz": 270.0,
-        "kind": "Phone",
-        "label": "Military Sat"
-      },
-      {
         "lo_mhz": 420.0,
         "hi_mhz": 450.0,
         "kind": "All",
         "label": "70cm Ham Band"
-      },
-      {
-        "lo_mhz": 446.0,
-        "hi_mhz": 446.2,
-        "kind": "All",
-        "label": "PMR446"
       },
       {
         "lo_mhz": 462.55,
@@ -787,7 +742,9 @@
         "kind": "All",
         "label": "13cm Ham Band"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region3": {
     "bands": [
@@ -851,12 +808,6 @@
         "label": "Long Wave"
       },
       {
-        "lo_mhz": 0.472,
-        "hi_mhz": 0.479,
-        "kind": "All",
-        "label": "630m Band"
-      },
-      {
         "lo_mhz": 0.525,
         "hi_mhz": 1.705,
         "kind": "Phone",
@@ -1025,12 +976,6 @@
         "label": "TV Channels 2-4"
       },
       {
-        "lo_mhz": 76.0,
-        "hi_mhz": 88.0,
-        "kind": "Phone",
-        "label": "TV Channels 5-6"
-      },
-      {
         "lo_mhz": 87.5,
         "hi_mhz": 108.0,
         "kind": "Phone",
@@ -1109,22 +1054,10 @@
         "label": "Military Air"
       },
       {
-        "lo_mhz": 240.0,
-        "hi_mhz": 270.0,
-        "kind": "Phone",
-        "label": "Military Sat"
-      },
-      {
         "lo_mhz": 420.0,
         "hi_mhz": 450.0,
         "kind": "All",
         "label": "70cm Ham Band"
-      },
-      {
-        "lo_mhz": 446.0,
-        "hi_mhz": 446.2,
-        "kind": "All",
-        "label": "PMR446"
       },
       {
         "lo_mhz": 462.55,
@@ -1180,6 +1113,8 @@
         "kind": "All",
         "label": "13cm Ham Band"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   }
 }

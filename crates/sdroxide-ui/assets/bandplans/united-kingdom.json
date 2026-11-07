@@ -3,6 +3,7 @@
     "Converted from SDR++ bandplan.",
     "Edit, save, then press RELOAD BAND PLAN on the General tab."
   ],
+  "complete": true,
   "region1": {
     "bands": [
       {
@@ -514,12 +515,6 @@
         "label": "Military Air"
       },
       {
-        "lo_mhz": 399.9,
-        "hi_mhz": 401.0,
-        "kind": "Digi",
-        "label": "Satellites"
-      },
-      {
         "lo_mhz": 401.0,
         "hi_mhz": 406.0,
         "kind": "Phone",
@@ -699,7 +694,9 @@
         "kind": "All",
         "label": "ISM - wifi"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region2": {
     "bands": [
@@ -1212,12 +1209,6 @@
         "label": "Military Air"
       },
       {
-        "lo_mhz": 399.9,
-        "hi_mhz": 401.0,
-        "kind": "Digi",
-        "label": "Satellites"
-      },
-      {
         "lo_mhz": 401.0,
         "hi_mhz": 406.0,
         "kind": "Phone",
@@ -1397,7 +1388,9 @@
         "kind": "All",
         "label": "ISM - wifi"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region3": {
     "bands": [
@@ -1910,12 +1903,6 @@
         "label": "Military Air"
       },
       {
-        "lo_mhz": 399.9,
-        "hi_mhz": 401.0,
-        "kind": "Digi",
-        "label": "Satellites"
-      },
-      {
         "lo_mhz": 401.0,
         "hi_mhz": 406.0,
         "kind": "Phone",
@@ -2095,6 +2082,8 @@
         "kind": "All",
         "label": "ISM - wifi"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   }
 }

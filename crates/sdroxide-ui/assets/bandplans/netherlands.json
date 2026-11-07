@@ -3,6 +3,7 @@
     "Converted from SDR++ bandplan.",
     "Edit, save, then press RELOAD BAND PLAN on the General tab."
   ],
+  "complete": true,
   "region1": {
     "bands": [
       {
@@ -487,12 +488,6 @@
         "hi_mhz": 6.2148,
         "kind": "Phone",
         "label": "(Ship TX) Maritime"
-      },
-      {
-        "lo_mhz": 6.2138,
-        "hi_mhz": 6.2162,
-        "kind": "Phone",
-        "label": "Distress"
       },
       {
         "lo_mhz": 6.2162,
@@ -1227,12 +1222,6 @@
         "label": "Repeaters Voice"
       },
       {
-        "lo_mhz": 145.79,
-        "hi_mhz": 145.81,
-        "kind": "Digi",
-        "label": "ISS Voice/ SSTV Downlink"
-      },
-      {
         "lo_mhz": 145.81,
         "hi_mhz": 146.0,
         "kind": "All",
@@ -1375,12 +1364,6 @@
         "hi_mhz": 446.0125,
         "kind": "Phone",
         "label": "Land Maritime Military"
-      },
-      {
-        "lo_mhz": 446.0,
-        "hi_mhz": 446.2,
-        "kind": "All",
-        "label": "PMR446"
       },
       {
         "lo_mhz": 446.1875,
@@ -2006,7 +1989,9 @@
         "kind": "All",
         "label": "Radio Ham 1 mm band"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region2": {
     "bands": [
@@ -2494,12 +2479,6 @@
         "label": "(Ship TX) Maritime"
       },
       {
-        "lo_mhz": 6.2138,
-        "hi_mhz": 6.2162,
-        "kind": "Phone",
-        "label": "Distress"
-      },
-      {
         "lo_mhz": 6.2162,
         "hi_mhz": 6.3425,
         "kind": "Phone",
@@ -3232,12 +3211,6 @@
         "label": "Repeaters Voice"
       },
       {
-        "lo_mhz": 145.79,
-        "hi_mhz": 145.81,
-        "kind": "Digi",
-        "label": "ISS Voice/ SSTV Downlink"
-      },
-      {
         "lo_mhz": 145.81,
         "hi_mhz": 146.0,
         "kind": "All",
@@ -3380,12 +3353,6 @@
         "hi_mhz": 446.0125,
         "kind": "Phone",
         "label": "Land Maritime Military"
-      },
-      {
-        "lo_mhz": 446.0,
-        "hi_mhz": 446.2,
-        "kind": "All",
-        "label": "PMR446"
       },
       {
         "lo_mhz": 446.1875,
@@ -4011,7 +3978,9 @@
         "kind": "All",
         "label": "Radio Ham 1 mm band"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region3": {
     "bands": [
@@ -4499,12 +4468,6 @@
         "label": "(Ship TX) Maritime"
       },
       {
-        "lo_mhz": 6.2138,
-        "hi_mhz": 6.2162,
-        "kind": "Phone",
-        "label": "Distress"
-      },
-      {
         "lo_mhz": 6.2162,
         "hi_mhz": 6.3425,
         "kind": "Phone",
@@ -5237,12 +5200,6 @@
         "label": "Repeaters Voice"
       },
       {
-        "lo_mhz": 145.79,
-        "hi_mhz": 145.81,
-        "kind": "Digi",
-        "label": "ISS Voice/ SSTV Downlink"
-      },
-      {
         "lo_mhz": 145.81,
         "hi_mhz": 146.0,
         "kind": "All",
@@ -5385,12 +5342,6 @@
         "hi_mhz": 446.0125,
         "kind": "Phone",
         "label": "Land Maritime Military"
-      },
-      {
-        "lo_mhz": 446.0,
-        "hi_mhz": 446.2,
-        "kind": "All",
-        "label": "PMR446"
       },
       {
         "lo_mhz": 446.1875,
@@ -6016,6 +5967,8 @@
         "kind": "All",
         "label": "Radio Ham 1 mm band"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   }
 }
