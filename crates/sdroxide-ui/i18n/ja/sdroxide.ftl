@@ -9166,7 +9166,6 @@ settings-general-band-plan-built-in = 内蔵IARU
 
 settings-general-band-plan-germany-nrw = ドイツ（NRW、SWL）
 
-settings-general-band-plan-own = 局独自
 
 settings-general-band-plan-hint = 同梱のバンドプランを選択します。bandplan.json を置き換えますが、内蔵IARUテーブルが常に既定です。
 
@@ -9242,30 +9241,41 @@ tx-bands-power-hint = Drive を最大にしたときのこのバンドの最大�
 
 tx-bands-power-note = 任意。パワーメーターのない無線機は、この値を使って送信出力をSメーターにワットで表示します。未設定の場合は Drive の設定をパーセントで表示します。
 
-band-plan-title = この無線機のバンドプラン
 
-band-plan-col-tx = TX
 
-band-plan-col-rx = RX
 
-rx-bands-note = この無線機で受信するバンドだけ RX を「はい」にしてください。「いいえ」のバンドには同調せず、RX リストを確認するまで一切同調しません。TX と RX は別々です。TX いいえ・RX はい という設定もできます。
+settings-general-band-plan-sdrpp-australia = Australia
 
-rx-bands-title = 受信バンド
+settings-general-band-plan-sdrpp-austria = Austria
 
-rx-bands-check-again = RX を再確認
+settings-general-band-plan-sdrpp-belgium = Belgium
 
-rx-bands-check-again-hint = 確認を取り消して受信リストを見直します。バンドを変更すると自動的に取り消されます。
+settings-general-band-plan-sdrpp-brazil = Brazil
 
-rx-bands-confirmed = ✓ この無線機の受信バンドを確認済み
+settings-general-band-plan-sdrpp-canada = Canada
 
-rx-bands-ack = これらの受信バンドを無線機と照らし合わせて確認しました
+settings-general-band-plan-sdrpp-china = China
 
-rx-bands-confirm = これらの受信バンドを確認する
+settings-general-band-plan-sdrpp-france = France
 
-rx-bands-confirm-hint = 先にチェックを入れてください。確認は無線機ごとに一度だけです。
+settings-general-band-plan-sdrpp-germany = Germany
 
-rx-bands-notice = 受信バンドのリストが未確認です。受信バンドを一度確認するまで、無線機は同調しません。
+settings-general-band-plan-sdrpp-ireland = Ireland
 
-rx-bands-out-of-range = この無線機の公表範囲はこのバンドに届きません。
+settings-general-band-plan-sdrpp-italy = Italy
 
-rx-bands-band-off = この無線機のバンドプランでは、このバンドの受信がオフです（設定）。または受信リストがまだ確認されていません。
+settings-general-band-plan-sdrpp-netherlands = Netherlands
+
+settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
+
+settings-general-band-plan-sdrpp-russia = Russia
+
+settings-general-band-plan-sdrpp-slovakia = Slovakia
+
+settings-general-band-plan-sdrpp-turkey = Turkey
+
+settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
+
+settings-general-band-plan-sdrpp-usa = USA
+
+settings-general-band-plan-own = Station's own

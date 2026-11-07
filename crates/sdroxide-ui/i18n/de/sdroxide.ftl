@@ -9216,7 +9216,6 @@ settings-general-band-plan-built-in = Integriert (IARU)
 
 settings-general-band-plan-germany-nrw = Deutschland (NRW, SWL)
 
-settings-general-band-plan-own = Eigener der Station
 
 settings-general-band-plan-hint = Einen mitgelieferten Bandplan wählen. Er ersetzt bandplan.json; die integrierten IARU-Tabellen bleiben die Vorgabe.
 
@@ -9292,30 +9291,41 @@ tx-bands-power-hint = Die höchste Leistung auf diesem Band bei voll aufgedrehte
 
 tx-bands-power-note = Optional. Ein Funkgerät ohne Leistungsmesser nutzt diese Werte, um seine Sendeleistung in Watt am S-Meter anzuzeigen; ohne sie zeigt es die Drive-Einstellung in Prozent.
 
-band-plan-title = Bandplan dieses Funkgeräts
 
-band-plan-col-tx = TX
 
-band-plan-col-rx = RX
 
-rx-bands-note = Stellen Sie RX nur für die Bänder auf JA, auf denen dieses Funkgerät hören soll. Das Gerät stimmt nie auf ein Band mit NEIN ab und überhaupt nicht, solange die RX-Liste nicht bestätigt ist. TX und RX sind getrennt: ein Band kann TX NEIN und RX JA sein.
+settings-general-band-plan-sdrpp-australia = Australia
 
-rx-bands-title = Empfangsbänder
+settings-general-band-plan-sdrpp-austria = Austria
 
-rx-bands-check-again = RX PRÜFEN
+settings-general-band-plan-sdrpp-belgium = Belgium
 
-rx-bands-check-again-hint = Nimmt die Bestätigung zurück, um die Empfangsliste erneut zu prüfen. Jede Änderung eines Bands macht das von selbst.
+settings-general-band-plan-sdrpp-brazil = Brazil
 
-rx-bands-confirmed = ✓ Empfangsbänder für dieses Funkgerät bestätigt
+settings-general-band-plan-sdrpp-canada = Canada
 
-rx-bands-ack = Ich habe diese Empfangsbänder mit meinem Funkgerät abgeglichen
+settings-general-band-plan-sdrpp-china = China
 
-rx-bands-confirm = Diese Empfangsbänder bestätigen
+settings-general-band-plan-sdrpp-france = France
 
-rx-bands-confirm-hint = Zuerst das Kästchen anhaken: die Bestätigung erfolgt einmal pro Funkgerät.
+settings-general-band-plan-sdrpp-germany = Germany
 
-rx-bands-notice = Empfangsbandliste nicht bestätigt: Das Funkgerät stimmt nicht ab, bis Sie die Empfangsbänder einmal geprüft und bestätigt haben.
+settings-general-band-plan-sdrpp-ireland = Ireland
 
-rx-bands-out-of-range = Der veröffentlichte Bereich dieses Funkgeräts reicht nicht bis zu diesem Band.
+settings-general-band-plan-sdrpp-italy = Italy
 
-rx-bands-band-off = Der Empfang ist auf diesem Band im Bandplan dieses Funkgeräts (Einstellungen) aus, oder die Empfangsliste ist noch nicht bestätigt.
+settings-general-band-plan-sdrpp-netherlands = Netherlands
+
+settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
+
+settings-general-band-plan-sdrpp-russia = Russia
+
+settings-general-band-plan-sdrpp-slovakia = Slovakia
+
+settings-general-band-plan-sdrpp-turkey = Turkey
+
+settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
+
+settings-general-band-plan-sdrpp-usa = USA
+
+settings-general-band-plan-own = Station's own

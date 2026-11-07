@@ -123,20 +123,35 @@ def convert(sdrpp):
         })
 
     segments.sort(key=lambda s: s["lo_mhz"])
+    deduped = []
+    for seg in segments:
+        if deduped and seg["lo_mhz"] < deduped[-1]["hi_mhz"]:
+            if seg["hi_mhz"] - seg["lo_mhz"] > deduped[-1]["hi_mhz"] - deduped[-1]["lo_mhz"]:
+                deduped[-1] = seg
+        else:
+            deduped.append(seg)
+    segments = deduped
 
     plan = {
         "readme": README,
+        "complete": True,
         "region1": {
             "bands": [dict(b) for b in band_list],
             "segments": [dict(s) for s in segments],
+            "psk_windows": [],
+            "rtty_windows": [],
         },
         "region2": {
             "bands": [dict(b) for b in band_list],
             "segments": [dict(s) for s in segments],
+            "psk_windows": [],
+            "rtty_windows": [],
         },
         "region3": {
             "bands": [dict(b) for b in band_list],
             "segments": [dict(s) for s in segments],
+            "psk_windows": [],
+            "rtty_windows": [],
         },
     }
 

@@ -591,12 +591,6 @@ pub struct EngineConfig {
     /// by default, and no command line option, setting or configuration file
     /// reaches it.
     pub tx_bands_open: bool,
-    /// Hold the operator's receive band list: a dial move onto a band that is
-    /// not ticked for reception, or onto any band while the list is not
-    /// confirmed, is refused and the radio stays where it was. **On in the
-    /// program** (`gui_main`, `server_main`); off by default, so the many tests
-    /// that tune freely do not each have to set a list up.
-    pub rx_bands_enforced: bool,
     /// Abort the over and latch out transmit when the rig reports an SWR at or
     /// above [`Self::swr_limit`]. Inert on rigs that do not measure SWR.
     pub swr_guard: bool,
@@ -664,7 +658,6 @@ impl Default for EngineConfig {
             tx_ham_only: true,
             cb_tx_allowed: false,
             tx_bands_open: false,
-            rx_bands_enforced: false,
             swr_guard: true,
             swr_limit: 2.5,
             reopen: None,
@@ -2766,19 +2759,6 @@ fn wants_recording_tap(recorder: bool, udp_stream: bool, external: bool) -> bool
     (recorder || udp_stream) && !external
 }
 
-/// `src`, or a block of silence of the same length when `off`. The receive band
-/// list ([`Engine::rx_band_refusal`]) cuts what is *heard and recorded* with it:
-/// the decoders read their own clean tap and are not touched. `scratch` holds
-/// the silence, and stays empty (no allocation) when `off` is false.
-fn silenced_copy<'a>(off: bool, src: &'a [f32], scratch: &'a mut Vec<f32>) -> &'a [f32] {
-    if !off {
-        return src;
-    }
-    scratch.clear();
-    scratch.resize(src.len(), 0.0);
-    &scratch[..]
-}
-
 /// Binaural (pseudo-stereo) audio: spread the receive passband across the two
 /// ears, so that pitch becomes direction and tuning a signal floats it from one
 /// ear to the other (issue #263). What it actually does to the audio is
@@ -3238,11 +3218,6 @@ struct Engine {
     /// the same reason as `drive_trim`: a key-down cannot go back to the store.
     tx_band_enable: Vec<Band>,
     tx_bands_confirmed: bool,
-    /// The receive band list, held for the same reason, and whether it is
-    /// enforced at all ([`EngineConfig::rx_bands_enforced`]).
-    rx_band_enable: Vec<Band>,
-    rx_bands_confirmed: bool,
-    rx_bands_enforced: bool,
     /// [`EngineConfig::tx_bands_open`], for tests.
     tx_bands_open: bool,
     /// The operator's fixed receive-audio trim, in dB — the other part of
@@ -4947,15 +4922,6 @@ fn engine_thread(
         }
     }
 
-    // The same for reception: the bands the hardware publishes it reaches,
-    // ticked but not confirmed, so the operator checks the list once.
-    if radio_cfg.migrate_rx_bands(|hz| caps.may_rx_hz(hz)) {
-        info!("radio.json had no receive band list — filled it from the published range, unconfirmed");
-        if let Err(e) = engine_cfg.store.save_radio_config(&radio_cfg) {
-            warn!("saving the migrated receive bands: {e}");
-        }
-    }
-
     // The UDP audio sink, from the radio's own configuration. Set here rather
     // than where the mixer is built because the configuration is read here.
     if let Some(m) = mixer.as_mut() {
@@ -5140,9 +5106,6 @@ fn engine_thread(
         tx_drive_max: radio_cfg.tx_drive_ceiling(),
         tx_band_enable: radio_cfg.tx_band_enable.clone().unwrap_or_default(),
         tx_bands_confirmed: radio_cfg.tx_bands_confirmed,
-        rx_band_enable: radio_cfg.rx_band_enable.clone().unwrap_or_default(),
-        rx_bands_confirmed: radio_cfg.rx_bands_confirmed,
-        rx_bands_enforced: engine_cfg.rx_bands_enforced,
         rx_af_gain_db: radio_cfg.rx_audio_gain_db,
         swap_iq: radio_cfg.swaps_iq(),
         tx_center_hz: 0.0,
@@ -6797,12 +6760,6 @@ impl Engine {
             &mut self.main_play_r,
         );
 
-        // The receive band list, judged here while nothing is borrowed: the
-        // main receiver on the dial, the sub receiver on its own frequency.
-        let main_off =
-            !unscaled_preview && self.rx_band_refusal(self.state.active_freq_hz()).is_some();
-        let sub_off = self.rx_band_refusal(self.state.sub_rx_hz).is_some();
-
         // Both taps come out of one borrow: `run`'s own return would keep the
         // chain mutably borrowed, leaving no way to ask for the recorder tap
         // as well.
@@ -6869,18 +6826,6 @@ impl Engine {
         }
         let (speaker, speaker_right): (&[f32], Option<&[f32]>) =
             if self.replay.on() { (&self.replay_buf, None) } else { (&self.main_play, right) };
-        // The receive band list: a dial on a band that is RX NO, or while the RX
-        // list is unconfirmed, is not heard and not recorded. The preview of a
-        // voice-keyer message is the operator's own audio, not the band, and is
-        // left alone. The right channel is the sub receiver's when it runs, so
-        // it is judged on the sub's own frequency.
-        let right_off = if sub_audio.is_some() { sub_off } else { main_off };
-        let (mut z_l, mut z_r, mut z_rec, mut z_rec_r) =
-            (Vec::new(), Vec::new(), Vec::new(), Vec::new());
-        let speaker = silenced_copy(main_off, speaker, &mut z_l);
-        let speaker_right = speaker_right.map(|r| silenced_copy(right_off, r, &mut z_r));
-        let rec_left = silenced_copy(main_off, &self.main_play_rec, &mut z_rec);
-        let rec_right = rec_right.map(|r| silenced_copy(right_off, r, &mut z_rec_r));
         let now = Instant::now();
         if self.audio_level_until.is_some_and(|t| now < t) {
             if let Some(level) =
@@ -6890,7 +6835,7 @@ impl Engine {
             }
         }
         if let Some(mixer) = self.mixer.as_mut() {
-            mixer.push(speaker, speaker_right, rec_left, rec_right);
+            mixer.push(speaker, speaker_right, &self.main_play_rec, rec_right);
         }
         // Feed the high-resolution channel spectrum from the DDC output.
         if let (Some(ca), Some(main)) = (self.channel_analyzer.as_mut(), self.main.as_ref()) {
@@ -7213,14 +7158,8 @@ impl Engine {
         }
         let (speaker, speaker_right): (&[f32], Option<&[f32]>) =
             if self.replay.on() { (&self.replay_buf, None) } else { (&self.audio_play, right) };
-        // The same receive band list as the SDR path.
-        let off = self.rx_band_refusal(self.state.active_freq_hz()).is_some();
-        let (mut z_l, mut z_r, mut z_rec) = (Vec::new(), Vec::new(), Vec::new());
-        let speaker = silenced_copy(off, speaker, &mut z_l);
-        let speaker_right = speaker_right.map(|r| silenced_copy(off, r, &mut z_r));
-        let rec_left = silenced_copy(off, &self.audio_play_rec, &mut z_rec);
         if let Some(mixer) = self.mixer.as_mut() {
-            mixer.push(speaker, speaker_right, rec_left, None);
+            mixer.push(speaker, speaker_right, &self.audio_play_rec, None);
         }
     }
 
@@ -9990,16 +9929,8 @@ impl Engine {
             // `follow_dial` still keeps the window, so only the
             // rig-as-front-end case moves.
             SetVfo { vfo, hz } | TuneInSpan { vfo, hz } => {
-                let hz = hz.max(0.0);
-                // The receive band list: no order reaches the radio for a band
-                // that is off or unconfirmed, and it stays on its last
-                // frequency. No new message — the band notice the screen
-                // already raises says why.
-                if let Some(why) = self.rx_band_refusal(hz) {
-                    warn!("tune refused: {why:?} at {:.6} MHz", hz / 1e6);
-                    return;
-                }
                 self.stop_scan_for_operator();
+                let hz = hz.max(0.0);
                 match vfo {
                     Vfo::A => self.state.vfo_a_hz = hz,
                     Vfo::B => self.state.vfo_b_hz = hz,
@@ -10034,10 +9965,6 @@ impl Engine {
                 self.update_tuning();
             }
             TuneWidebandTo(hz) => {
-                if let Some(why) = self.rx_band_refusal(hz.max(0.0)) {
-                    warn!("tune refused: {why:?} at {:.6} MHz", hz / 1e6);
-                    return;
-                }
                 self.stop_scan_for_operator();
                 // The dial that puts the front end's *own centre* on `hz`,
                 // which is where a wideband lane's window is placed from. On a
@@ -10144,10 +10071,6 @@ impl Engine {
             SetSampleRate(_) => { /* needs stream re-open; deferred */ }
             SetDecimation(factor) => self.set_decimation(factor),
             SetBand(band) => {
-                if let Some(why) = self.rx_band_refusal_for(band) {
-                    warn!("band change refused: {why:?} for {}", band.label());
-                    return;
-                }
                 self.stop_scan_for_operator();
                 self.change_band(band);
             }
@@ -12097,6 +12020,36 @@ impl Engine {
                 }
             }
 
+            ImportBandPlan(text) => {
+                if text.len() > 1_000_000 {
+                    self.notice("Import failed: the file is too large.");
+                    return;
+                }
+                let plan = match sdroxide_config::parse_band_plan(&text) {
+                    Some(p) => p,
+                    None => {
+                        self.notice("Import failed: not a band plan or has problems.");
+                        return;
+                    }
+                };
+                if let Err(e) = sdroxide_config::save_band_plan(&plan) {
+                    self.notice(&format!("Import failed: {e}"));
+                    return;
+                }
+                let loaded = sdroxide_config::load_band_plan();
+                let custom = !loaded.is_default();
+                sdroxide_types::set_band_plan(loaded);
+                self.state.band = Band::containing(self.state.active_freq_hz());
+                self.relay_bands_told = None;
+                self.tx_bands_confirmed = false;
+                self.emit_station_config();
+                self.notice(if custom {
+                    "Band plan imported. The station is running on it."
+                } else {
+                    "Band plan imported — it matches the built-in IARU tables."
+                });
+            }
+
             // This radio's own `radio.json` (no RadioState change → return
             // before the State emit below). The engine is the one that writes
             // it: the file is in *this* machine's config directory, and the
@@ -12124,8 +12077,6 @@ impl Engine {
                 self.drive_trim = cfg.tx_drive_trim.clone();
                 self.tx_band_enable = cfg.tx_band_enable.clone().unwrap_or_default();
                 self.tx_bands_confirmed = cfg.tx_bands_confirmed;
-                self.rx_band_enable = cfg.rx_band_enable.clone().unwrap_or_default();
-                self.rx_bands_confirmed = cfg.rx_bands_confirmed;
                 // And the ceiling beside it, live rather than at the next
                 // reopen: the operator setting one is very likely doing it
                 // because the radio is making too much power *now*.
@@ -17389,28 +17340,6 @@ impl Engine {
         }
         if !self.tx_band_enable.contains(&band) {
             return Some(TxBlock::BandOff(band));
-        }
-        None
-    }
-
-    /// Why the dial may not be moved to `hz` under the operator's receive band
-    /// list, or `None` when it may. The same rule as
-    /// [`sdroxide_types::RadioConfig::rx_block_reason`], on the copy the engine
-    /// holds. Always `None` when the list is not enforced (tests).
-    fn rx_band_refusal(&self, hz: f64) -> Option<sdroxide_types::RxBlock> {
-        self.rx_band_refusal_for(Band::containing(hz))
-    }
-
-    /// [`Self::rx_band_refusal`] for a band chosen by name (a band button).
-    fn rx_band_refusal_for(&self, band: Band) -> Option<sdroxide_types::RxBlock> {
-        if !self.rx_bands_enforced {
-            return None;
-        }
-        if !self.rx_bands_confirmed {
-            return Some(sdroxide_types::RxBlock::Unconfirmed);
-        }
-        if !self.rx_band_enable.contains(&band) {
-            return Some(sdroxide_types::RxBlock::BandOff(band));
         }
         None
     }
@@ -24189,19 +24118,6 @@ mod frame_watch_tests {
 #[cfg(test)]
 mod decode_feed_tests {
     use super::*;
-
-    /// The receive band list cuts the audio by replacing it with silence of the
-    /// same length, and costs nothing when it is not cutting.
-    #[test]
-    fn silenced_copy_is_silence_of_the_same_length_or_the_source_itself() {
-        let src = [0.5f32, -0.25, 0.75];
-        let mut scratch = Vec::new();
-        assert_eq!(silenced_copy(false, &src, &mut scratch), &src[..]);
-        assert!(scratch.is_empty(), "nothing allocated when not cutting");
-        assert_eq!(silenced_copy(true, &src, &mut scratch), &[0.0, 0.0, 0.0][..]);
-        let mut again = Vec::new();
-        assert!(silenced_copy(true, &[], &mut again).is_empty());
-    }
 
     fn line() -> FeedLine<'static> {
         FeedLine {

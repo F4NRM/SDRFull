@@ -9233,7 +9233,6 @@ settings-general-band-plan-built-in = Встроенный IARU
 
 settings-general-band-plan-germany-nrw = Германия (NRW, SWL)
 
-settings-general-band-plan-own = Свой план станции
 
 settings-general-band-plan-hint = Выберите поставляемый план диапазонов. Он заменяет bandplan.json; встроенные таблицы IARU остаются по умолчанию.
 
@@ -9309,30 +9308,41 @@ tx-bands-power-hint = Максимальная мощность на этом д
 
 tx-bands-power-note = Необязательно. Радио без измерителя мощности использует эти значения, чтобы показывать мощность передачи в ваттах на S-метре; без них показывается уровень Drive в процентах.
 
-band-plan-title = План диапазонов этого радио
 
-band-plan-col-tx = TX
 
-band-plan-col-rx = RX
 
-rx-bands-note = Ставьте RX в положение ДА только для диапазонов, которые это радио должно слушать. Радио никогда не настраивается на диапазон с НЕТ и вообще не настраивается, пока список RX не подтверждён. TX и RX независимы: диапазон может быть TX НЕТ и RX ДА.
+settings-general-band-plan-sdrpp-australia = Australia
 
-rx-bands-title = Диапазоны приёма
+settings-general-band-plan-sdrpp-austria = Austria
 
-rx-bands-check-again = ПРОВЕРИТЬ RX
+settings-general-band-plan-sdrpp-belgium = Belgium
 
-rx-bands-check-again-hint = Снимает подтверждение, чтобы заново проверить список приёма. Изменение любого диапазона делает это само.
+settings-general-band-plan-sdrpp-brazil = Brazil
 
-rx-bands-confirmed = ✓ Диапазоны приёма подтверждены для этого радио
+settings-general-band-plan-sdrpp-canada = Canada
 
-rx-bands-ack = Я сверил эти диапазоны приёма со своим радио
+settings-general-band-plan-sdrpp-china = China
 
-rx-bands-confirm = Подтвердить эти диапазоны приёма
+settings-general-band-plan-sdrpp-france = France
 
-rx-bands-confirm-hint = Сначала поставьте галочку: подтверждение выполняется один раз для каждого радио.
+settings-general-band-plan-sdrpp-germany = Germany
 
-rx-bands-notice = Список диапазонов приёма не подтверждён: радио не будет настраиваться, пока вы один раз не проверите и не подтвердите диапазоны приёма.
+settings-general-band-plan-sdrpp-ireland = Ireland
 
-rx-bands-out-of-range = Заявленный диапазон этого радио не достигает этого диапазона частот.
+settings-general-band-plan-sdrpp-italy = Italy
 
-rx-bands-band-off = Приём на этом диапазоне выключен в плане диапазонов этого радио (Настройки) либо список приёма ещё не подтверждён.
+settings-general-band-plan-sdrpp-netherlands = Netherlands
+
+settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
+
+settings-general-band-plan-sdrpp-russia = Russia
+
+settings-general-band-plan-sdrpp-slovakia = Slovakia
+
+settings-general-band-plan-sdrpp-turkey = Turkey
+
+settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
+
+settings-general-band-plan-sdrpp-usa = USA
+
+settings-general-band-plan-own = Station's own

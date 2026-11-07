@@ -9226,7 +9226,6 @@ settings-general-band-plan-built-in = Ingebouwd (IARU)
 
 settings-general-band-plan-germany-nrw = Duitsland (NRW, SWL)
 
-settings-general-band-plan-own = Eigen van de station
 
 settings-general-band-plan-hint = Kies een meegeleverd bandplan. Het vervangt bandplan.json; de ingebouwde IARU-tabellen blijven de standaard.
 
@@ -9302,30 +9301,41 @@ tx-bands-power-hint = Het maximale vermogen op deze band met Drive op het maximu
 
 tx-bands-power-note = Optioneel. Een radio zonder vermogensmeter gebruikt deze waarden om het zendvermogen in watt op de S-meter te tonen; zonder toont hij de Drive-instelling in procenten.
 
-band-plan-title = Bandplan van deze radio
 
-band-plan-col-tx = TX
 
-band-plan-col-rx = RX
 
-rx-bands-note = Zet RX alleen op JA voor de banden waarop deze radio moet luisteren. De radio stemt nooit af op een band met NEE en helemaal niet zolang de RX-lijst niet is bevestigd. TX en RX staan los van elkaar: een band kan TX NEE en RX JA zijn.
+settings-general-band-plan-sdrpp-australia = Australia
 
-rx-bands-title = Ontvangstbanden
+settings-general-band-plan-sdrpp-austria = Austria
 
-rx-bands-check-again = RX CONTROLEREN
+settings-general-band-plan-sdrpp-belgium = Belgium
 
-rx-bands-check-again-hint = Trekt de bevestiging in om de ontvangstlijst opnieuw te controleren. Een band wijzigen doet dit al vanzelf.
+settings-general-band-plan-sdrpp-brazil = Brazil
 
-rx-bands-confirmed = ✓ Ontvangstbanden bevestigd voor deze radio
+settings-general-band-plan-sdrpp-canada = Canada
 
-rx-bands-ack = Ik heb deze ontvangstbanden met mijn radio vergeleken
+settings-general-band-plan-sdrpp-china = China
 
-rx-bands-confirm = Deze ontvangstbanden bevestigen
+settings-general-band-plan-sdrpp-france = France
 
-rx-bands-confirm-hint = Vink eerst het vakje aan: u bevestigt één keer per radio.
+settings-general-band-plan-sdrpp-germany = Germany
 
-rx-bands-notice = Lijst met ontvangstbanden niet bevestigd: de radio stemt niet af totdat u de ontvangstbanden één keer hebt gecontroleerd en bevestigd.
+settings-general-band-plan-sdrpp-ireland = Ireland
 
-rx-bands-out-of-range = Het opgegeven bereik van deze radio haalt deze band niet.
+settings-general-band-plan-sdrpp-italy = Italy
 
-rx-bands-band-off = Ontvangst staat uit op deze band in het bandplan van deze radio (Instellingen), of de ontvangstlijst is nog niet bevestigd.
+settings-general-band-plan-sdrpp-netherlands = Netherlands
+
+settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
+
+settings-general-band-plan-sdrpp-russia = Russia
+
+settings-general-band-plan-sdrpp-slovakia = Slovakia
+
+settings-general-band-plan-sdrpp-turkey = Turkey
+
+settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
+
+settings-general-band-plan-sdrpp-usa = USA
+
+settings-general-band-plan-own = Station's own

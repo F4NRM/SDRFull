@@ -9241,7 +9241,6 @@ settings-general-band-plan-built-in = Built-in IARU
 
 settings-general-band-plan-germany-nrw = Germany (NRW, SWL)
 
-settings-general-band-plan-own = Station's own
 
 settings-general-band-plan-hint = Choose a shipped band plan. It replaces bandplan.json; the built-in IARU tables are always the default.
 
@@ -9317,30 +9316,41 @@ tx-bands-power-hint = The most power this band makes with Drive at its top, in w
 
 tx-bands-power-note = Optional. A radio with no power meter uses these figures to show its transmit power in watts on the S-meter; with none, it shows the Drive setting as a percentage.
 
-band-plan-title = Band plan of this radio
 
-band-plan-col-tx = TX
 
-band-plan-col-rx = RX
 
-rx-bands-note = Switch RX to YES only on the bands this radio should listen on. The radio never tunes to a band that is NO, and never tunes at all until the RX list is confirmed. TX and RX are separate: a band can be TX NO and RX YES.
+settings-general-band-plan-sdrpp-australia = Australia
 
-rx-bands-title = Receive bands
+settings-general-band-plan-sdrpp-austria = Austria
 
-rx-bands-check-again = CHECK RX AGAIN
+settings-general-band-plan-sdrpp-belgium = Belgium
 
-rx-bands-check-again-hint = Withdraw the confirmation and check the receive list again. Changing any band does this by itself.
+settings-general-band-plan-sdrpp-brazil = Brazil
 
-rx-bands-confirmed = ✓ Receive bands confirmed for this radio
+settings-general-band-plan-sdrpp-canada = Canada
 
-rx-bands-ack = I have checked these receive bands against my radio
+settings-general-band-plan-sdrpp-china = China
 
-rx-bands-confirm = Confirm these receive bands
+settings-general-band-plan-sdrpp-france = France
 
-rx-bands-confirm-hint = Tick the box first: you confirm once for each radio.
+settings-general-band-plan-sdrpp-germany = Germany
 
-rx-bands-notice = Receive band list not confirmed: the radio will not tune until you check and confirm the receive bands once.
+settings-general-band-plan-sdrpp-ireland = Ireland
 
-rx-bands-out-of-range = This radio's published range does not reach this band.
+settings-general-band-plan-sdrpp-italy = Italy
 
-rx-bands-band-off = Receive is off on this band in this radio's band plan (Settings), or the receive list is not confirmed yet.
+settings-general-band-plan-sdrpp-netherlands = Netherlands
+
+settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
+
+settings-general-band-plan-sdrpp-russia = Russia
+
+settings-general-band-plan-sdrpp-slovakia = Slovakia
+
+settings-general-band-plan-sdrpp-turkey = Turkey
+
+settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
+
+settings-general-band-plan-sdrpp-usa = USA
+
+settings-general-band-plan-own = Station's own

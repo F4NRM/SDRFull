@@ -3,6 +3,7 @@
     "Converted from SDR++ bandplan.",
     "Edit, save, then press RELOAD BAND PLAN on the General tab."
   ],
+  "complete": true,
   "region1": {
     "bands": [
       {
@@ -75,12 +76,6 @@
         "label": "Radionavigazione"
       },
       {
-        "lo_mhz": 0.1355,
-        "hi_mhz": 0.1378,
-        "kind": "All",
-        "label": "Radioamatori 137kHz"
-      },
-      {
         "lo_mhz": 0.1485,
         "hi_mhz": 0.2835,
         "kind": "Phone",
@@ -103,12 +98,6 @@
         "hi_mhz": 0.52,
         "kind": "Phone",
         "label": "Mobile marittimo, NAVTEX"
-      },
-      {
-        "lo_mhz": 0.472,
-        "hi_mhz": 0.479,
-        "kind": "All",
-        "label": "Radioamatori 472kHz"
       },
       {
         "lo_mhz": 0.52,
@@ -175,12 +164,6 @@
         "hi_mhz": 3.5,
         "kind": "Phone",
         "label": "Mobile aviazione"
-      },
-      {
-        "lo_mhz": 3.5,
-        "hi_mhz": 3.6,
-        "kind": "Phone",
-        "label": "Mobile marittimo"
       },
       {
         "lo_mhz": 3.5,
@@ -771,12 +754,6 @@
         "label": "DECT"
       },
       {
-        "lo_mhz": 1880.0,
-        "hi_mhz": 1900.0,
-        "kind": "All",
-        "label": "GSM, IMT, MCA, MCV"
-      },
-      {
         "lo_mhz": 1900.0,
         "hi_mhz": 1980.0,
         "kind": "All",
@@ -829,12 +806,6 @@
         "hi_mhz": 2450.0,
         "kind": "All",
         "label": "Radioamatori 13cm"
-      },
-      {
-        "lo_mhz": 2400.0,
-        "hi_mhz": 2500.0,
-        "kind": "All",
-        "label": "ISM, SAP/SAB, 802.11"
       },
       {
         "lo_mhz": 2500.0,
@@ -1155,12 +1126,6 @@
         "label": "Collegamenti fissi ad alta capacit\u00e0"
       },
       {
-        "lo_mhz": 74000.0,
-        "hi_mhz": 76500.0,
-        "kind": "All",
-        "label": "LPR, SRD, SRR, TLPR, radar veicoli"
-      },
-      {
         "lo_mhz": 75500.0,
         "hi_mhz": 81500.0,
         "kind": "All",
@@ -1202,7 +1167,9 @@
         "kind": "All",
         "label": "Radioamatori 1mm"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region2": {
     "bands": [
@@ -1276,12 +1243,6 @@
         "label": "Radionavigazione"
       },
       {
-        "lo_mhz": 0.1355,
-        "hi_mhz": 0.1378,
-        "kind": "All",
-        "label": "Radioamatori 137kHz"
-      },
-      {
         "lo_mhz": 0.1485,
         "hi_mhz": 0.2835,
         "kind": "Phone",
@@ -1304,12 +1265,6 @@
         "hi_mhz": 0.52,
         "kind": "Phone",
         "label": "Mobile marittimo, NAVTEX"
-      },
-      {
-        "lo_mhz": 0.472,
-        "hi_mhz": 0.479,
-        "kind": "All",
-        "label": "Radioamatori 472kHz"
       },
       {
         "lo_mhz": 0.52,
@@ -1376,12 +1331,6 @@
         "hi_mhz": 3.5,
         "kind": "Phone",
         "label": "Mobile aviazione"
-      },
-      {
-        "lo_mhz": 3.5,
-        "hi_mhz": 3.6,
-        "kind": "Phone",
-        "label": "Mobile marittimo"
       },
       {
         "lo_mhz": 3.5,
@@ -1972,12 +1921,6 @@
         "label": "DECT"
       },
       {
-        "lo_mhz": 1880.0,
-        "hi_mhz": 1900.0,
-        "kind": "All",
-        "label": "GSM, IMT, MCA, MCV"
-      },
-      {
         "lo_mhz": 1900.0,
         "hi_mhz": 1980.0,
         "kind": "All",
@@ -2030,12 +1973,6 @@
         "hi_mhz": 2450.0,
         "kind": "All",
         "label": "Radioamatori 13cm"
-      },
-      {
-        "lo_mhz": 2400.0,
-        "hi_mhz": 2500.0,
-        "kind": "All",
-        "label": "ISM, SAP/SAB, 802.11"
       },
       {
         "lo_mhz": 2500.0,
@@ -2356,12 +2293,6 @@
         "label": "Collegamenti fissi ad alta capacit\u00e0"
       },
       {
-        "lo_mhz": 74000.0,
-        "hi_mhz": 76500.0,
-        "kind": "All",
-        "label": "LPR, SRD, SRR, TLPR, radar veicoli"
-      },
-      {
         "lo_mhz": 75500.0,
         "hi_mhz": 81500.0,
         "kind": "All",
@@ -2403,7 +2334,9 @@
         "kind": "All",
         "label": "Radioamatori 1mm"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   },
   "region3": {
     "bands": [
@@ -2477,12 +2410,6 @@
         "label": "Radionavigazione"
       },
       {
-        "lo_mhz": 0.1355,
-        "hi_mhz": 0.1378,
-        "kind": "All",
-        "label": "Radioamatori 137kHz"
-      },
-      {
         "lo_mhz": 0.1485,
         "hi_mhz": 0.2835,
         "kind": "Phone",
@@ -2505,12 +2432,6 @@
         "hi_mhz": 0.52,
         "kind": "Phone",
         "label": "Mobile marittimo, NAVTEX"
-      },
-      {
-        "lo_mhz": 0.472,
-        "hi_mhz": 0.479,
-        "kind": "All",
-        "label": "Radioamatori 472kHz"
       },
       {
         "lo_mhz": 0.52,
@@ -2577,12 +2498,6 @@
         "hi_mhz": 3.5,
         "kind": "Phone",
         "label": "Mobile aviazione"
-      },
-      {
-        "lo_mhz": 3.5,
-        "hi_mhz": 3.6,
-        "kind": "Phone",
-        "label": "Mobile marittimo"
       },
       {
         "lo_mhz": 3.5,
@@ -3173,12 +3088,6 @@
         "label": "DECT"
       },
       {
-        "lo_mhz": 1880.0,
-        "hi_mhz": 1900.0,
-        "kind": "All",
-        "label": "GSM, IMT, MCA, MCV"
-      },
-      {
         "lo_mhz": 1900.0,
         "hi_mhz": 1980.0,
         "kind": "All",
@@ -3231,12 +3140,6 @@
         "hi_mhz": 2450.0,
         "kind": "All",
         "label": "Radioamatori 13cm"
-      },
-      {
-        "lo_mhz": 2400.0,
-        "hi_mhz": 2500.0,
-        "kind": "All",
-        "label": "ISM, SAP/SAB, 802.11"
       },
       {
         "lo_mhz": 2500.0,
@@ -3557,12 +3460,6 @@
         "label": "Collegamenti fissi ad alta capacit\u00e0"
       },
       {
-        "lo_mhz": 74000.0,
-        "hi_mhz": 76500.0,
-        "kind": "All",
-        "label": "LPR, SRD, SRR, TLPR, radar veicoli"
-      },
-      {
         "lo_mhz": 75500.0,
         "hi_mhz": 81500.0,
         "kind": "All",
@@ -3604,6 +3501,8 @@
         "kind": "All",
         "label": "Radioamatori 1mm"
       }
-    ]
+    ],
+    "psk_windows": [],
+    "rtty_windows": []
   }
 }
