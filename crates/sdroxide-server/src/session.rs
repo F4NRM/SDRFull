@@ -19,6 +19,9 @@ use sdroxide_proto::{
 };
 use sdroxide_types::Command;
 
+/// Serialises the logbook's read-modify-write, see `ClientMsg::QsoLogApply`.
+static QSO_LOG_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 use crate::auth;
 use crate::{SessionTx, Shared, Station};
 /// `/ws` — the station's first radio, which is the whole of what a station
@@ -722,6 +725,33 @@ async fn run_session(
                         let _ = s.reliable.try_send(ServerMsg::ClientAcks(merged.clone()));
                     }
                     report(shared, done.map(|r| r.map(|_| ())), "saving the client's answers");
+                }
+                // The logbook the station keeps for its browser clients. One lock
+                // around read-modify-write: the radios of a station share this
+                // file, and two clients applying at once must not write each
+                // other's contacts away.
+                Ok(ClientMsg::QsoLogRequest) => {
+                    let done = tokio::task::spawn_blocking(|| {
+                        let _g = QSO_LOG_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+                        config::load_qso_log()
+                    })
+                    .await;
+                    if let Ok(log) = &done
+                        && let Some(s) = shared.session.lock().unwrap().as_ref()
+                    {
+                        let _ = s.reliable.try_send(ServerMsg::QsoLog(log.clone()));
+                    }
+                    report(shared, done.map(Ok::<_, String>), "reading the logbook");
+                }
+                Ok(ClientMsg::QsoLogApply { upsert, delete }) => {
+                    let done = tokio::task::spawn_blocking(move || {
+                        let _g = QSO_LOG_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+                        let mut log = config::load_qso_log();
+                        sdroxide_types::apply_qso_changes(&mut log, upsert, &delete);
+                        config::save_qso_log(&log).map_err(|e| e.to_string())
+                    })
+                    .await;
+                    report(shared, done, "saving the logbook");
                 }
                 Ok(ClientMsg::Ping(t)) => {
                     if let Some(s) = shared.session.lock().unwrap().as_ref() {

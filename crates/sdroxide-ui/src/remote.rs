@@ -710,6 +710,7 @@ impl RemoteController {
             ServerMsg::Qo100Status(s) => self.pending.push_back(RadioEvent::Qo100Status(s)),
             ServerMsg::HfdlStatus(s) => self.pending.push_back(RadioEvent::HfdlStatus(s)),
             ServerMsg::SondeStatus(s) => self.pending.push_back(RadioEvent::SondeStatus(s)),
+            ServerMsg::QsoLog(l) => self.pending.push_back(RadioEvent::QsoLog(l)),
             ServerMsg::DabStatus(s) => self.pending.push_back(RadioEvent::DabStatus(s)),
             ServerMsg::RifpRows { image_id, y, w, h, rows } => {
                 self.pending.push_back(RadioEvent::RifpRows { image_id, y, w, h, rows })
@@ -935,6 +936,14 @@ impl RadioController for RemoteController {
 
     fn send_client_acks(&mut self, acks: sdroxide_types::ClientAcks) {
         self.send_msg(ClientMsg::SetClientAcks(acks));
+    }
+
+    fn request_qso_log(&mut self) {
+        self.send_msg(ClientMsg::QsoLogRequest);
+    }
+
+    fn send_qso_log_apply(&mut self, upsert: Vec<sdroxide_types::QsoRecord>, delete: Vec<u64>) {
+        self.send_msg(ClientMsg::QsoLogApply { upsert, delete });
     }
 
     fn send(&mut self, cmd: Command) {

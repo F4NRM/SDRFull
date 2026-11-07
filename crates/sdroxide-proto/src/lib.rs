@@ -2245,8 +2245,16 @@ use sdroxide_types::{
 /// log and the sonde tracks, which stayed on the station until now. Cached by
 /// the server and replayed on connect. A v273 peer has no variant to decode
 /// them into. `PROTO_VERSION` 273 → 274, `VERSION_BYTE` 0x5D → 0x5E.
-pub const PROTO_VERSION: u16 = 274;
-const VERSION_BYTE: u8 = 0x5E;
+///
+/// v275: **the logbook lives on the station.** `ClientMsg` gains `QsoLogRequest`
+/// and `QsoLogApply { upsert, delete }`, `ServerMsg` gains `QsoLog(Vec<QsoRecord>)`,
+/// all appended last. A browser client used to keep the whole logbook in the
+/// page's own storage (capped, and gone with the browser's data); it now asks
+/// the station for it on connect, sends back each change as a delta, and the
+/// station writes `qso_log.json`. A v274 peer has no variant to decode them
+/// into. `PROTO_VERSION` 274 → 275, `VERSION_BYTE` 0x5E → 0x5F.
+pub const PROTO_VERSION: u16 = 275;
+const VERSION_BYTE: u8 = 0x5F;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2387,6 +2395,16 @@ pub enum ClientMsg {
     /// holds (see [`sdroxide_types::ClientAcks::merge`]) and echoes the result
     /// with [`ServerMsg::ClientAcks`]. Appended last, as ever.
     SetClientAcks(sdroxide_types::ClientAcks),
+    /// Ask for the station's logbook, answered with [`ServerMsg::QsoLog`]. Sent
+    /// by a browser client when it connects: a native client keeps its own
+    /// `qso_log.json` and never asks. Appended last.
+    QsoLogRequest,
+    /// Changes to the station's logbook: these records are stored (added, or
+    /// replacing the one with the same id — see
+    /// [`sdroxide_types::apply_qso_changes`]) and these ids are deleted. A delta
+    /// rather than the whole log, which is tens of thousands of records at a
+    /// busy station. Not echoed. Appended last.
+    QsoLogApply { upsert: Vec<QsoRecord>, delete: Vec<u64> },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2842,6 +2860,9 @@ pub enum ServerMsg {
     /// The radiosonde decoder: level and the sondes heard with their tracks,
     /// a whole snapshot each time. Appended last.
     SondeStatus(Box<sdroxide_types::SondeStatus>),
+    /// The station's whole logbook, the answer to [`ClientMsg::QsoLogRequest`].
+    /// Appended last.
+    QsoLog(Vec<QsoRecord>),
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3629,6 +3650,22 @@ mod tests {
             let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
             assert_eq!(back, m);
         }
+    }
+
+    /// The logbook messages ride the wire whole and are the last variants of
+    /// their enums, so a slip in a discriminant shows here.
+    #[test]
+    fn the_logbook_messages_round_trip() {
+        let rec = QsoRecord { id: 7, call: "W1AW".into(), start_utc: 1_700_000_000, ..Default::default() };
+        let asked = ClientMsg::QsoLogRequest;
+        let back: ClientMsg = decode(&encode(&asked).unwrap()).unwrap();
+        assert_eq!(back, asked);
+        let apply = ClientMsg::QsoLogApply { upsert: vec![rec.clone()], delete: vec![3, 4] };
+        let back: ClientMsg = decode(&encode(&apply).unwrap()).unwrap();
+        assert_eq!(back, apply);
+        let log = ServerMsg::QsoLog(vec![rec]);
+        let back: ServerMsg = decode(&encode(&log).unwrap()).unwrap();
+        assert_eq!(back, log);
     }
 
     /// What an aircraft says about its own flight crosses the wire with the

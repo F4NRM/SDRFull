@@ -72,6 +72,7 @@ pub(crate) mod persist;
 pub(in crate::app) mod playback;
 pub(in crate::app) mod publicsdr;
 pub(in crate::app) mod qo100;
+pub(in crate::app) mod qso_sync;
 pub(in crate::app) mod rds;
 pub(in crate::app) mod recording_jobs;
 #[cfg(not(target_arch = "wasm32"))]
@@ -1007,6 +1008,8 @@ pub struct SdroxideApp {
     /// reports back how many characters have been sent so we colour them green).
     text_tx: String,
     qso_log: Vec<QsoRecord>,
+    /// What a browser client knows the station's logbook holds; see `qso_sync`.
+    qso_sync: qso_sync::QsoSync,
     session_qso_ids: std::collections::HashSet<u64>,
     /// The listener's reception log (`swl_log.json`) — separate from the QSO
     /// log on purpose. See [`crate::app::swl_log`].
@@ -2429,6 +2432,7 @@ impl SdroxideApp {
             weather: Default::default(),
             text_tx: String::new(),
             qso_log: load_qso_log(storage),
+            qso_sync: Default::default(),
             session_qso_ids: std::collections::HashSet::new(),
             swl_log: load_swl_log(storage),
             swl_report: load_swl_report(),

@@ -545,7 +545,7 @@ mod tests {
 /// twice on two different bands inside two minutes. The existing log is indexed
 /// once by call so the check stays linear: this runs inside a single frame and a
 /// full logbook is tens of thousands of records.
-fn new_import_records(
+pub(in crate::app) fn new_import_records(
     existing: &[sdroxide_types::QsoRecord],
     parsed: Vec<sdroxide_types::QsoRecord>,
 ) -> (Vec<sdroxide_types::QsoRecord>, usize) {

@@ -7,7 +7,7 @@
 
 use sdroxide_types::{QsoRecord, RecordingJob, SwlEntry, SwlReportPrefs};
 
-// ── Logbook persistence (native: config-dir JSON; wasm: eframe storage) ──────
+// ── Logbook persistence (native: config-dir JSON; wasm: the station, see `qso_sync`) ──
 #[cfg(not(target_arch = "wasm32"))]
 pub(in crate::app) fn load_qso_log(_storage: Option<&dyn eframe::Storage>) -> Vec<QsoRecord> {
     sdroxide_config::load_qso_log()
@@ -66,7 +66,8 @@ pub(in crate::app) fn persist_qso_log(log: &[QsoRecord]) {
 
 #[cfg(target_arch = "wasm32")]
 pub(in crate::app) fn persist_qso_log(_log: &[QsoRecord]) {
-    // Written by eframe's periodic `save()` into localStorage.
+    // The station keeps the logbook (`qso_sync`): say there is something to send.
+    crate::app::qso_sync::QSO_LOG_DIRTY.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
 // ── Wavelog download cursors (native only) ───────────────────────────────────
