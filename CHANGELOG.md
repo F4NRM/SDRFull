@@ -15,6 +15,7 @@ and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 
 ### Added
 - **Public SDRs: ADD AS RADIO, a map and an ONLINE/SILENT check** — the receiver becomes a radio of its own, named after its directory entry, and the radio in use is never touched (USE, + TAB and their confirmation are gone; stars and MINE stay). LIST | MAP shows the filtered receivers on the world map; a click picks the receivers under the pointer and checks whether they answer. Ported from upstream dividebysandwich/sdroxide#799 (Hans-Dieter Zucht). Protocol 277.
+- **Public SDRs can dock under the waterfall** — like Radio Classic, in the voice modes that have nothing there (not CW, not a digital mode, not on a phone): the ⤓ chip on the list or Settings → UI → *Window: Public SDRs* docks it, ↗ puts it back in a window. Where the slot is taken it stays a window. Five messages in eleven languages.
 - **A public receiver's tab name opens the map at that receiver** — click the name of a radio taken from Public SDRs: the map opens on it, or at its last known place (dashed ring) where the directory no longer lists it. Ported from upstream dividebysandwich/sdroxide#799 (Hans-Dieter Zucht).
 
 ### Changed
