@@ -6230,7 +6230,9 @@ name = "sdroxide-wxsat"
 version = "2.3.0"
 dependencies = [
  "crossbeam-channel",
+ "rustfft",
  "sdroxide-dsp",
+ "sdroxide-sonde",
  "sdroxide-types",
  "tracing",
 ]
