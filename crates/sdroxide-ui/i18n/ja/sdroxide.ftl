@@ -9585,3 +9585,9 @@ settings-radio-overlay = Obarei
 settings-radio-overlay-hint = Waterfall no IARU plan no ue ni tsuika no band plan o hyoji
 
 settings-radio-overlay-enable = Obarei o yuko ka
+
+settings-radio-bandplan-waterfall-overlay = Waterfall band plan overlay
+
+settings-radio-bandplan-waterfall-overlay-hint = Waterfall no IARU plan no ue ni tsuika no band plan o hyoji
+
+settings-radio-bandplan-waterfall-overlay-enable = Obarei o yuko ka

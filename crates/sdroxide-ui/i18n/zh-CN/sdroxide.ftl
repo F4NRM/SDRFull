@@ -9575,3 +9575,9 @@ settings-radio-overlay = Diejia
 settings-radio-overlay-hint = Zai pubu tu IARU jihua shangfang xianshi e wai de pin duan jihua
 
 settings-radio-overlay-enable = Qiyong diejia
+
+settings-radio-bandplan-waterfall-overlay = Waterfall bandplan overlay
+
+settings-radio-bandplan-waterfall-overlay-hint = Zai pubu tu IARU jihua shangfang xianshi e wai de pin duan jihua
+
+settings-radio-bandplan-waterfall-overlay-enable = Qiyong diejia

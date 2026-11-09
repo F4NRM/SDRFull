@@ -4741,6 +4741,23 @@ impl SdroxideApp {
                     // with every bundle: the list this client chooses from.
                     self.band_plans = c.band_plans.clone();
                     self.band_plan_name = c.band_plan_name.clone();
+                    // Overlay plan: load from the bandplans folder when enabled.
+                    let enabled = *self.band_plan_overlay_enabled.lock().unwrap();
+                    if enabled {
+                        let name = self.band_plan_overlay.lock().unwrap().clone();
+                        if let Some(name) = name {
+                            if let Some(dir) = crate::app::persist::band_plans_dir() {
+                                let path = dir.join(format!("{}.json", name));
+                                if let Ok(json) = std::fs::read_to_string(&path) {
+                                    if let Ok(plan) = serde_json::from_str::<sdroxide_types::BandPlan>(&json) {
+                                        crate::widgets::bandplan::set_overlay(Some(sdroxide_types::leak_band_plan(plan)));
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        crate::widgets::bandplan::set_overlay(None);
+                    }
                     // The operator's own additions to the modes' frequency
                     // tables, on the same terms and for the same reason: the
                     // station owns the list, and this client draws the picker

@@ -9646,3 +9646,9 @@ settings-radio-overlay = Sovrapposizione
 settings-radio-overlay-hint = Mostra un piano di banda aggiuntivo sopra quello IARU nel waterfall
 
 settings-radio-overlay-enable = Abilita sovrapposizione
+
+settings-radio-bandplan-waterfall-overlay = Sovrapposizione bandplan sul waterfall
+
+settings-radio-bandplan-waterfall-overlay-hint = Mostra un piano di banda aggiuntivo sopra quello IARU nel waterfall
+
+settings-radio-bandplan-waterfall-overlay-enable = Abilita sovrapposizione

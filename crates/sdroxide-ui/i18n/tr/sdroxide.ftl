@@ -9637,3 +9637,9 @@ settings-radio-overlay = Kaplama
 settings-radio-overlay-hint = Waterfall'da IARU planinin ustunde ek bir band plani goster
 
 settings-radio-overlay-enable = Kaplamayi etkinlestir
+
+settings-radio-bandplan-waterfall-overlay = Waterfall band plani kaplamasi
+
+settings-radio-bandplan-waterfall-overlay-hint = Waterfall'da IARU planinin ustunde ek bir band plani goster
+
+settings-radio-bandplan-waterfall-overlay-enable = Kaplamayi etkinlestir

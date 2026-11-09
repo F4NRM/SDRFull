@@ -9652,3 +9652,9 @@ settings-radio-overlay = Nalozhenie
 settings-radio-overlay-hint = Pokazat dopolnitelnyj plan diapazonov poverkh plana IARU v vodopade
 
 settings-radio-overlay-enable = Vklyuchit nalozhenie
+
+settings-radio-bandplan-waterfall-overlay = Nalozhenie plana diapazonov na vodopad
+
+settings-radio-bandplan-waterfall-overlay-hint = Pokazat dopolnitelnyj plan diapazonov poverkh plana IARU v vodopade
+
+settings-radio-bandplan-waterfall-overlay-enable = Vklyuchit nalozhenie

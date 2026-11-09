@@ -13,10 +13,18 @@
 //! be worse than no strip.
 
 use eframe::egui::{Color32, FontId, Painter, Rect, Stroke, pos2};
-use sdroxide_types::{Band, BandplanKind as Kind, Region, SegmentKind};
+use sdroxide_types::{Band, BandPlan, BandplanKind as Kind, Region, SegmentKind};
+use std::sync::RwLock;
 
 use crate::theme;
 use crate::view::ViewState;
+
+/// Overlay plan (extra band plan) to draw above the IARU strip.
+static OVERLAY_PLAN: RwLock<Option<&'static sdroxide_types::BandPlan>> = RwLock::new(None);
+
+pub fn set_overlay(plan: Option<&'static sdroxide_types::BandPlan>) {
+    *OVERLAY_PLAN.write().unwrap() = plan;
+}
 
 /// The shade this usage class is currently painted in — the operator's pick,
 /// or the stock one until they make one. Looked up per block per frame rather
@@ -371,7 +379,12 @@ const PANEL_MAX_FRAC: f32 = 0.10;
 /// lines before anything on the waterfall is painted. See
 /// [`super::memories::layout`].
 pub fn height(view: &ViewState, wf: &Rect, panel_below: bool) -> f32 {
-    plan(view, wf, panel_below).map_or(0.0, |p| p.total_h)
+    let base = plan(view, wf, panel_below).map_or(0.0, |p| p.total_h);
+    if OVERLAY_PLAN.read().unwrap().is_some() {
+        base + 18.0 * crate::theme::panadapter_font_scale()
+    } else {
+        base
+    }
 }
 
 /// What the strip works out before it draws anything.
@@ -470,5 +483,18 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
         if flip { strip_bottom } else { strip_top },
         Stroke::new(1.0, theme::scope().line),
     );
+
+    // Overlay: an extra band plan drawn as a second strip just above the main
+    // one, in a distinct colour. All bands of the selected plan are shown.
+    if let Some(oplan) = *OVERLAY_PLAN.read().unwrap() {
+        let region = sdroxide_types::region();
+        let otop = if flip { strip_bottom } else { strip_top - base_h };
+        for band in sdroxide_types::Band::ALL {
+            if let Some((lo, hi)) = oplan.region(region).edges(band) {
+                draw_seg(p, view, wf, lo, hi, Color32::from_rgb(0, 200, 220), band.label(), otop, base_h, 10.5 * fs);
+            }
+        }
+    }
+
     total_h
 }

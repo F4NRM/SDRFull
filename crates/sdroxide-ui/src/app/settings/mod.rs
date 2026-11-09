@@ -3841,9 +3841,9 @@ impl SdroxideApp {
 
                     ui.add_space(6.0);
                     ui.separator();
-                    ui.label(tr!("settings-radio-overlay")).on_hover_text(tr!("settings-radio-overlay-hint"));
+                    ui.label(tr!("settings-radio-bandplan-waterfall-overlay")).on_hover_text(tr!("settings-radio-bandplan-waterfall-overlay-hint"));
                     let mut enabled = *self.band_plan_overlay_enabled.lock().unwrap();
-                    ui.checkbox(&mut enabled, tr!("settings-radio-overlay-enable"));
+                    ui.checkbox(&mut enabled, tr!("settings-radio-bandplan-waterfall-overlay-enable"));
                     *self.band_plan_overlay_enabled.lock().unwrap() = enabled;
                     if enabled {
                         let mut choice = self.band_plan_overlay.lock().unwrap().clone();

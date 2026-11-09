@@ -9645,3 +9645,9 @@ settings-radio-overlay = Overlay
 settings-radio-overlay-hint = Toon een extra bandplan boven het IARU-plan in de waterfall
 
 settings-radio-overlay-enable = Overlay inschakelen
+
+settings-radio-bandplan-waterfall-overlay = Bandplan Waterfall Overlay
+
+settings-radio-bandplan-waterfall-overlay-hint = Toon een extra bandplan boven het IARU-plan in de waterfall
+
+settings-radio-bandplan-waterfall-overlay-enable = Overlay inschakelen
