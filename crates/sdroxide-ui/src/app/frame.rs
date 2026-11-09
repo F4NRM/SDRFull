@@ -806,6 +806,24 @@ impl eframe::App for SdroxideApp {
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         // This radio's band plan for everything this frame draws and decides.
         let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
+        // Overlay plan global: keep in sync with the settings switch.
+        let enabled = *self.band_plan_overlay_enabled.lock().unwrap();
+        crate::widgets::bandplan::set_overlay_enabled(enabled);
+        if enabled {
+            let name = self.band_plan_overlay.lock().unwrap().clone();
+            if let Some(name) = name {
+                if let Some(dir) = crate::app::persist::band_plans_dir() {
+                    let path = dir.join(format!("{}.json", name));
+                    if let Ok(json) = std::fs::read_to_string(&path) {
+                        if let Ok(plan) = serde_json::from_str::<sdroxide_types::BandPlan>(&json) {
+                            crate::widgets::bandplan::set_overlay(Some(sdroxide_types::leak_band_plan(plan)));
+                        }
+                    }
+                }
+            }
+        } else {
+            crate::widgets::bandplan::set_overlay(None);
+        }
         let ctx = ui.ctx().clone();
         let now = ctx.input(|i| i.time);
         self.konami.tick(ctx.input(|i| i.stable_dt).min(0.25));

@@ -456,17 +456,24 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
     let (strip_top, strip_bottom) =
         if flip { (wf.top(), wf.top() + total_h) } else { (wf.bottom() - total_h, wf.bottom()) };
 
+    let enabled = *OVERLAY_ENABLED.read().unwrap();
+    let zoomed = span <= FINE_MAX_SPAN;
+
     // Subtle base so the strip reads as one band even between segments.
-    p.rect_filled(
-        Rect::from_min_max(pos2(wf.left(), strip_top), pos2(wf.right(), strip_bottom)),
-        0.0,
-        Color32::from_rgba_unmultiplied(0, 0, 0, 80),
-    );
+    if !(enabled && zoomed) {
+        p.rect_filled(
+            Rect::from_min_max(pos2(wf.left(), strip_top), pos2(wf.right(), strip_bottom)),
+            0.0,
+            Color32::from_rgba_unmultiplied(0, 0, 0, 80),
+        );
+    }
 
     // Base allocation row (coarse bands, or fine CW/Digi/SSB sub-segments).
-    for seg in if span <= FINE_MAX_SPAN { fine(region) } else { coarse(region) } {
-        let color = color(seg.kind);
-        draw_seg(p, view, wf, seg.lo, seg.hi, color, seg.label, base_top, base_h, 10.5 * fs);
+    if !(enabled && zoomed) {
+        for seg in if span <= FINE_MAX_SPAN { fine(region) } else { coarse(region) } {
+            let color = color(seg.kind);
+            draw_seg(p, view, wf, seg.lo, seg.hi, color, seg.label, base_top, base_h, 10.5 * fs);
+        }
     }
 
     // Digi-mode rows stacked inwards from the allocation row.
@@ -491,7 +498,7 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
     // Overlay: an extra band plan drawn as a second strip just above the main
     // one, in a distinct colour. All bands of the selected plan are shown.
     let enabled = *OVERLAY_ENABLED.read().unwrap();
-    if enabled {
+    if enabled && zoomed {
         let otop = if flip { strip_bottom } else { strip_top - base_h };
         if let Some(oplan) = *OVERLAY_PLAN.read().unwrap() {
             let region = sdroxide_types::region();
