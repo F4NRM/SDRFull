@@ -21,9 +21,13 @@ use crate::view::ViewState;
 
 /// Overlay plan (extra band plan) to draw above the IARU strip.
 static OVERLAY_PLAN: RwLock<Option<&'static sdroxide_types::BandPlan>> = RwLock::new(None);
+static OVERLAY_ENABLED: RwLock<bool> = RwLock::new(false);
 
 pub fn set_overlay(plan: Option<&'static sdroxide_types::BandPlan>) {
     *OVERLAY_PLAN.write().unwrap() = plan;
+}
+pub fn set_overlay_enabled(enabled: bool) {
+    *OVERLAY_ENABLED.write().unwrap() = enabled;
 }
 
 /// The shade this usage class is currently painted in — the operator's pick,
@@ -486,13 +490,19 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
 
     // Overlay: an extra band plan drawn as a second strip just above the main
     // one, in a distinct colour. All bands of the selected plan are shown.
-    if let Some(oplan) = *OVERLAY_PLAN.read().unwrap() {
-        let region = sdroxide_types::region();
+    let enabled = *OVERLAY_ENABLED.read().unwrap();
+    if enabled {
         let otop = if flip { strip_bottom } else { strip_top - base_h };
-        for band in sdroxide_types::Band::ALL {
-            if let Some((lo, hi)) = oplan.region(region).edges(band) {
-                draw_seg(p, view, wf, lo, hi, Color32::from_rgb(0, 200, 220), band.label(), otop, base_h, 10.5 * fs);
+        if let Some(oplan) = *OVERLAY_PLAN.read().unwrap() {
+            let region = sdroxide_types::region();
+            for band in sdroxide_types::Band::ALL {
+                if let Some((lo, hi)) = oplan.region(region).edges(band) {
+                    draw_seg(p, view, wf, lo, hi, Color32::from_rgb(0, 200, 220), band.label(), otop, base_h, 10.5 * fs);
+                }
             }
+        } else {
+            // Diagnostic: show a bright strip even without a loaded plan.
+            p.rect_filled(Rect::from_min_max(pos2(wf.left(), otop), pos2(wf.right(), otop + base_h)), 0.0, Color32::from_rgb(255, 0, 255));
         }
     }
 

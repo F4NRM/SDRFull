@@ -4743,6 +4743,7 @@ impl SdroxideApp {
                     self.band_plan_name = c.band_plan_name.clone();
                     // Overlay plan: load from the bandplans folder when enabled.
                     let enabled = *self.band_plan_overlay_enabled.lock().unwrap();
+                    crate::widgets::bandplan::set_overlay_enabled(enabled);
                     if enabled {
                         let name = self.band_plan_overlay.lock().unwrap().clone();
                         if let Some(name) = name {
