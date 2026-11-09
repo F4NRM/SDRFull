@@ -7946,6 +7946,12 @@ pub struct RadioConfig {
     /// alert, and the name stays. Appended last, as the wire requires.
     #[serde(default)]
     pub band_plan: Option<String>,
+    /// Overlay an extra band plan on the waterfall (display only).
+    #[serde(default)]
+    pub band_plan_overlay_enabled: bool,
+    /// The extra band plan file to overlay.
+    #[serde(default)]
+    pub band_plan_overlay: Option<String>,
 }
 
 /// Why [`RadioConfig::rx_block_reason`] refuses a frequency.

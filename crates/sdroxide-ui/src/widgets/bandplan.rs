@@ -459,8 +459,9 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
     let enabled = *OVERLAY_ENABLED.read().unwrap();
     let zoomed = span <= FINE_MAX_SPAN;
 
+    let has_plan = OVERLAY_PLAN.read().unwrap().is_some();
     // Subtle base so the strip reads as one band even between segments.
-    if !(enabled && zoomed) {
+    if !(enabled && zoomed && has_plan) {
         p.rect_filled(
             Rect::from_min_max(pos2(wf.left(), strip_top), pos2(wf.right(), strip_bottom)),
             0.0,
@@ -469,7 +470,7 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
     }
 
     // Base allocation row (coarse bands, or fine CW/Digi/SSB sub-segments).
-    if !(enabled && zoomed) {
+    if !(enabled && zoomed && has_plan) {
         for seg in if span <= FINE_MAX_SPAN { fine(region) } else { coarse(region) } {
             let color = color(seg.kind);
             draw_seg(p, view, wf, seg.lo, seg.hi, color, seg.label, base_top, base_h, 10.5 * fs);
@@ -499,7 +500,7 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
     // one, in a distinct colour. All bands of the selected plan are shown.
     let enabled = *OVERLAY_ENABLED.read().unwrap();
     let zoomed = span <= FINE_MAX_SPAN;
-    if enabled && zoomed {
+    if enabled && zoomed && has_plan {
         if let Some(oplan) = *OVERLAY_PLAN.read().unwrap() {
             let region = sdroxide_types::region();
             for band in sdroxide_types::Band::ALL {
