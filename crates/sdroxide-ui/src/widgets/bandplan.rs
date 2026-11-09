@@ -498,19 +498,17 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
     // Overlay: an extra band plan drawn as a second strip just above the main
     // one, in a distinct colour. All bands of the selected plan are shown.
     let enabled = *OVERLAY_ENABLED.read().unwrap();
-    // DEBUG: ignore zoom for testing.
-    if enabled {
-        let otop = if flip { strip_bottom } else { strip_top - base_h };
+    let zoomed = span <= FINE_MAX_SPAN;
+    if enabled && zoomed {
         if let Some(oplan) = *OVERLAY_PLAN.read().unwrap() {
             let region = sdroxide_types::region();
             for band in sdroxide_types::Band::ALL {
                 if let Some((lo, hi)) = oplan.region(region).edges(band) {
-                    draw_seg(p, view, wf, lo, hi, Color32::from_rgb(0, 200, 220), band.label(), otop, base_h, 10.5 * fs);
+                    draw_seg(p, view, wf, lo, hi, Color32::from_rgb(0, 200, 220), band.label(), base_top, base_h, 10.5 * fs);
                 }
             }
         } else {
-            // Diagnostic: show a bright strip even without a loaded plan.
-            p.rect_filled(Rect::from_min_max(pos2(wf.left(), otop), pos2(wf.right(), otop + base_h)), 0.0, Color32::from_rgb(255, 0, 255));
+            p.rect_filled(Rect::from_min_max(pos2(wf.left(), base_top), pos2(wf.right(), base_top + base_h)), 0.0, Color32::from_rgb(255, 0, 255));
         }
     }
 

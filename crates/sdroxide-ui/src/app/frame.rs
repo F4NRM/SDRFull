@@ -4767,12 +4767,22 @@ impl SdroxideApp {
                         if let Some(name) = name {
                             if let Some(dir) = crate::app::persist::band_plans_dir() {
                                 let path = dir.join(format!("{}.json", name));
-                                if let Ok(json) = std::fs::read_to_string(&path) {
-                                    if let Ok(plan) = serde_json::from_str::<sdroxide_types::BandPlan>(&json) {
-                                        crate::widgets::bandplan::set_overlay(Some(sdroxide_types::leak_band_plan(plan)));
-                                    }
+                                eprintln!("overlay: loading {:?}", path);
+                                match std::fs::read_to_string(&path) {
+                                    Ok(json) => match serde_json::from_str::<sdroxide_types::BandPlan>(&json) {
+                                        Ok(plan) => {
+                                            eprintln!("overlay: loaded OK");
+                                            crate::widgets::bandplan::set_overlay(Some(sdroxide_types::leak_band_plan(plan)));
+                                        }
+                                        Err(e) => eprintln!("overlay: parse error: {e}"),
+                                    },
+                                    Err(e) => eprintln!("overlay: read error: {e}"),
                                 }
+                            } else {
+                                eprintln!("overlay: no bandplans dir");
                             }
+                        } else {
+                            eprintln!("overlay: no name selected");
                         }
                     } else {
                         crate::widgets::bandplan::set_overlay(None);
