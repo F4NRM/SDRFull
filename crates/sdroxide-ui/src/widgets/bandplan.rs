@@ -507,8 +507,6 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
                     draw_seg(p, view, wf, lo, hi, Color32::from_rgb(0, 200, 220), band.label(), base_top, base_h, 10.5 * fs);
                 }
             }
-        } else {
-            p.rect_filled(Rect::from_min_max(pos2(wf.left(), base_top), pos2(wf.right(), base_top + base_h)), 0.0, Color32::from_rgb(255, 0, 255));
         }
     }
 
