@@ -498,7 +498,8 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
     // Overlay: an extra band plan drawn as a second strip just above the main
     // one, in a distinct colour. All bands of the selected plan are shown.
     let enabled = *OVERLAY_ENABLED.read().unwrap();
-    if enabled && zoomed {
+    // DEBUG: ignore zoom for testing.
+    if enabled {
         let otop = if flip { strip_bottom } else { strip_top - base_h };
         if let Some(oplan) = *OVERLAY_PLAN.read().unwrap() {
             let region = sdroxide_types::region();
