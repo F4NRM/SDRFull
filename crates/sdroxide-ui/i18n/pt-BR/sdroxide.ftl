@@ -9631,3 +9631,9 @@ meshtastic-tune-mode-hint = O rádio também vai para FM larga, para que o alto-
 wefax-revert-auto-slant = Desfazer inclinação
 
 wefax-revert-auto-slant-hint = Desfaz a correção automática de inclinação nesta carta: o ajuste do relógio volta ao valor definido aqui e a correção automática fica desligada até a próxima carta. As linhas já recebidas não mudam.
+
+settings-radio-overlay = Sobreposicao
+
+settings-radio-overlay-hint = Mostrar um plano de banda extra sobre o plano IARU no waterfall
+
+settings-radio-overlay-enable = Ativar sobreposicao

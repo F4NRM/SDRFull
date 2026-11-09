@@ -9579,3 +9579,9 @@ meshtastic-tune-mode-hint = 無線機はワイドFMにも切り替わり、ス�
 wefax-revert-auto-slant = 傾き補正を戻す
 
 wefax-revert-auto-slant-hint = このチャートの自動傾き補正を取り消します。クロック調整はここで設定した値に戻り、次のチャートまで自動補正はオフのままです。すでに受信した行は変わりません。
+
+settings-radio-overlay = Obarei
+
+settings-radio-overlay-hint = Waterfall no IARU plan no ue ni tsuika no band plan o hyoji
+
+settings-radio-overlay-enable = Obarei o yuko ka

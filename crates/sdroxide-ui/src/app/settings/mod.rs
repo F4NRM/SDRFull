@@ -3002,7 +3002,7 @@ impl SdroxideApp {
                     &tr!("settings-cb-licence-note"),
                 );
                 ui.add_space(6.0);
-                self.settings_band_plan_file(ui, cmds);
+                // Extra band plans moved to Radio settings -> Overlay.
 
                 ui.add_space(10.0);
                 ui.separator();
@@ -3837,6 +3837,25 @@ impl SdroxideApp {
                                 .weak(),
                             );
                         }
+                    }
+
+                    ui.add_space(6.0);
+                    ui.separator();
+                    ui.label(tr!("settings-radio-overlay")).on_hover_text(tr!("settings-radio-overlay-hint"));
+                    let mut enabled = *self.band_plan_overlay_enabled.lock().unwrap();
+                    ui.checkbox(&mut enabled, tr!("settings-radio-overlay-enable"));
+                    *self.band_plan_overlay_enabled.lock().unwrap() = enabled;
+                    if enabled {
+                        let mut choice = self.band_plan_overlay.lock().unwrap().clone();
+                        egui::ComboBox::from_id_salt("overlay-band-plan")
+                            .selected_text(choice.as_deref().unwrap_or("none"))
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut choice, None, tr!("settings-general-band-plan-built-in"));
+                                for p in &self.band_plans {
+                                    ui.selectable_value(&mut choice, Some(p.file.clone()), p.name.clone());
+                                }
+                            });
+                        *self.band_plan_overlay.lock().unwrap() = choice;
                     }
                 });
                 // **A gap before the row, and it is not decoration.** Every

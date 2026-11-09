@@ -672,6 +672,7 @@ pub(in crate::app) fn settings_cat_tab(
                 ui.end_row();
             }
 
+
             if cfg.cat.family == CatFamily::Icom {
                 ui.label(tr!("settings-radio-radio-model")).on_hover_text(
                     tr!("settings-radio-which-icom-two-things-ci"),

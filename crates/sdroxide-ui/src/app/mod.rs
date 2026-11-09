@@ -1641,6 +1641,8 @@ pub struct SdroxideApp {
     /// so a split view of two radios on two plans draws each with its own. Leaked
     /// once per *change* of plan, never per frame.
     pub(in crate::app) band_plan_cur: Option<&'static sdroxide_types::BandPlan>,
+    pub(in crate::app) band_plan_overlay: std::sync::Arc<std::sync::Mutex<Option<String>>>,
+    pub(in crate::app) band_plan_overlay_enabled: std::sync::Arc<std::sync::Mutex<bool>>,
     /// The plan this screen asked the station to send as a file, so that of the
     /// answers (which go to every screen) only this one's is saved here. A cell
     /// because the settings are drawn through `&self`.
@@ -2753,6 +2755,8 @@ impl SdroxideApp {
             band_plans: Vec::new(),
             band_plan_name: None,
             band_plan_cur: None,
+            band_plan_overlay: std::sync::Arc::new(std::sync::Mutex::new(None)),
+            band_plan_overlay_enabled: std::sync::Arc::new(std::sync::Mutex::new(false)),
             band_plan_export_wanted: std::cell::RefCell::new(None),
             band_plan_ui: std::cell::RefCell::new(Default::default()),
             pending_lookups: Vec::new(),
