@@ -2,7 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-08.
 
-State: `main` at crate 2.3.0, PROTO_VERSION 292 (0x70). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0 (re-measured 2026-11-08). Open issues: 10 (re-measured 2026-11-07).
+State: `main` at crate 2.3.0, PROTO_VERSION 292 (0x70). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0 (re-measured 2026-11-09). Open issues: 6 (re-measured 2026-11-09).
 
 ## Task tracking rules
 

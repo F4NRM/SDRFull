@@ -297,8 +297,7 @@ are closed/unlicensed (research only). SDRuno look is parked.
 
 - `main` at crate 2.2.0, PROTO_VERSION 262 (0x52). Latest release
   v2.2.3.6.2_brown (pre-release).
-- Open issues: 8 (re-measured 2026-11-04). Open PRs: 1 — #434 public-SDR
-  favourites.
+- Open issues: 6 (re-measured 2026-11-09). Open PRs: 0.
 - STANAG 4285 finished (Mark proved decode with video; coded payload not
   implemented — legal restriction). Olivia proven by user (RX+TX). Grey-line
   confirmed. S-meter still an issue.
