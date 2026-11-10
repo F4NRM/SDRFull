@@ -181,7 +181,15 @@ fn coarse(region: Region) -> Vec<Seg> {
 /// band where there are not (everything above 30 MHz).
 fn fine(region: Region) -> Vec<Seg> {
     let segs = sdroxide_types::segments_in(region);
-    let mut v = non_ham(region);
+    let cuts: Vec<(f64, f64)> = segs.iter().map(|s| (s.lo, s.hi)).collect();
+    let mut v = Vec::new();
+    // Blocks are broken where a configuration segment (ISM, CB, a special
+    // allocation) sits inside them, rather than drawn over it.
+    for block in non_ham(region) {
+        for (lo, hi) in split_range(block.lo, block.hi, &cuts) {
+            v.push(Seg { lo, hi, label: block.label, kind: block.kind });
+        }
+    }
     for seg in segs {
         let (label, kind) = match seg.kind {
             SegmentKind::Cw => ("CW", Kind::Cw),
@@ -192,20 +200,42 @@ fn fine(region: Region) -> Vec<Seg> {
         };
         v.push(s(seg.lo, seg.hi, seg.label.unwrap_or(label), kind));
     }
-    // The bands with no sub-segment table keep their whole-band block, so
-    // zooming into 2 m or 70 cm does not empty the strip. Non-amateur
-    // allocations are `non_ham`'s, as in `coarse`.
+    // Amateur bands are broken around the same segments; parts with no
+    // segment of their own keep the whole-band label.
     for band in Band::ALL {
         if !band.is_amateur() {
             continue;
         }
         let Some((lo, hi)) = band.edges_in(region) else { continue };
-        if !segs.iter().any(|s| s.lo < hi && s.hi > lo) {
-            v.push(s(lo, hi, ham_label(band, region), Kind::Ham));
+        for (a, b) in split_range(lo, hi, &cuts) {
+            v.push(s(a, b, ham_label(band, region), Kind::Ham));
         }
     }
     v.sort_by(|a, b| a.lo.total_cmp(&b.lo));
     v
+}
+
+/// Remove every `(lo, hi)` cut from `[lo, hi]`, returning the remaining pieces.
+fn split_range(lo: f64, hi: f64, cuts: &[(f64, f64)]) -> Vec<(f64, f64)> {
+    let mut pieces = vec![(lo, hi)];
+    for &(cut_lo, cut_hi) in cuts {
+        let mut next = Vec::new();
+        for (a, b) in pieces {
+            if cut_hi <= a || cut_lo >= b {
+                next.push((a, b));
+                continue;
+            }
+            if cut_lo > a {
+                next.push((a, cut_lo.min(b)));
+            }
+            if cut_hi < b {
+                next.push((cut_hi.max(a), b));
+            }
+        }
+        pieces = next;
+    }
+    pieces.retain(|(a, b)| b - a > 0.0);
+    pieces
 }
 
 // ── Explicit digi-mode detail rows ──────────────────────────────────────────
@@ -521,4 +551,23 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
     }
 
     total_h
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split_range;
+
+    #[test]
+    fn a_special_segment_breaks_the_block_around_it() {
+        let cuts = [(26.957e6, 27.283e6)];
+        let pieces = split_range(26.965e6, 27.405e6, &cuts);
+        assert_eq!(pieces.len(), 1, "the cut starts before the CB block");
+        assert_eq!(pieces[0], (27.283e6, 27.405e6));
+    }
+
+    #[test]
+    fn a_cut_in_the_middle_leaves_both_sides() {
+        let pieces = split_range(1.0, 10.0, &[(4.0, 6.0)]);
+        assert_eq!(pieces, vec![(1.0, 4.0), (6.0, 10.0)]);
+    }
 }
