@@ -1562,6 +1562,7 @@ impl SdroxideApp {
     /// lock — the pass window's TUNE action, reached from the 3D window's
     /// frequency table, which has no command path of its own. `link_idx` is the
     /// index into the same usable-links list the table drew.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub(in crate::app) fn sat_tune_request(
         &mut self,
         norad_id: u64,

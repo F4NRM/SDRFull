@@ -11,7 +11,11 @@
 // dialog, radio-control and other desktop-only code is compiled there and never
 // called. Real dead code is still reported by the native build, which reaches
 // all of it, so the browser build does not repeat the same warnings.
-#![cfg_attr(target_arch = "wasm32", allow(dead_code))]
+//
+// Only without the `remote` feature, which is a build nobody ships (the web
+// client enables it, and reaches nearly all of this); with it, the few items
+// the browser really never calls carry their own scoped allow.
+#![cfg_attr(all(target_arch = "wasm32", not(feature = "remote")), allow(dead_code))]
 
 mod adsb_icons;
 mod adsb_map;

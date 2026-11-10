@@ -227,6 +227,7 @@ pub fn set_open_settings_tab(key: &str) {
 /// Three states, though only the operating panel can be in all three: the
 /// others are docked or in a window of their own.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub(crate) enum ModuleWindow {
     /// In its own place in this window — the pane under the waterfall, the
     /// strip above it, the column beside it.
@@ -504,6 +505,7 @@ pub struct SdroxideApp {
     /// from the setting, because folding a column to see the picture is a thing
     /// done for a minute rather than a preference — SDR++'s ☰ is the same
     /// gesture. The setting decides whether the arrangement is in use at all.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub(in crate::app) classic_collapsed: bool,
     /// The interface font size last written into the context as its zoom
     /// factor, for the same reason — and so the zoom is left alone in between,
@@ -1804,6 +1806,7 @@ pub struct SdroxideApp {
     /// Where recordings are written, resolved from `config.toml` for the
     /// General tab to show. Native only; empty in the browser, which has no
     /// engine to record with.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     recordings_dir: std::path::PathBuf,
     /// Weather fax: the chart being painted and the gallery of saved ones.
     wefax: crate::wefax::WefaxUi,
@@ -2859,6 +2862,7 @@ impl SdroxideApp {
     /// operator asked for a floating panel long before the windows existed — and
     /// a list that showed only "docked / in a window" would be a list that
     /// cannot say where his panel is.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub(crate) fn module_window_state(
         &self,
         module: sdroxide_types::DetachableModule,
@@ -2879,6 +2883,7 @@ impl SdroxideApp {
     /// two places to change the same thing. So a request to float another module
     /// is refused here rather than written — the list disables that icon and
     /// says why.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub(crate) fn set_module_window_state(
         &mut self,
         module: sdroxide_types::DetachableModule,
