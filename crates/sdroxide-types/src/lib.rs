@@ -292,7 +292,9 @@ pub use picupload::{
 pub use playback::{
     PlaybackCommand, PlaybackStatus, RecordingFile, RecordingListing, RecordingStamp,
 };
-pub use probe::{DeviceProbe, ProbeAnswer, ProbeTest, ReportKind, TestKind};
+pub use probe::{
+    ConnectFailure, ConnectWhy, DeviceProbe, ProbeAnswer, ProbeTest, ReportKind, TestKind,
+};
 pub use profile::{ModeProfile, ModeProfiles};
 pub use prop_store::{PropSources, PropStore};
 pub use propagation::{

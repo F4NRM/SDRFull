@@ -9694,3 +9694,9 @@ sstv-clock-hint = Prints the date and time of the moment the picture is sent —
 sstv-clock-local = Local time
 
 sstv-clock-local-hint = Print the station's own time instead of UTC — daylight saving included
+
+test-tci-connect-refused = connect { $address }: { $detail } — nothing is serving TCI on that port. TCI comes from the SDR program — ExpertSDR3, Thetis — and not from the radio itself, so it has to be running with TCI switched on in its settings. On a standalone set such as an MB1 that is the copy running inside the radio
+
+test-tci-connect-timed-out = connect { $address }: { $detail } — no answer at that address. Check the host, and that a firewall is not in the way. If the SDR program that serves TCI (ExpertSDR3, Thetis) is not running with TCI switched on, a closed port can look like this on Windows
+
+test-connect-failed = connect { $address }: { $detail }

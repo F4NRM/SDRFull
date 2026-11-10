@@ -9665,3 +9665,9 @@ sstv-clock-hint = Drukt de datum en tijd af van het moment waarop de foto wordt 
 sstv-clock-local = Lokale tijd
 
 sstv-clock-local-hint = De lokale tijd van het station afdrukken in plaats van UTC — zomertijd inbegrepen
+
+test-tci-connect-refused = verbinding met { $address }: { $detail } — niets biedt TCI aan op die poort. TCI komt van het SDR-programma — ExpertSDR3, Thetis — en niet van de radio zelf; het moet draaien met TCI ingeschakeld in de instellingen. Bij een zelfstandig toestel zoals een MB1 is dat de kopie die in de radio draait
+
+test-tci-connect-timed-out = verbinding met { $address }: { $detail } — geen antwoord op dat adres. Controleer de host en of een firewall niet in de weg zit. Als het SDR-programma dat TCI aanbiedt (ExpertSDR3, Thetis) niet draait met TCI ingeschakeld, kan een gesloten poort er onder Windows zo uitzien
+
+test-connect-failed = verbinding met { $address }: { $detail }

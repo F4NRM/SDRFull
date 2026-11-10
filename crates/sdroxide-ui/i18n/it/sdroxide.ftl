@@ -9674,3 +9674,9 @@ sstv-clock-hint = Stampa la data e l'ora del momento in cui l'immagine viene inv
 sstv-clock-local = Ora locale
 
 sstv-clock-local-hint = Stampa l'ora locale della stazione invece dell'UTC — ora legale inclusa
+
+test-tci-connect-refused = connessione a { $address }: { $detail } — nulla offre TCI su quella porta. TCI viene dal programma SDR — ExpertSDR3, Thetis — e non dalla radio stessa, quindi deve essere in esecuzione con TCI attivato nelle impostazioni. Su un apparato autonomo come un MB1 è la copia che gira dentro la radio
+
+test-tci-connect-timed-out = connessione a { $address }: { $detail } — nessuna risposta a quell'indirizzo. Controlla l'host e che un firewall non sia di mezzo. Se il programma SDR che serve TCI (ExpertSDR3, Thetis) non è in esecuzione con TCI attivato, una porta chiusa può apparire così su Windows
+
+test-connect-failed = connessione a { $address }: { $detail }

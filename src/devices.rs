@@ -13,7 +13,7 @@
 //! connection test — so callers run it off their hot path: the GUI after the
 //! settings window closure, the server on its own probe thread.
 
-use sdroxide_types::{DeviceProbe, ProbeAnswer, ProbeTest, ReportKind};
+use sdroxide_types::{DeviceProbe, ProbeAnswer, ProbeTest, ReportKind, TestKind};
 
 /// Answer one device question about this machine, asked by radio `radio` (its
 /// roster id).
@@ -51,6 +51,19 @@ pub fn probe(req: DeviceProbe, radio: u32) -> ProbeAnswer {
             ProbeAnswer::PublicSdrs(Box::new(sdroxide_config::public_sdr_directory(refresh)))
         }
         DeviceProbe::Fobos => ProbeAnswer::Fobos(fobos_devices()),
+        DeviceProbe::Test(ProbeTest::Tci(address)) => {
+            // The one test that can say a failed connect as data, so the
+            // interface words it in the operator's language.
+            match sdroxide_tci::test_connection(&address, std::time::Duration::from_secs(3)) {
+                Ok(s) => ProbeAnswer::Test(TestKind::Tci, Ok(s)),
+                Err(sdroxide_tci::TestError::Connect(f)) => {
+                    ProbeAnswer::TestFailed(TestKind::Tci, f)
+                }
+                Err(sdroxide_tci::TestError::Other(m)) => {
+                    ProbeAnswer::Test(TestKind::Tci, Err(m))
+                }
+            }
+        }
         DeviceProbe::Test(t) => ProbeAnswer::Test(t.kind(), test(&t)),
         DeviceProbe::Report(k) => ProbeAnswer::Report(k, report(k, radio)),
         DeviceProbe::Relays => ProbeAnswer::Relays(sdroxide_relay::list()),
@@ -153,7 +166,9 @@ fn soapy_devices() -> Vec<sdroxide_types::SoapyDeviceInfo> {
 fn test(t: &ProbeTest) -> Result<String, String> {
     use std::time::Duration;
     match t {
-        ProbeTest::Tci(address) => sdroxide_tci::test_connection(address, Duration::from_secs(3)),
+        ProbeTest::Tci(address) => {
+            sdroxide_tci::test_connection(address, Duration::from_secs(3)).map_err(|e| e.to_string())
+        }
         ProbeTest::SpyServer(address) => {
             sdroxide_spyserver::test_connection(address, Duration::from_secs(3))
         }
