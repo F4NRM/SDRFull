@@ -14,7 +14,7 @@ use sdroxide_meshtastic::{TxParams, modulate};
 use sdroxide_radio::{Complex32, EngineConfig, IqSource, Result, start_engine};
 use sdroxide_types::{
     Band, Command, DeviceCaps, MeshtasticSettings, MeshtasticStatus, Mode, RadioConfig, RadioEvent,
-    RadioState, RxBlock, Vfo,
+    RadioState, Vfo,
 };
 
 const RATE: f64 = 2_000_000.0;

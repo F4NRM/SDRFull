@@ -871,6 +871,10 @@ impl SdroxideApp {
         if !choose && !reset {
             return;
         }
+        // A test must never open a native dialog (see `download::save_as`).
+        if cfg!(test) && choose {
+            return;
+        }
         let saved = if choose {
             let mut dialog = rfd::FileDialog::new();
             if let Some(parent) = self.recordings_dir.parent() {

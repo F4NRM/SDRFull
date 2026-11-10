@@ -16,6 +16,7 @@
 //! The installed desktop program has no equivalent here: its screen follows
 //! the system's own power settings, and [`status`] says that too.
 
+#[cfg(test)]
 use crate::i18n::tr;
 
 /// Where the lock stands, for the settings row to say.
@@ -40,6 +41,7 @@ pub enum WakeStatus {
 
 impl WakeStatus {
     /// The few words shown beside the setting.
+    #[cfg(test)]
     pub fn label(self) -> String {
         match self {
             Self::Off => String::new(),

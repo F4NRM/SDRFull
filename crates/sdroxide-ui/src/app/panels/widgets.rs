@@ -498,6 +498,11 @@ pub(in crate::app) fn snr_color(snr_db: i16) -> Color32 {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(in crate::app) fn pick_image(inbox: Arc<Mutex<Option<Vec<u8>>>>) {
+    // A test must never open a native dialog: nobody is there to answer it, and
+    // a person watching the run is left to guess what to click.
+    if cfg!(test) {
+        return;
+    }
     std::thread::Builder::new()
         .name("sdroxide-pick".into())
         .spawn(move || {

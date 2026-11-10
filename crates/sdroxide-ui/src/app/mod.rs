@@ -597,15 +597,6 @@ pub struct SdroxideApp {
     /// Take a SpyServer in its VFO+FFT shape rather than wideband. No effect on
     /// a KiwiSDR, which has only one shape.
     public_sdr_low_bw: bool,
-    /// The receiver whose **USE** is waiting to be confirmed.
-    ///
-    /// USE replaces the radio the operator is on, and a radio is a station's
-    /// worth of setting up — issue #254 is somebody losing an IC-9700 to a
-    /// SpyServer on one click, with the tab still carrying the Icom's name
-    /// afterwards. So the row's button arms this instead of acting, and the
-    /// window puts the choice, and the way out of it, in front of the list.
-    /// `None` is the ordinary state.
-    public_sdr_confirm: Option<Box<sdroxide_types::PublicSdrEntry>>,
     /// Public-SDR receivers a connect to has failed on this session, keyed by
     /// their address, so a row that will not answer is shown greyed with the
     /// reason instead of offered again.
@@ -2330,7 +2321,6 @@ impl SdroxideApp {
             public_sdr_near_kiwi: false,
             public_sdr_in_band: false,
             public_sdr_low_bw: false,
-            public_sdr_confirm: None,
             dead_public_sdrs: std::collections::HashSet::new(),
             public_sdr_favourites: ui_settings.public_sdr_favourites.iter().cloned().collect(),
             public_sdr_mine_only: false,
@@ -3966,7 +3956,7 @@ mod tests {
         crate::app::persist::persist_ui_settings(&settings);
 
         let ctx = egui::Context::default();
-        let mut make = |radio: u32| {
+        let make = |radio: u32| {
             let controller: Box<dyn RadioController> = Box::new(RecordingController::default());
             SdroxideApp::new_tab(&ctx, None, None, controller, radio, true)
         };
