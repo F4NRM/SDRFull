@@ -2385,8 +2385,8 @@ use sdroxide_types::{
 /// v293: **weather fax: undo the auto-slant.** [`sdroxide_types::Command`]
 /// gains `WefaxRevertSlant`, appended, with no payload. A v292 station does
 /// not know the variant. `PROTO_VERSION` 292 → 293, `VERSION_BYTE` 0x70 → 0x71.
-pub const PROTO_VERSION: u16 = 293;
-const VERSION_BYTE: u8 = 0x71;
+pub const PROTO_VERSION: u16 = 294;
+const VERSION_BYTE: u8 = 0x72;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3693,7 +3693,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (293, 0x71));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3749,7 +3749,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (293, 0x71));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3770,7 +3770,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (293, 0x71));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -3888,13 +3888,16 @@ mod tests {
         // (PROTO_VERSION 264 → 265). `HpsdrConfig` sits inside `RadioConfig`,
         // so this moves what follows it: that is what the bump is for.
         //
+        // 906 since the band-plan overlay switch and plan name were appended at
+        // the tail (PROTO_VERSION 293 → 294).
+        //
         // 904 since the receive band list (PROTO_VERSION 274 → 275), the plan
         // fingerprint its confirmation is made against (275 → 276) and the radio's
         // own band plan (277 → 278) were appended at its tail. The pin had not
         // been moved since 265; this is the conscious edit those bumps owed it.
         assert_eq!(
             (radio.len(), fnv1a(&radio)),
-            (904, 13_554_492_482_937_614_926),
+            (906, 16_099_045_647_962_863_742),
             "RadioConfig's wire layout shifted — append fields, never insert them"
         );
         // 316 since the two Dynamic DNS fields were appended at the end
@@ -3902,7 +3905,7 @@ mod tests {
         // struct it knows and the two new bytes are simply not there.
         assert_eq!(
             (net.len(), fnv1a(&net)),
-            (316, 9_696_214_884_124_040_590),
+            (318, 13_712_061_205_942_838_718),
             "NetworkConfig's wire layout shifted — append fields, never insert them"
         );
     }
@@ -4273,6 +4276,8 @@ mod tests {
                 sdroxide_types::Band::Gen,
             ]),
             rx_bands_confirmed: true,
+            band_plan_overlay_enabled: true,
+            band_plan_overlay: Some("bandplan-nl".into()),
             ..RadioConfig::default()
         };
 
@@ -4535,7 +4540,7 @@ mod tests {
     fn the_wefax_revert_slant_is_appended_last() {
         let last = encode(&ClientMsg::Command(Command::WefaxRevertSlant)).unwrap();
         let before = encode(&ClientMsg::Command(Command::ImportMemoriesFiled(vec![]))).unwrap();
-        assert_eq!(last[0], 0x71);
+        assert_eq!(last[0], 0x72);
         // `before` is the version, the message and variant tags, then the empty
         // list's length byte; `last` is the same tags with the variant one on.
         // The variant number is a varint: its low byte is one more, the rest
@@ -4827,7 +4832,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (293, 0x71));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

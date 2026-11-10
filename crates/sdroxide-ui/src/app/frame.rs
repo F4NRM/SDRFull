@@ -806,17 +806,24 @@ impl eframe::App for SdroxideApp {
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         // This radio's band plan for everything this frame draws and decides.
         let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
-        // Overlay plan global: keep in sync with the settings switch.
-        // Overlay state now lives in the radio config (persisted).
-        let (enabled, name) = self.radio_cfg.as_ref().map(|c| (c.band_plan_overlay_enabled, c.band_plan_overlay.clone())).unwrap_or((false, None));
+        // Overlay state lives in the radio config (persisted).
+        let (enabled, name) = self
+            .radio_cfg
+            .as_ref()
+            .map(|c| (c.band_plan_overlay_enabled, c.band_plan_overlay.clone()))
+            .unwrap_or((false, None));
         crate::widgets::bandplan::set_overlay_enabled(enabled);
         if enabled {
             if let Some(name) = name {
                 if let Some(dir) = crate::app::persist::band_plans_dir() {
                     let path = dir.join(format!("{}.json", name));
                     if let Ok(json) = std::fs::read_to_string(&path) {
-                        if let Ok(plan) = serde_json::from_str::<sdroxide_types::BandPlan>(&json) {
-                            crate::widgets::bandplan::set_overlay(Some(sdroxide_types::leak_band_plan(plan)));
+                        if let Ok(plan) =
+                            serde_json::from_str::<sdroxide_types::BandPlan>(&json)
+                        {
+                            crate::widgets::bandplan::set_overlay(Some(
+                                sdroxide_types::leak_band_plan(plan),
+                            ));
                         }
                     }
                 }
@@ -4759,18 +4766,28 @@ impl SdroxideApp {
                     // with every bundle: the list this client chooses from.
                     self.band_plans = c.band_plans.clone();
                     self.band_plan_name = c.band_plan_name.clone();
-                    // Overlay plan: load from the bandplans folder when enabled.
-                    // Overlay state now comes from the radio config (persisted).
-                    let enabled = self.radio_cfg.as_ref().map(|c| c.band_plan_overlay_enabled).unwrap_or(false);
-                    let name = self.radio_cfg.as_ref().and_then(|c| c.band_plan_overlay.clone());
+                    // Overlay state comes from the radio config (persisted).
+                    let enabled = self
+                        .radio_cfg
+                        .as_ref()
+                        .map(|c| c.band_plan_overlay_enabled)
+                        .unwrap_or(false);
+                    let name = self
+                        .radio_cfg
+                        .as_ref()
+                        .and_then(|c| c.band_plan_overlay.clone());
                     crate::widgets::bandplan::set_overlay_enabled(enabled);
                     if enabled {
                         if let Some(name) = name {
                             if let Some(dir) = crate::app::persist::band_plans_dir() {
                                 let path = dir.join(format!("{}.json", name));
                                 if let Ok(json) = std::fs::read_to_string(&path) {
-                                    if let Ok(plan) = serde_json::from_str::<sdroxide_types::BandPlan>(&json) {
-                                        crate::widgets::bandplan::set_overlay(Some(sdroxide_types::leak_band_plan(plan)));
+                                    if let Ok(plan) =
+                                        serde_json::from_str::<sdroxide_types::BandPlan>(&json)
+                                    {
+                                        crate::widgets::bandplan::set_overlay(Some(
+                                            sdroxide_types::leak_band_plan(plan),
+                                        ));
                                     }
                                 }
                             }

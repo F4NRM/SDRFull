@@ -3528,17 +3528,30 @@ impl SdroxideApp {
 
                 // Bandplan Waterfall Overlay (above RX/TX).
                 {
-                    let cfg = io.radio_edit.get_or_insert_with(sdroxide_types::RadioConfig::default);
-                    ui.label(tr!("settings-radio-bandplan-waterfall-overlay")).on_hover_text(tr!("settings-radio-bandplan-waterfall-overlay-hint"));
-                    ui.checkbox(&mut cfg.band_plan_overlay_enabled, tr!("settings-radio-bandplan-waterfall-overlay-enable"));
+                    let cfg =
+                        io.radio_edit.get_or_insert_with(sdroxide_types::RadioConfig::default);
+                    ui.label(tr!("settings-radio-bandplan-waterfall-overlay"))
+                        .on_hover_text(tr!("settings-radio-bandplan-waterfall-overlay-hint"));
+                    ui.checkbox(
+                        &mut cfg.band_plan_overlay_enabled,
+                        tr!("settings-radio-bandplan-waterfall-overlay-enable"),
+                    );
                     if cfg.band_plan_overlay_enabled {
                         let mut choice = cfg.band_plan_overlay.clone();
                         egui::ComboBox::from_id_salt("overlay-band-plan")
                             .selected_text(choice.as_deref().unwrap_or("none"))
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut choice, None, tr!("settings-general-band-plan-built-in"));
+                                ui.selectable_value(
+                                    &mut choice,
+                                    None,
+                                    tr!("settings-general-band-plan-built-in"),
+                                );
                                 for p in &self.band_plans {
-                                    ui.selectable_value(&mut choice, Some(p.file.clone()), p.name.clone());
+                                    ui.selectable_value(
+                                        &mut choice,
+                                        Some(p.file.clone()),
+                                        p.name.clone(),
+                                    );
                                 }
                             });
                         cfg.band_plan_overlay = choice;
@@ -3548,7 +3561,11 @@ impl SdroxideApp {
                     ui.add_space(6.0);
                 }
 
-                self.settings_panadapter(ui, io.radio_edit.get_or_insert_with(sdroxide_types::RadioConfig::default));
+                self.settings_panadapter(
+                    ui,
+                    io.radio_edit
+                        .get_or_insert_with(sdroxide_types::RadioConfig::default),
+                );
 
                 // Transmit EQ: mic/modulator-path DSP, not a device feature.
                 // It applies the same way regardless of which interface is

@@ -9640,13 +9640,10 @@ wefax-revert-auto-slant = Scheefstand herstellen
 
 wefax-revert-auto-slant-hint = Maakt de automatische scheefstandcorrectie van deze kaart ongedaan: de klokcorrectie gaat terug naar de hier ingestelde waarde en de automatische correctie blijft uit tot de volgende kaart. Reeds ontvangen regels veranderen niet.
 
-settings-radio-overlay = Overlay
 
-settings-radio-overlay-hint = Toon een extra bandplan boven het IARU-plan in de waterfall
 
-settings-radio-overlay-enable = Overlay inschakelen
 
-settings-radio-bandplan-waterfall-overlay = Bandplan Waterfall Overlay
+settings-radio-bandplan-waterfall-overlay = Bandplan-waterfalloverlay
 
 settings-radio-bandplan-waterfall-overlay-hint = Toon een extra bandplan boven het IARU-plan in de waterfall
 

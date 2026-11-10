@@ -9824,7 +9824,8 @@ mod tests {
         let mut c = rx_list(&[], false);
         assert!(c.rx_block_reason(7_074_000.0).is_some());
         c.hide_tx = true;
-        for hz in [150_000.0, 1_000_000.0, 7_074_000.0, 14_200_000.0, 45_000_000.0, 1_090_000_000.0] {
+        for hz in [150_000.0, 1_000_000.0, 7_074_000.0, 14_200_000.0, 45_000_000.0, 1_090_000_000.0]
+        {
             assert_eq!(c.rx_block_reason(hz), None, "{hz}");
         }
         assert!(c.rx_band_allowed(Band::M40));

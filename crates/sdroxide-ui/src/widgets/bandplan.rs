@@ -496,16 +496,25 @@ pub fn overlay(p: &Painter, view: &ViewState, wf: &Rect, panel_below: bool) -> f
         Stroke::new(1.0, theme::scope().line),
     );
 
-    // Overlay: an extra band plan drawn as a second strip just above the main
-    // one, in a distinct colour. All bands of the selected plan are shown.
-    let enabled = *OVERLAY_ENABLED.read().unwrap();
-    let zoomed = span <= FINE_MAX_SPAN;
+    // Overlay: an extra band plan drawn in place of the IARU strip when
+    // zoomed in. All bands of the selected plan are shown.
     if enabled && zoomed && has_plan {
         if let Some(oplan) = *OVERLAY_PLAN.read().unwrap() {
             let region = sdroxide_types::region();
             for band in sdroxide_types::Band::ALL {
                 if let Some((lo, hi)) = oplan.region(region).edges(band) {
-                    draw_seg(p, view, wf, lo, hi, Color32::from_rgb(0, 200, 220), band.label(), base_top, base_h, 10.5 * fs);
+                    draw_seg(
+                        p,
+                        view,
+                        wf,
+                        lo,
+                        hi,
+                        Color32::from_rgb(0, 200, 220),
+                        band.label(),
+                        base_top,
+                        base_h,
+                        10.5 * fs,
+                    );
                 }
             }
         }

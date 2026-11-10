@@ -9659,11 +9659,8 @@ wefax-revert-auto-slant = Revert slant
 
 wefax-revert-auto-slant-hint = Undo the automatic slant correction on this chart: the clock trim goes back to the value set here and the automatic correction stays off until the next chart. Lines already received are not changed.
 
-settings-radio-overlay = Overlay
 
-settings-radio-overlay-hint = Show an extra band plan above the IARU plan in the waterfall
 
-settings-radio-overlay-enable = Enable overlay
 
 settings-radio-bandplan-waterfall-overlay = Bandplan Waterfall Overlay
 

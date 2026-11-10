@@ -9631,14 +9631,11 @@ wefax-revert-auto-slant = Anular inclinación
 
 wefax-revert-auto-slant-hint = Anula la corrección automática de inclinación en este mapa: el ajuste de reloj vuelve al valor indicado aquí y la corrección automática queda desactivada hasta el mapa siguiente. Las líneas ya recibidas no cambian.
 
-settings-radio-overlay = Superposicion
 
-settings-radio-overlay-hint = Mostrar un plan de banda adicional sobre el plan IARU en el waterfall
 
-settings-radio-overlay-enable = Activar superposicion
 
-settings-radio-bandplan-waterfall-overlay = Superposicion de plan de banda en el waterfall
+settings-radio-bandplan-waterfall-overlay = Superposición del plan de bandas en el waterfall
 
-settings-radio-bandplan-waterfall-overlay-hint = Mostrar un plan de banda adicional sobre el plan IARU en el waterfall
+settings-radio-bandplan-waterfall-overlay-hint = Mostrar un plan de bandas adicional sobre el plan IARU en el waterfall
 
-settings-radio-bandplan-waterfall-overlay-enable = Activar superposicion
+settings-radio-bandplan-waterfall-overlay-enable = Activar superposición

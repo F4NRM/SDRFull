@@ -9580,14 +9580,11 @@ wefax-revert-auto-slant = 傾き補正を戻す
 
 wefax-revert-auto-slant-hint = このチャートの自動傾き補正を取り消します。クロック調整はここで設定した値に戻り、次のチャートまで自動補正はオフのままです。すでに受信した行は変わりません。
 
-settings-radio-overlay = Obarei
 
-settings-radio-overlay-hint = Waterfall no IARU plan no ue ni tsuika no band plan o hyoji
 
-settings-radio-overlay-enable = Obarei o yuko ka
 
-settings-radio-bandplan-waterfall-overlay = Waterfall band plan overlay
+settings-radio-bandplan-waterfall-overlay = ウォーターフォール帯域計画オーバーレイ
 
-settings-radio-bandplan-waterfall-overlay-hint = Waterfall no IARU plan no ue ni tsuika no band plan o hyoji
+settings-radio-bandplan-waterfall-overlay-hint = ウォーターフォールの IARU 計画の上に追加の帯域計画を表示
 
-settings-radio-bandplan-waterfall-overlay-enable = Obarei o yuko ka
+settings-radio-bandplan-waterfall-overlay-enable = オーバーレイを有効にする

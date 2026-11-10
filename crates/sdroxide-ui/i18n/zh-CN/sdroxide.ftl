@@ -9570,14 +9570,11 @@ wefax-revert-auto-slant = 撤销倾斜校正
 
 wefax-revert-auto-slant-hint = 撤销此图的自动倾斜校正：时钟微调回到此处设置的值，自动校正在下一张图之前保持关闭。已接收的行不会改变。
 
-settings-radio-overlay = Diejia
 
-settings-radio-overlay-hint = Zai pubu tu IARU jihua shangfang xianshi e wai de pin duan jihua
 
-settings-radio-overlay-enable = Qiyong diejia
 
-settings-radio-bandplan-waterfall-overlay = Waterfall bandplan overlay
+settings-radio-bandplan-waterfall-overlay = 瀑布图频段计划叠加
 
-settings-radio-bandplan-waterfall-overlay-hint = Zai pubu tu IARU jihua shangfang xianshi e wai de pin duan jihua
+settings-radio-bandplan-waterfall-overlay-hint = 在瀑布图 IARU 计划上方显示额外的频段计划
 
-settings-radio-bandplan-waterfall-overlay-enable = Qiyong diejia
+settings-radio-bandplan-waterfall-overlay-enable = 启用叠加

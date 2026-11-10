@@ -9647,14 +9647,11 @@ wefax-revert-auto-slant = Отменить наклон
 
 wefax-revert-auto-slant-hint = Отменяет автоматическую коррекцию наклона для этой карты: подстройка тактовой частоты возвращается к значению, заданному здесь, и автокоррекция остаётся выключенной до следующей карты. Уже принятые строки не меняются.
 
-settings-radio-overlay = Nalozhenie
 
-settings-radio-overlay-hint = Pokazat dopolnitelnyj plan diapazonov poverkh plana IARU v vodopade
 
-settings-radio-overlay-enable = Vklyuchit nalozhenie
 
-settings-radio-bandplan-waterfall-overlay = Nalozhenie plana diapazonov na vodopad
+settings-radio-bandplan-waterfall-overlay = Наложение плана диапазонов на водопад
 
-settings-radio-bandplan-waterfall-overlay-hint = Pokazat dopolnitelnyj plan diapazonov poverkh plana IARU v vodopade
+settings-radio-bandplan-waterfall-overlay-hint = Показать дополнительный план диапазонов поверх плана IARU в водопаде
 
-settings-radio-bandplan-waterfall-overlay-enable = Vklyuchit nalozhenie
+settings-radio-bandplan-waterfall-overlay-enable = Включить наложение
