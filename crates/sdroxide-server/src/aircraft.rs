@@ -222,6 +222,7 @@ impl<K: PartialEq + Clone> PhotoStore<K> {
     }
 
     /// The keys whose pictures are held, oldest first.
+    #[cfg(test)]
     pub(crate) fn holds(&self) -> Vec<K> {
         self.lock().iter().map(|h| h.key.clone()).collect()
     }

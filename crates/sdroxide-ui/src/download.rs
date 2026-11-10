@@ -31,6 +31,11 @@ pub fn save(name: &str, data: &[u8]) {
 /// Save `data` under a suggested `name`, labelled as `mime`.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_as(name: &str, data: &[u8], _mime: Mime) {
+    // A test must never open a native dialog: nobody is there to answer it, and
+    // a person watching the run is left to guess what to click.
+    if cfg!(test) {
+        return;
+    }
     let data = data.to_vec();
     let name = name.to_string();
     // rfd's dialog is blocking; run it off the UI thread.
@@ -73,6 +78,11 @@ pub type BytesInbox = std::sync::Arc<std::sync::Mutex<Option<Result<Vec<u8>, Str
 /// format goes by, since a filter that knows only `.adi` hides an `.adif`.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load_text(filter_name: &str, exts: &[&str], inbox: LoadInbox) {
+    // A test must never open a native dialog: nobody is there to answer it, and
+    // a person watching the run is left to guess what to click.
+    if cfg!(test) {
+        return;
+    }
     let filter_name = filter_name.to_string();
     let exts: Vec<String> = exts.iter().map(|e| e.to_string()).collect();
     std::thread::Builder::new()

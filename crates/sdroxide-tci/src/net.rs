@@ -111,9 +111,6 @@ struct DevInner {
     /// because the radio itself has no IQ tap. Their `RxAudio` stream is then the
     /// only receive path there is, and this receiver runs as an audio-band one.
     audio_only: bool,
-    /// The audio stream's rate, which is what the samples are when
-    /// [`Self::audio_only`].
-    audio_rate_hz: f64,
     /// Independent receivers the rig announced (`trx_count:`). 1 when the
     /// server never said — every server names what it has, and refusing a
     /// receiver it never offered beats streaming silence from it.
@@ -337,7 +334,6 @@ impl TciDevice {
                 device,
                 sample_rate_hz: if audio_only { TX_RATE_HZ as f64 } else { iq_rate_hz },
                 audio_only,
-                audio_rate_hz: TX_RATE_HZ as f64,
                 trx_count,
                 tx_endpoint: Mutex::new(Some((tx_prod, telem_rx))),
                 attached: Mutex::new(std::collections::HashSet::new()),

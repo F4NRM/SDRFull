@@ -7,6 +7,12 @@
 //! its own, so the shared egui pass never sees them and the module runs on both
 //! targets.
 
+// The browser build reaches only part of this crate: the serial, MIDI, file
+// dialog, radio-control and other desktop-only code is compiled there and never
+// called. Real dead code is still reported by the native build, which reaches
+// all of it, so the browser build does not repeat the same warnings.
+#![cfg_attr(target_arch = "wasm32", allow(dead_code))]
+
 mod adsb_icons;
 mod adsb_map;
 mod airdata;

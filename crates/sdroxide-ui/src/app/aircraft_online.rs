@@ -191,6 +191,7 @@ pub(in crate::app) fn photo_url(peer_url: &str, icao: u32) -> Option<String> {
 /// Where the card being closed lets its thumbnail go:
 /// `DELETE {station}/aircraft-photo/{icao}`. Only that aircraft's, so a card
 /// opened a moment before keeps its own.
+#[cfg(test)]
 pub(in crate::app) fn photo_release_url(peer_url: &str, icao: u32) -> Option<String> {
     photo_url(peer_url, icao)
 }

@@ -475,7 +475,7 @@ impl SdroxideApp {
                 // Native file picker only — the browser client has no
                 // filesystem dialog here, same as the log-import button.
                 #[cfg(not(target_arch = "wasm32"))]
-                if clicked && let Some(path) = rfd::FileDialog::new().pick_file() {
+                if clicked && !cfg!(test) && let Some(path) = rfd::FileDialog::new().pick_file() {
                     cmds.push(Command::AtChatSendFile {
                         to: target.clone(),
                         path: path.to_string_lossy().into_owned(),

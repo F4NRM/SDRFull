@@ -11199,7 +11199,7 @@ mod tests {
                             ui.horizontal(|ui| {
                                 for label in row {
                                     let right = chip_stretched(ui, false, label, 0.0).rect.right();
-                                    chips.push((label.clone(), right - left));
+                                    chips.push((*label, right - left));
                                 }
                             });
                         }

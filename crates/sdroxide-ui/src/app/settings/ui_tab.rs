@@ -985,6 +985,10 @@ pub(in crate::app) fn pick_report_picture(
     std::thread::Builder::new()
         .name("sdroxide-report-pick".into())
         .spawn(move || {
+            // A test must never open a native dialog (see `download::save_as`).
+            if cfg!(test) {
+                return;
+            }
             if let Some(path) =
                 rfd::FileDialog::new().add_filter(tr!("widgets-image"), &["png", "jpg", "jpeg"]).pick_file()
             {

@@ -604,6 +604,7 @@ fn alsa_dev_index(pcm_id: &str) -> Option<u32> {
 
 /// Trim the "at usb-…, full speed" tail off an ALSA longname, leaving the
 /// readable "manufacturer model" part.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn prettify_longname(long: &str) -> String {
     long.split(" at ").next().unwrap_or(long).trim().to_string()
 }

@@ -89,10 +89,14 @@ pub(in crate::app) struct MorseState {
     key_pick: usize,
     #[cfg(all(not(target_arch = "wasm32"), target_os = "linux"))]
     key_error: Option<String>,
+#[cfg_attr(not(all(not(target_arch = "wasm32"), target_os = "linux")), allow(dead_code))]
     key_reverse: bool,
+    #[cfg_attr(not(all(not(target_arch = "wasm32"), target_os = "linux")), allow(dead_code))]
     send_target: Option<char>,
     /// (correct, target, sent) for the last character keyed.
+    #[cfg_attr(not(all(not(target_arch = "wasm32"), target_os = "linux")), allow(dead_code))]
     send_feedback: Option<(bool, char, char)>,
+    #[cfg_attr(not(all(not(target_arch = "wasm32"), target_os = "linux")), allow(dead_code))]
     send_last: String,
     /// Reads back what the operator's paddle actually sent, off the monitor
     /// tone (#569). Reused from the transmit path rather than written a second
@@ -242,6 +246,7 @@ impl MorseState {
     }
 
     /// Score a character the paddle just sent.
+    #[cfg_attr(not(all(not(target_arch = "wasm32"), target_os = "linux")), allow(dead_code))]
     fn on_sent(&mut self, text: String) {
         let got = text.chars().find(|c| !c.is_whitespace() && !c.is_ascii_control());
         self.send_last = text;

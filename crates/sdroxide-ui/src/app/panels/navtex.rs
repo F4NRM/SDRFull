@@ -162,17 +162,7 @@ fn has_content(st: &NavtexStatus) -> bool {
 ///
 /// Wrapped: on a phone the row is wider than the screen, and a plain one ran
 /// REV off its edge.
-#[allow(clippy::too_many_arguments)]
-pub(super) fn navtex_list_header(
-    ui: &mut egui::Ui,
-    st: &NavtexStatus,
-    status: Option<&sdroxide_types::DigiStatus>,
-    cmds: &mut Vec<Command>,
-    rev: bool,
-    cfg: &mut sdroxide_types::DigiConfig,
-    seeded: bool,
-) -> bool {
-    let mut flip = false;
+pub(super) fn navtex_list_header(ui: &mut egui::Ui, st: &NavtexStatus) {
     ui.horizontal_wrapped(|ui| {
         ui.label(RichText::new(tr!("navtex-messages")).strong().color(theme::CYAN()));
         ui.label(RichText::new(format!("{}", st.messages.len())).weak());
@@ -202,7 +192,6 @@ pub(super) fn navtex_list_header(
         )
         .on_hover_text(tr!("navtex-characters-whose-first-copy-was"));
     });
-    flip
 }
 
 impl SdroxideApp {
@@ -210,7 +199,7 @@ impl SdroxideApp {
         &mut self,
         ui: &mut egui::Ui,
         cmds: &mut Vec<Command>,
-        panel_h: f32,
+        _panel_h: f32,
     ) {
         let st: Option<NavtexStatus> = self.digi_status.as_ref().and_then(|s| s.navtex.clone());
         let Some(st) = st else {
@@ -293,7 +282,7 @@ impl SdroxideApp {
                     if pane.is_none() {
                         ui.set_width(ui.available_width() * 0.46);
                     }
-                    self.navtex_list(ui, cmds, &st, panel_h);
+                    self.navtex_list(ui, &st);
                 });
             }
             if pane.is_none() {
@@ -302,7 +291,7 @@ impl SdroxideApp {
             if pane.is_none_or(|p| p == 1) {
                 ui.vertical(|ui| {
                     ui.set_min_height(h);
-                    self.navtex_reading(ui, &st, panel_h);
+                    self.navtex_reading(ui, &st);
                 });
             }
         });
@@ -356,25 +345,9 @@ impl SdroxideApp {
     fn navtex_list(
         &mut self,
         ui: &mut egui::Ui,
-        cmds: &mut Vec<Command>,
         st: &NavtexStatus,
-        panel_h: f32,
     ) {
-        let rev_pressed = navtex_list_header(
-            ui,
-            st,
-            self.digi_status.as_ref(),
-            cmds,
-            self.digi_cfg_edit.navtex_reverse,
-            &mut self.digi_cfg_edit,
-            self.digi_cfg_seeded,
-        );
-        if rev_pressed {
-            self.digi_cfg_edit.navtex_reverse = !self.digi_cfg_edit.navtex_reverse;
-            if self.digi_cfg_seeded {
-                cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
-            }
-        }
+        navtex_list_header(ui, st);
 
         egui::ScrollArea::vertical()
             .id_salt("navtex-list")
@@ -427,7 +400,7 @@ impl SdroxideApp {
     }
 
     /// The message being read: the one selected, or the one arriving.
-    fn navtex_reading(&mut self, ui: &mut egui::Ui, st: &NavtexStatus, panel_h: f32) {
+    fn navtex_reading(&mut self, ui: &mut egui::Ui, st: &NavtexStatus) {
         let selected: Option<&NavtexMessage> =
             self.navtex_open.and_then(|i| st.messages.get(i)).or(st.live.as_ref());
         ui.horizontal(|ui| match selected {

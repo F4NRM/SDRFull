@@ -114,10 +114,6 @@ struct StanagRx {
     shown: std::collections::VecDeque<String>,
     /// Samples since the last decode.
     since: usize,
-    /// The reference decoder works at 12 kHz, five samples a symbol; this path
-    /// carries the modem's own 8 kHz.
-    rs: Option<sdroxide_dsp::MonoResampler>,
-    up: Vec<f32>,
 }
 
 impl StanagRx {
@@ -131,13 +127,11 @@ impl StanagRx {
             buf: Vec::new(),
             shown: std::collections::VecDeque::new(),
             since: 0,
-            rs: sdroxide_dsp::MonoResampler::new(MODEM_RATE, 12_000.0),
-            up: Vec::new(),
         }
     }
 
     fn process(&mut self, audio: &[f32]) -> String {
-        let mut out = String::new();
+        let out = String::new();
         // The receiver's own reading is the **uncoded** one. On a coded
         // transmission it is letters made of noise, so once the reference decoder
         // has read anything at all this stops being shown: a console that prints

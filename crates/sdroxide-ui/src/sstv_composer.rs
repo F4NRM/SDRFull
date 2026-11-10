@@ -408,6 +408,7 @@ pub(crate) fn claim(edit: &mut Edit, presets: &ImagePresets, slot: usize) -> boo
 }
 
 /// Give the slot back to the engine.
+#[cfg(test)]
 pub(crate) fn release(edit: &mut Edit, presets: &ImagePresets, sent: &Edit) -> Option<Command> {
     let cmd = pending(edit, presets, sent);
     *edit = None;

@@ -571,6 +571,7 @@ pub(in crate::app) fn broadcast_stations_settings(
                     _ => tr!("settings-net-eibi-file-hint"),
                 })
                 .clicked()
+                && !cfg!(test)
                 && let Some(path) = rfd::FileDialog::new()
                     .add_filter(tr!("settings-net-filter-aoki"), &["zip", "txt"])
                     .add_filter(tr!("settings-net-filter-eibi"), &["csv"])
@@ -642,6 +643,10 @@ pub(in crate::app) fn broadcast_stations_settings(
 /// disagree about what a file is.
 #[cfg(not(target_arch = "wasm32"))]
 pub(in crate::app) fn import_schedule_dialog() -> Option<Result<String, String>> {
+    // A test must never open a native dialog (see `download::save_as`).
+    if cfg!(test) {
+        return None;
+    }
     let path = rfd::FileDialog::new()
         .add_filter(tr!("settings-net-filter-station-lists"), &["csv", "txt", "json", "zip"])
         .pick_file()?;
@@ -667,6 +672,7 @@ pub(in crate::app) fn import_button(
     peer: Option<&str>,
 ) -> Option<Result<String, String>> {
     #[cfg(target_arch = "wasm32")]
+    #[allow(unused_mut)]
     let mut done = poll_schedule_import(peer);
     #[cfg(not(target_arch = "wasm32"))]
     let mut done: Option<Result<String, String>> = {
