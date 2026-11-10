@@ -9595,3 +9595,9 @@ publicsdr-near-kiwi = 近くのKIWI
 publicsdr-near-kiwi-tip = ロケーターに最も近く、空きチャンネルのあるKiwiSDR受信機を近い順に{ $n }台だけ表示します。CAT無線機のバンド表示として使えます。
 
 publicsdr-near-kiwi-no-grid = 近くのKIWIにはロケーターが必要です。局の設定で入力すると、受信機を距離順に並べられます。
+
+test-tci-connect-refused = { $address } への接続: { $detail } — そのポートで TCI を提供しているものがありません。TCI は無線機本体ではなく SDR プログラム（ExpertSDR3、Thetis）が提供するため、設定で TCI を有効にして起動している必要があります。MB1 のような単体機では、無線機の内部で動いているコピーが該当します
+
+test-tci-connect-timed-out = { $address } への接続: { $detail } — そのアドレスから応答がありません。ホストを確認し、ファイアウォールが妨げていないか確認してください。TCI を提供する SDR プログラム（ExpertSDR3、Thetis）が TCI を有効にして起動していない場合、閉じたポートは Windows ではこのように見えることがあります
+
+test-connect-failed = { $address } への接続: { $detail }

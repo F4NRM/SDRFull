@@ -9673,3 +9673,9 @@ publicsdr-near-kiwi = NEAR KIWI
 publicsdr-near-kiwi-tip = Only the { $n } KiwiSDR receivers closest to your locator that have a free channel, nearest first. Use one as the band view of a CAT radio.
 
 publicsdr-near-kiwi-no-grid = NEAR KIWI needs your locator: set it in the station settings to rank receivers by distance.
+
+test-tci-connect-refused = connect { $address }: { $detail } — nothing is serving TCI on that port. TCI comes from the SDR program — ExpertSDR3, Thetis — and not from the radio itself, so it has to be running with TCI switched on in its settings. On a standalone set such as an MB1 that is the copy running inside the radio
+
+test-tci-connect-timed-out = connect { $address }: { $detail } — no answer at that address. Check the host, and that a firewall is not in the way. If the SDR program that serves TCI (ExpertSDR3, Thetis) is not running with TCI switched on, a closed port can look like this on Windows
+
+test-connect-failed = connect { $address }: { $detail }
