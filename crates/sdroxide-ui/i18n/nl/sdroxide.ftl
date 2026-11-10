@@ -9648,3 +9648,5 @@ settings-radio-bandplan-waterfall-overlay = Bandplan-waterfalloverlay
 settings-radio-bandplan-waterfall-overlay-hint = Toon een extra bandplan boven het IARU-plan in de waterfall
 
 settings-radio-bandplan-waterfall-overlay-enable = Overlay inschakelen
+
+settings-radio-bandplan-overlay-informational = De overlay is alleen informatief. TX en RX blijven volgens het IARU-bandplan gaan.

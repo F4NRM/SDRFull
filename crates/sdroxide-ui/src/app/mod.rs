@@ -324,6 +324,7 @@ pub struct SdroxideApp {
     /// Persistent, non-fatal operator notice (e.g. radio audio input
     /// unavailable / mono card selected for IQ). Shown as a warning banner.
     radio_notice: Option<String>,
+    overlay_notice_shown: bool,
     /// Why transmit is off at the dial: the band is not enabled (see
     /// `tx_bands.rs`). A warning, dismissable; the dial is never moved.
     tx_band_msg: Option<String>,
@@ -2226,6 +2227,7 @@ impl SdroxideApp {
             retry_at: None,
             retry_backoff: RETRY_MIN_S,
             radio_notice: None,
+            overlay_notice_shown: false,
             tx_band_msg: None,
             tx_press_refused_at: None,
             tx_engine_refusal: None,

@@ -9578,3 +9578,5 @@ settings-radio-bandplan-waterfall-overlay = 瀑布图频段计划叠加
 settings-radio-bandplan-waterfall-overlay-hint = 在瀑布图 IARU 计划上方显示额外的频段计划
 
 settings-radio-bandplan-waterfall-overlay-enable = 启用叠加
+
+settings-radio-bandplan-overlay-informational = 叠加仅供信息参考。发射和接收仍遵循 IARU 频段计划。

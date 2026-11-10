@@ -9640,3 +9640,5 @@ settings-radio-bandplan-waterfall-overlay = Waterfall bant planı kaplaması
 settings-radio-bandplan-waterfall-overlay-hint = IARU planının üzerinde ek bir bant planı göster
 
 settings-radio-bandplan-waterfall-overlay-enable = Kaplamayı etkinleştir
+
+settings-radio-bandplan-overlay-informational = Kaplama yalnızca bilgilendiricidir. TX ve RX hâlâ IARU band planına göre çalışır.

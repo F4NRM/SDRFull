@@ -12575,6 +12575,23 @@ impl Engine {
             // screen asking for the change may be in another country.
             SetRadioConfig { cfg, reopen } => {
                 let mut cfg = cfg;
+                // Resolve the waterfall overlay plan on this machine, so a
+                // remote or browser client gets the bands rather than a name.
+                if cfg.band_plan_overlay_enabled {
+                    if let Some(name) = cfg.band_plan_overlay.clone() {
+                        match sdroxide_config::read_band_plan(&name) {
+                            Ok(plan) => cfg.band_plan_overlay_plan = Some(plan),
+                            Err(e) => {
+                                warn!("overlay band plan {name}: {e}");
+                                cfg.band_plan_overlay_plan = None;
+                            }
+                        }
+                    } else {
+                        cfg.band_plan_overlay_plan = None;
+                    }
+                } else {
+                    cfg.band_plan_overlay_plan = None;
+                }
                 cfg.drop_other_band();
                 self.vet_band_confirmations(&mut cfg);
                 if let Err(e) = self.store.save_radio_config(&cfg) {

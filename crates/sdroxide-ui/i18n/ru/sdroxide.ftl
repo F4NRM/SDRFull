@@ -9655,3 +9655,5 @@ settings-radio-bandplan-waterfall-overlay = Наложение плана диа
 settings-radio-bandplan-waterfall-overlay-hint = Показать дополнительный план диапазонов поверх плана IARU в водопаде
 
 settings-radio-bandplan-waterfall-overlay-enable = Включить наложение
+
+settings-radio-bandplan-overlay-informational = Наложение только информативное. TX и RX по-прежнему следуют плану IARU.

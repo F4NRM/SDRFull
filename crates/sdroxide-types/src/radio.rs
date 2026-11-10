@@ -7952,6 +7952,10 @@ pub struct RadioConfig {
     /// The extra band plan file to overlay.
     #[serde(default)]
     pub band_plan_overlay: Option<String>,
+    /// The overlay plan's content, resolved on the engine's machine so a
+    /// remote or browser client draws the same bands.
+    #[serde(default)]
+    pub band_plan_overlay_plan: Option<crate::BandPlan>,
 }
 
 /// Why [`RadioConfig::rx_block_reason`] refuses a frequency.

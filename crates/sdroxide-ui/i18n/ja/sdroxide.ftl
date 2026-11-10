@@ -9588,3 +9588,5 @@ settings-radio-bandplan-waterfall-overlay = ウォーターフォール帯域計
 settings-radio-bandplan-waterfall-overlay-hint = ウォーターフォールの IARU 計画の上に追加の帯域計画を表示
 
 settings-radio-bandplan-waterfall-overlay-enable = オーバーレイを有効にする
+
+settings-radio-bandplan-overlay-informational = オーバーレイは情報表示のみです。送受信は引き続き IARU バンドプランに従います。
