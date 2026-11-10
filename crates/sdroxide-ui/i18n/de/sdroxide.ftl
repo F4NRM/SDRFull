@@ -9639,3 +9639,9 @@ publicsdr-near-kiwi = KIWI NAH
 publicsdr-near-kiwi-tip = Nur die { $n } KiwiSDR-Empfänger, die Ihrem Locator am nächsten sind und einen freien Kanal haben, der nächste zuerst. Als Bandansicht für ein CAT-Funkgerät verwendbar.
 
 publicsdr-near-kiwi-no-grid = KIWI NAH braucht Ihren Locator: Tragen Sie ihn in den Stationseinstellungen ein, um die Empfänger nach Entfernung zu ordnen.
+
+test-tci-connect-refused = Verbindung zu { $address }: { $detail } — auf diesem Port bietet nichts TCI an. TCI kommt vom SDR-Programm — ExpertSDR3, Thetis — und nicht vom Funkgerät selbst; es muss laufen und TCI muss in den Einstellungen aktiviert sein. Bei einem eigenständigen Gerät wie dem MB1 ist das die Kopie, die im Funkgerät läuft
+
+test-tci-connect-timed-out = Verbindung zu { $address }: { $detail } — keine Antwort unter dieser Adresse. Prüfen Sie den Host und ob eine Firewall im Weg ist. Läuft das SDR-Programm, das TCI anbietet (ExpertSDR3, Thetis), nicht mit aktiviertem TCI, kann ein geschlossener Port unter Windows so aussehen
+
+test-connect-failed = Verbindung zu { $address }: { $detail }

@@ -9585,3 +9585,9 @@ publicsdr-near-kiwi = 附近KIWI
 publicsdr-near-kiwi-tip = 仅显示离您的定位符最近且有空闲通道的 { $n } 台 KiwiSDR 接收机，最近的在前。可用作 CAT 电台的频段视图。
 
 publicsdr-near-kiwi-no-grid = “附近KIWI”需要您的定位符：请在电台设置中填写，以便按距离对接收机排序。
+
+test-tci-connect-refused = 连接 { $address }：{ $detail } — 该端口上没有任何程序提供 TCI。TCI 由 SDR 程序（ExpertSDR3、Thetis）提供，而不是由电台本身提供，因此该程序必须在运行，并且已在其设置中开启 TCI。对于 MB1 这类独立机型，指的是电台内部运行的那份程序
+
+test-tci-connect-timed-out = 连接 { $address }：{ $detail } — 该地址没有应答。请检查主机，并确认防火墙没有拦截。如果提供 TCI 的 SDR 程序（ExpertSDR3、Thetis）没有在开启 TCI 的状态下运行，在 Windows 上关闭的端口可能会表现成这样
+
+test-connect-failed = 连接 { $address }：{ $detail }

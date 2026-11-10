@@ -9638,3 +9638,9 @@ publicsdr-near-kiwi = KIWI CERCANO
 publicsdr-near-kiwi-tip = Solo los { $n } receptores KiwiSDR más cercanos a su locator que tienen un canal libre, el más cercano primero. Úselo como vista de banda de una radio CAT.
 
 publicsdr-near-kiwi-no-grid = KIWI CERCANO necesita su locator: indíquelo en los ajustes de la estación para ordenar los receptores por distancia.
+
+test-tci-connect-refused = conexión a { $address }: { $detail } — nada sirve TCI en ese puerto. TCI lo ofrece el programa SDR — ExpertSDR3, Thetis — y no la radio en sí, así que debe estar en marcha con TCI activado en sus ajustes. En un equipo autónomo como un MB1 es la copia que se ejecuta dentro de la radio
+
+test-tci-connect-timed-out = conexión a { $address }: { $detail } — sin respuesta en esa dirección. Compruebe el host y que un cortafuegos no lo bloquee. Si el programa SDR que sirve TCI (ExpertSDR3, Thetis) no está en marcha con TCI activado, un puerto cerrado puede verse así en Windows
+
+test-connect-failed = conexión a { $address }: { $detail }

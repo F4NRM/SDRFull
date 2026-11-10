@@ -9647,3 +9647,9 @@ publicsdr-near-kiwi = YAKIN KIWI
 publicsdr-near-kiwi-tip = Locator'ınıza en yakın, boş kanalı olan { $n } KiwiSDR alıcısı, en yakın olan önce. Birini bir CAT telsizinin bant görünümü olarak kullanın.
 
 publicsdr-near-kiwi-no-grid = YAKIN KIWI için locator'ınız gerekir: alıcıları mesafeye göre sıralamak için istasyon ayarlarında girin.
+
+test-tci-connect-refused = { $address } adresine bağlantı: { $detail } — o portta TCI sunan hiçbir şey yok. TCI, telsizin kendisinden değil SDR programından — ExpertSDR3, Thetis — gelir; bu yüzden programın çalışıyor ve ayarlarında TCI'nin açık olması gerekir. MB1 gibi tek başına çalışan bir cihazda bu, telsizin içinde çalışan kopyadır
+
+test-tci-connect-timed-out = { $address } adresine bağlantı: { $detail } — bu adresten yanıt yok. Ana bilgisayarı ve bir güvenlik duvarının engellemediğini kontrol edin. TCI sunan SDR programı (ExpertSDR3, Thetis) TCI açık olarak çalışmıyorsa, kapalı bir port Windows'ta böyle görünebilir
+
+test-connect-failed = { $address } adresine bağlantı: { $detail }

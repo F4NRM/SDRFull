@@ -259,6 +259,20 @@ const NOTE_POINTER_CHARS: usize = 64;
 /// A note already short enough is returned unchanged, which is what keeps the
 /// short ones — "Changing either reopens the radio." — reading exactly as they
 /// did.
+/// The sentence for a failed connect in the operator's language. The address is
+/// passed pre-joined (`host:port`) so the port is never run through number
+/// formatting, and `detail` is the system's own message, left as it came.
+fn connect_failure_text(f: &sdroxide_types::ConnectFailure) -> String {
+    use sdroxide_types::ConnectWhy as W;
+    let address = format!("{}:{}", f.host, f.port);
+    let detail = f.detail.as_str();
+    match f.why {
+        W::Refused => tr!("test-tci-connect-refused", address = address, detail = detail),
+        W::TimedOut => tr!("test-tci-connect-timed-out", address = address, detail = detail),
+        W::Other => tr!("test-connect-failed", address = address, detail = detail),
+    }
+}
+
 fn pointer(text: &str) -> String {
     // The first sentence: up to a full stop that ends a word, so "144-146" and
     // a decimal point are not mistaken for one.
@@ -1616,6 +1630,11 @@ impl SdroxideApp {
             // instead of leaving stale receivers in it.
             A::PublicSdrs(d) => self.public_sdrs = Some(*d),
             A::Test(kind, result) => self.set_test_outcome(kind, TestOutcome::Done(result)),
+            // A failed connect arrives as data and is worded here, in the
+            // operator's language (see `ProbeAnswer::TestFailed`).
+            A::TestFailed(kind, f) => {
+                self.set_test_outcome(kind, TestOutcome::Done(Err(connect_failure_text(&f))))
+            }
             // Straight to the clipboard, which is what the button that asked
             // for it promised — from here it goes into a bug report.
             //

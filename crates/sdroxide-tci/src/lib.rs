@@ -25,6 +25,7 @@ pub mod server;
 use std::net::{TcpStream, ToSocketAddrs};
 use std::time::{Duration, Instant};
 
+use sdroxide_types::{ConnectFailure, ConnectWhy};
 use tungstenite::{HandshakeError, Message, WebSocket};
 
 pub use net::{TX_RATE_HZ, TciDevice, TciError, TciHandle, TciRx, TciUpdate};
@@ -95,46 +96,108 @@ pub(crate) fn split_addr(address: &str) -> Result<(String, u16), String> {
 /// broken radio or a wrong address, so the likeliest cause goes in the message.
 ///
 /// Only for the two failures that mean it. A refusal is an answer — something is
-/// at that address and nothing is serving TCI there — and a timeout is the
-/// absence of one, which is a different problem with a different fix.
+/// at that address and nothing is serving TCI there. A timeout is the absence of
+/// one, so the host and the firewall come first; but Windows reports a closed
+/// port as a timeout when the wait is shorter than its SYN retries (about two
+/// seconds on the loopback), so the SDR program is named there too.
 pub(crate) fn connect_socket(
     sockaddr: &std::net::SocketAddr,
     host: &str,
     port: u16,
     timeout: Duration,
 ) -> Result<TcpStream, String> {
-    TcpStream::connect_timeout(sockaddr, timeout).map_err(|e| {
-        let why = match e.kind() {
-            std::io::ErrorKind::ConnectionRefused => Some(
-                "nothing is serving TCI on that port. TCI comes from the SDR program — \
-                 ExpertSDR3, Thetis — and not from the radio itself, so it has to be running \
-                 with TCI switched on in its settings. On a standalone set such as an MB1 \
-                 that is the copy running inside the radio",
-            ),
-            std::io::ErrorKind::TimedOut => Some(
-                "no answer at that address. Check the host, and that a firewall is not in \
-                 the way",
-            ),
-            _ => None,
-        };
-        match why {
-            Some(w) => format!("connect {host}:{port}: {e} — {w}"),
-            None => format!("connect {host}:{port}: {e}"),
+    connect_socket_failure(sockaddr, host, port, timeout).map_err(|f| connect_message(&f))
+}
+
+/// [`connect_socket`] with the failure as data, for the caller that has the
+/// operator's language and says it itself (the connection test).
+pub(crate) fn connect_socket_failure(
+    sockaddr: &std::net::SocketAddr,
+    host: &str,
+    port: u16,
+    timeout: Duration,
+) -> Result<TcpStream, ConnectFailure> {
+    TcpStream::connect_timeout(sockaddr, timeout).map_err(|e| connect_failure(host, port, &e))
+}
+
+/// Classify a failed connect: the two failures that have advice attached, and
+/// the rest.
+pub(crate) fn connect_failure(host: &str, port: u16, e: &std::io::Error) -> ConnectFailure {
+    let why = match e.kind() {
+        std::io::ErrorKind::ConnectionRefused => ConnectWhy::Refused,
+        std::io::ErrorKind::TimedOut => ConnectWhy::TimedOut,
+        _ => ConnectWhy::Other,
+    };
+    ConnectFailure { why, host: host.to_string(), port, detail: e.to_string() }
+}
+
+/// Why a connection test failed: at the connect (data, translated by the
+/// interface) or anywhere else (a sentence, English as before).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TestError {
+    Connect(ConnectFailure),
+    Other(String),
+}
+
+impl std::fmt::Display for TestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TestError::Connect(c) => f.write_str(&connect_message(c)),
+            TestError::Other(m) => f.write_str(m),
         }
-    })
+    }
+}
+
+impl From<String> for TestError {
+    fn from(m: String) -> Self {
+        TestError::Other(m)
+    }
+}
+
+/// The sentence for a failed connection, kept apart from the socket so each
+/// case can be tested without having to provoke it on the network.
+#[cfg(test)]
+pub(crate) fn connect_error(host: &str, port: u16, e: &std::io::Error) -> String {
+    connect_message(&connect_failure(host, port, e))
+}
+
+/// The English sentence for a [`ConnectFailure`]: what the log and the engine's
+/// error channel carry. The settings dialog says the same in its own language.
+pub(crate) fn connect_message(f: &ConnectFailure) -> String {
+    let (host, port, e) = (&f.host, f.port, &f.detail);
+    let why = match f.why {
+        ConnectWhy::Refused => Some(
+            "nothing is serving TCI on that port. TCI comes from the SDR program — \
+             ExpertSDR3, Thetis — and not from the radio itself, so it has to be running \
+             with TCI switched on in its settings. On a standalone set such as an MB1 \
+             that is the copy running inside the radio",
+        ),
+        ConnectWhy::TimedOut => Some(
+            "no answer at that address. Check the host, and that a firewall is not in \
+             the way. If the SDR program that serves TCI (ExpertSDR3, Thetis) is not \
+             running with TCI switched on, a closed port can look like this on Windows",
+        ),
+        ConnectWhy::Other => None,
+    };
+    match why {
+        Some(w) => format!("connect {host}:{port}: {e} — {w}"),
+        None => format!("connect {host}:{port}: {e}"),
+    }
 }
 
 /// Test a TCI server: connect, read the status burst until `ready;` (or
 /// `timeout`), and return a one-line summary (device / protocol / IQ rates) or
 /// an error message.
-pub fn test_connection(address: &str, timeout: Duration) -> Result<String, String> {
+pub fn test_connection(address: &str, timeout: Duration) -> Result<String, TestError> {
     let (host, port) = split_addr(address)?;
     let sockaddr = (host.as_str(), port)
         .to_socket_addrs()
         .map_err(|e| format!("resolve {host}:{port}: {e}"))?
         .next()
         .ok_or_else(|| format!("no address for {host}:{port}"))?;
-    let stream = connect_socket(&sockaddr, &host, port, timeout.min(Duration::from_secs(3)))?;
+    let stream =
+        connect_socket_failure(&sockaddr, &host, port, timeout.min(Duration::from_secs(3)))
+            .map_err(TestError::Connect)?;
 
     let url = format!("ws://{host}:{port}/");
     let deadline = Instant::now() + timeout;
@@ -151,7 +214,7 @@ pub fn test_connection(address: &str, timeout: Duration) -> Result<String, Strin
     loop {
         if Instant::now() > deadline {
             let _ = ws.close(None);
-            return Err("timed out waiting for 'ready;'".into());
+            return Err(TestError::Other("timed out waiting for 'ready;'".into()));
         }
         match ws.read() {
             Ok(Message::Text(t)) => {
@@ -176,12 +239,14 @@ pub fn test_connection(address: &str, timeout: Duration) -> Result<String, Strin
                     }
                 }
             }
-            Ok(Message::Close(_)) => return Err("server closed the connection".into()),
+            Ok(Message::Close(_)) => {
+                return Err(TestError::Other("server closed the connection".into()));
+            }
             Ok(_) => {}
             Err(tungstenite::Error::Io(e))
                 if e.kind() == std::io::ErrorKind::WouldBlock
                     || e.kind() == std::io::ErrorKind::TimedOut => {}
-            Err(e) => return Err(format!("read error: {e}")),
+            Err(e) => return Err(TestError::Other(format!("read error: {e}"))),
         }
     }
 }
@@ -189,6 +254,38 @@ pub fn test_connection(address: &str, timeout: Duration) -> Result<String, Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A timeout is not a refusal, but on Windows a closed port can look like
+    /// one, so its message names the SDR program as well as the firewall.
+    #[test]
+    fn a_timeout_names_the_firewall_and_the_program() {
+        let e = std::io::Error::from(std::io::ErrorKind::TimedOut);
+        let m = connect_error("192.168.1.9", 50001, &e);
+        assert!(m.contains("firewall"), "{m}");
+        assert!(m.contains("ExpertSDR3"), "{m}");
+        assert!(m.contains("connect 192.168.1.9:50001"), "{m}");
+        // Any other failure stays the plain fact, with no advice attached.
+        let other = std::io::Error::from(std::io::ErrorKind::PermissionDenied);
+        assert!(!connect_error("h", 1, &other).contains("ExpertSDR3"));
+    }
+
+    /// The connection test hands the failure over as data, so the interface can
+    /// word it in its own language; the English sentence is made from the same
+    /// data and says what it always said.
+    #[test]
+    fn a_failed_connect_is_data_and_the_sentence_comes_from_it() {
+        use std::io::{Error, ErrorKind};
+        let f = connect_failure("h", 7, &Error::from(ErrorKind::ConnectionRefused));
+        assert_eq!((f.why, f.host.as_str(), f.port), (ConnectWhy::Refused, "h", 7));
+        assert_eq!(
+            connect_failure("h", 7, &Error::from(ErrorKind::TimedOut)).why,
+            ConnectWhy::TimedOut
+        );
+        let p = connect_failure("h", 7, &Error::from(ErrorKind::PermissionDenied));
+        assert_eq!(p.why, ConnectWhy::Other);
+        assert_eq!(TestError::Connect(f.clone()).to_string(), connect_message(&f));
+        assert!(connect_message(&f).contains("MB1"));
+    }
 
     /// A refused TCI port is the commonest way to meet this client, and on its
     /// own it reads as a broken radio: TCI is served by the SDR program and not
@@ -203,7 +300,10 @@ mod tests {
         let addr = listener.local_addr().expect("addr");
         drop(listener);
 
-        let e = connect_socket(&addr, "127.0.0.1", addr.port(), Duration::from_secs(1))
+        // Windows answers a closed port only after its SYN retries, about two
+        // seconds on the loopback; a shorter wait reports a timeout instead of
+        // the refusal this test is about.
+        let e = connect_socket(&addr, "127.0.0.1", addr.port(), Duration::from_secs(5))
             .expect_err("nothing is listening there");
         assert!(e.contains("ExpertSDR3"), "{e}");
         assert!(e.contains("MB1"), "{e}");
