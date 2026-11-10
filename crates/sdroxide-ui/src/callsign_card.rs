@@ -128,12 +128,24 @@ pub fn take_requests(ctx: &egui::Context) -> Vec<String> {
 /// The callsign QRZ is asked about for what is written on screen: `F4ABC/P` and
 /// `EA8/F4ABC` are both the operator behind `F4ABC`, and a hashed `<...>` or
 /// free text is nobody. `None` when it cannot be a callsign.
+///
+/// **An 11 m call is nobody as far as QRZ is concerned.** QRZ is the amateur
+/// database: it does not know `19DCG373` or `161OS222`, so asking would cost one
+/// request per hover, on every CB call in the logbook and every decode on 11 m,
+/// and come back empty every time. The CB grammars are what says so —
+/// WSJT-CB's own shape and the wide one, because `19DCG373` has three letters in
+/// the middle and only the wide grammar accepts it. An amateur call that merely
+/// starts with a digit (`2E0ABC`) is untouched: a CB call ends in its unit
+/// number, an amateur one ends in a letter.
 pub fn base_call(raw: &str) -> Option<String> {
     let t = raw.trim().trim_matches(|c| c == '<' || c == '>').to_ascii_uppercase();
     if t.is_empty() || !t.chars().all(|c| c.is_ascii_alphanumeric() || c == '/') {
         return None;
     }
     let best = t.split('/').filter(|p| !p.is_empty()).max_by_key(|p| p.len())?;
+    if sdroxide_types::is_cb_callsign(best) || sdroxide_types::is_cb_callsign_wide(best) {
+        return None;
+    }
     let ok = best.len() >= 3 && best.chars().any(|c| c.is_ascii_digit());
     ok.then(|| best.to_string())
 }
@@ -477,6 +489,32 @@ mod tests {
         assert_eq!(base_call("?"), None);
         assert_eq!(base_call(""), None);
         assert_eq!(base_call("ABC"), None, "no digit, no call");
+        // An amateur call that starts with a digit is still a call: it ends in
+        // a letter, where a CB call ends in its unit number.
+        assert_eq!(base_call("2E0ABC").as_deref(), Some("2E0ABC"));
+        assert_eq!(base_call("2E0ABC/P").as_deref(), Some("2E0ABC"));
+    }
+
+    /// **A CB call is not a QRZ call.** QRZ is the amateur database and does not
+    /// know them, so a card would only ever come back empty — and the request
+    /// would go out once per hover, for every 11 m call in the logbook and every
+    /// decode on the band. `19DCG373` needs the wide grammar (three letters in
+    /// the middle); the others are WSJT-CB's own shape.
+    #[test]
+    fn a_cb_call_is_never_asked_of_qrz() {
+        for call in ["19DCG373", "161OS222", "2EK297", "19DCG373/P", " 2ek297 ", "19DCG373/QRP"] {
+            assert_eq!(base_call(call), None, "{call} must not go to QRZ");
+        }
+        let ctx = egui::Context::default();
+        set_active(&ctx, true);
+        run(&ctx, |ui| {
+            section(ui, "19DCG373");
+            section(ui, "161OS222");
+        });
+        assert!(take_requests(&ctx).is_empty(), "no request may reach QRZ for a CB call");
+        assert!(!applies(&ctx, "19DCG373"), "and no card is drawn for it");
+        // The card still works on the same screen for an amateur call.
+        assert!(applies(&ctx, "F4ABC"));
     }
 
     /// A callsign painted twice (decode and spot) is one card, anchored where
