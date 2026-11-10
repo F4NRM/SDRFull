@@ -9638,3 +9638,19 @@ publicsdr-near-kiwi = KIWI CERCANO
 publicsdr-near-kiwi-tip = Solo los { $n } receptores KiwiSDR más cercanos a su locator que tienen un canal libre, el más cercano primero. Úselo como vista de banda de una radio CAT.
 
 publicsdr-near-kiwi-no-grid = KIWI CERCANO necesita su locator: indíquelo en los ajustes de la estación para ordenar los receptores por distancia.
+
+sstv-add-clock = ＋ UTC
+
+sstv-add-clock-hint = Añadir una línea que imprime la fecha y la hora del envío de la imagen
+
+sstv-clock-date-time = Fecha y hora (UTC)
+
+sstv-clock-time = Hora (UTC)
+
+sstv-clock-date = Fecha (UTC)
+
+sstv-clock-freeze = Fijar
+
+sstv-clock-freeze-hint = Convierte esta línea en texto normal, fijado a la hora que muestra
+
+sstv-clock-hint = Imprime la fecha y la hora del momento en que se envía la imagen, no la de su preparación.

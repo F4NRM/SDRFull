@@ -171,7 +171,7 @@ pub use cb_country::cb_callsign_in;
 pub use chirp::{chirp_csv_to_filed_memories, chirp_csv_to_memories, memories_to_chirp_csv};
 pub use command::{Command, KNOWN_CALLS_REPLY_MAX, KnownCallsReply};
 pub use composer::{
-    Composer, Face, LayoutTemplate, Strip, TEMPLATE_MAX, TEMPLATE_NAME_MAX, TextLayer,
+    Clock, Composer, Face, LayoutTemplate, Strip, TEMPLATE_MAX, TEMPLATE_NAME_MAX, TextLayer,
 };
 pub use contacts::FsqContact;
 pub use contest::{

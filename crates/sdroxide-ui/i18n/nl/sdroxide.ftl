@@ -9647,3 +9647,19 @@ publicsdr-near-kiwi = KIWI DICHTBIJ
 publicsdr-near-kiwi-tip = Alleen de { $n } KiwiSDR-ontvangers die het dichtst bij uw locator staan en een vrij kanaal hebben, de dichtstbijzijnde eerst. Te gebruiken als bandweergave voor een CAT-radio.
 
 publicsdr-near-kiwi-no-grid = KIWI DICHTBIJ heeft uw locator nodig: vul die in bij de stationsinstellingen om ontvangers op afstand te rangschikken.
+
+sstv-add-clock = ＋ UTC
+
+sstv-add-clock-hint = Een regel toevoegen die de datum en tijd van verzenden afdrukt
+
+sstv-clock-date-time = Datum en tijd (UTC)
+
+sstv-clock-time = Tijd (UTC)
+
+sstv-clock-date = Datum (UTC)
+
+sstv-clock-freeze = Vastzetten
+
+sstv-clock-freeze-hint = Maakt van deze regel gewone tekst, vastgezet op de getoonde tijd
+
+sstv-clock-hint = Drukt de datum en tijd af van het moment waarop de foto wordt verzonden — niet die van het maken.

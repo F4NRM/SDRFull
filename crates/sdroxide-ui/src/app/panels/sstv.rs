@@ -172,6 +172,9 @@ pub(in crate::app) struct SstvUi {
     pub(in crate::app) last_detected: Option<SstvMode>,
     pub(in crate::app) preview_tex: Option<egui::TextureHandle>,
     pub(in crate::app) preview_dirty: bool,
+    /// The minute the panel's own preview was composed at, so a document with a
+    /// clock line in it is drawn again when the minute turns.
+    pub(in crate::app) preview_minute: Option<i64>,
     /// Whether the store has been listed this session.
     pub(in crate::app) listed: bool,
     /// File-picker result inbox (raw image bytes), filled by the picker task.
@@ -220,6 +223,10 @@ pub(in crate::app) struct SstvUi {
     pub(in crate::app) composer_sel: Option<usize>,
     /// The preview texture is stale and has to be recomposed.
     pub(in crate::app) composer_dirty: bool,
+    /// The minute the preview was last composed at. A clock layer prints the
+    /// time, so a preview drawn at 14:32 is stale at 14:33 and has to be drawn
+    /// again — only for a document that carries one, checked against this.
+    pub(in crate::app) composer_minute: Option<i64>,
     /// The composed preview, as a texture.
     pub(in crate::app) composer_tex: Option<egui::TextureHandle>,
     /// A drag in progress: which layer, and where in it the pointer grabbed it
@@ -263,6 +270,7 @@ impl Default for SstvUi {
             last_detected: None,
             preview_tex: None,
             preview_dirty: true,
+            preview_minute: None,
             listed: false,
             inbox: Arc::new(Mutex::new(None)),
             pick_target: None,
@@ -280,6 +288,7 @@ impl Default for SstvUi {
             composer_open: false,
             composer_sel: None,
             composer_dirty: true,
+            composer_minute: None,
             composer_tex: None,
             composer_drag: None,
         }
@@ -535,19 +544,34 @@ impl SstvUi {
     /// `dims` is the transmitted picture size — the SSTV line format's, or the
     /// operator's chosen RIFP size.
     pub(in crate::app) fn ensure_preview(&mut self, dims: (u16, u16), ctx: &egui::Context) {
-        if !self.preview_dirty {
+        let now = crate::time::now_unix();
+        let minute = now / 60;
+        // A clock line in the document prints the minute it is drawn at, so a
+        // thumbnail drawn at 14:32 is a lie at 14:33. Only a document that
+        // carries one pays for the check.
+        let tick = self.preview_minute != Some(minute)
+            && crate::sstv_composer::shown(&self.composer_edit, &self.presets, self.selected_slot)
+                .has_clock();
+        if !self.preview_dirty && !tick {
             return;
         }
         self.preview_dirty = false;
+        self.preview_minute = Some(minute);
         let message = self.current_message().to_string();
         match self.slots.get(self.selected_slot).and_then(|s| s.as_ref()) {
             Some(slot) => {
                 // Use the composer document when it has content, so the
                 // preview matches what Send transmits.
-                let doc = crate::sstv_composer::shown(&self.composer_edit, &self.presets, self.selected_slot);
+                let doc = crate::sstv_composer::shown(
+                    &self.composer_edit,
+                    &self.presets,
+                    self.selected_slot,
+                );
                 let rgb = if doc.is_active() {
                     let mut d = doc.clone();
-                    if self.presets.slot(self.selected_slot).apply_overlay && self.overlay.is_active() {
+                    if self.presets.slot(self.selected_slot).apply_overlay
+                        && self.overlay.is_active()
+                    {
                         d = d.over(&self.overlay);
                     }
                     let (rgb, _, _) = crate::sstv_composer::render(
@@ -555,6 +579,7 @@ impl SstvUi {
                         dims.0,
                         dims.1,
                         Some((&slot.src_rgb, slot.sw, slot.sh)),
+                        now,
                     );
                     rgb
                 } else {
@@ -605,6 +630,7 @@ impl SstvUi {
                 dims.0,
                 dims.1,
                 Some((&slot.src_rgb, slot.sw, slot.sh)),
+                crate::time::now_unix(),
             );
             return crate::sstv::encode_png(&rgb, w, h);
         }
@@ -2282,11 +2308,24 @@ impl SdroxideApp {
     /// Composed at the transmit size rather than at a convenient size and
     /// scaled, because what the operator drags is what will go out: an outline
     /// one pixel thick at 320 pixels is not one pixel thick at 640.
-    fn composer_preview(&mut self, ctx: &egui::Context, dims: (u16, u16)) {
-        if !self.sstv.composer_dirty {
+    fn composer_preview(&mut self, ctx: &egui::Context, dims: (u16, u16), now: i64) {
+        // A clock layer prints the minute it is drawn at, so the preview has to
+        // be redrawn when the minute turns — otherwise the operator sets up a
+        // picture that says 14:32 and sends it twenty minutes later without the
+        // line ever having moved. Only documents that carry a clock pay for it.
+        let minute = now / 60;
+        let tick = self.sstv.composer_minute != Some(minute)
+            && crate::sstv_composer::shown(
+                &self.sstv.composer_edit,
+                &self.sstv.presets,
+                self.sstv.selected_slot,
+            )
+            .has_clock();
+        if !self.sstv.composer_dirty && !tick {
             return;
         }
         self.sstv.composer_dirty = false;
+        self.sstv.composer_minute = Some(minute);
         let base = self
             .sstv
             .slots
@@ -2299,7 +2338,7 @@ impl SdroxideApp {
             &self.sstv.presets,
             self.sstv.selected_slot,
         );
-        let (rgb, w, h) = crate::sstv_composer::render(doc, dims.0, dims.1, src);
+        let (rgb, w, h) = crate::sstv_composer::render(doc, dims.0, dims.1, src, now);
         let img = crate::sstv::color_image(&rgb, w, h);
         self.sstv.composer_tex =
             Some(ctx.load_texture("sstv_composer", img, egui::TextureOptions::NEAREST));
@@ -2423,7 +2462,11 @@ impl SdroxideApp {
             self.sstv.composer_edit = None;
         }
         self.composer_claim(dims);
-        self.composer_preview(ctx, dims);
+        // The moment every clock layer in this document prints, read once and
+        // used by the preview, by the box a click picks up and by SEND alike, so
+        // the three cannot disagree within the frame.
+        let now = crate::time::now_unix();
+        self.composer_preview(ctx, dims, now);
         let (fw, fh) = (f32::from(dims.0.max(1)), f32::from(dims.1.max(1)));
         let editing_overlay = self.sstv.editing_overlay;
         let mut doc = if editing_overlay {
@@ -2448,7 +2491,7 @@ impl SdroxideApp {
                 .and_then(|s| s.as_ref())
                 .map(|s| (s.src_rgb.clone(), s.sw, s.sh));
             let src = base.as_ref().map(|(rgb, w, h)| (rgb.as_slice(), *w, *h));
-            let (rgb, w, h) = crate::sstv_composer::render(&combined, dims.0, dims.1, src);
+            let (rgb, w, h) = crate::sstv_composer::render(&combined, dims.0, dims.1, src, now);
             let img = crate::sstv::color_image(&rgb, w, h);
             self.sstv.composer_tex =
                 Some(ctx.load_texture("sstv_composer", img, egui::TextureOptions::NEAREST));
@@ -2548,7 +2591,7 @@ impl SdroxideApp {
                         // is visible on the picture rather than only in a list.
                         if let Some(i) = self.sstv.composer_sel
                             && let Some((x0, y0, x1, y1)) =
-                                crate::sstv_composer::layer_box(&doc, i, dims.0, dims.1)
+                                crate::sstv_composer::layer_box(&doc, i, dims.0, dims.1, now)
                         {
                             let to_screen = |x: i32, y: i32| {
                                 egui::pos2(
@@ -2582,6 +2625,7 @@ impl SdroxideApp {
                                 ny * fh,
                                 dims.0,
                                 dims.1,
+                                now,
                             ) {
                                 let l = &doc.layers[i];
                                 self.sstv.composer_drag = Some((i, l.x - nx, l.y - ny));
@@ -2693,6 +2737,23 @@ impl SdroxideApp {
                                 self.sstv.composer_sel = Some(doc.layers.len() - 1);
                                 dirty = true;
                             }
+                            // **The date and time line** (issue #650): a line
+                            // that prints the moment the picture is sent rather
+                            // than a time typed into it, which is what every
+                            // received picture carries.
+                            if crate::chrome::chip(ui, false, tr!("sstv-add-clock"))
+                                .on_hover_text(tr!("sstv-add-clock-hint"))
+                                .clicked()
+                            {
+                                doc.layers.push(TextLayer {
+                                    clock: Some(sdroxide_types::Clock::DateTime),
+                                    px: 20,
+                                    y: 0.92,
+                                    ..Default::default()
+                                });
+                                self.sstv.composer_sel = Some(doc.layers.len() - 1);
+                                dirty = true;
+                            }
                         });
                         ui.add_space(4.0);
                         // **How many lines the layout holds**, so a document that
@@ -2720,7 +2781,12 @@ impl SdroxideApp {
                                             dirty = true;
                                         }
                                         let text = doc.layers[i].text.clone();
-                                        let label = if text.trim().is_empty() {
+                                        let label = if let Some(c) = doc.layers[i].clock {
+                                            // What it prints, so the list says
+                                            // which line is the clock rather
+                                            // than an unnamed strip.
+                                            c.text(now)
+                                        } else if text.trim().is_empty() {
                                             tr!("sstv-strip-paren")
                                         } else {
                                             crate::app::util::shorten(&text, 26).to_string()
@@ -2781,7 +2847,43 @@ impl SdroxideApp {
                                 .spacing([10.0, 6.0])
                                 .show(ui, |ui| {
                                     ui.label(tr!("panels-text"));
-                                    if crate::chrome::field(
+                                    if let Some(c) = l.clock {
+                                        // A clock line has no text of its own:
+                                        // what it prints is the time, and the
+                                        // choice left to the operator is which
+                                        // part of it.
+                                        let mut chosen = c;
+                                        ui.horizontal(|ui| {
+                                            egui::ComboBox::from_id_salt("composer-clock")
+                                                .selected_text(chosen.tr())
+                                                .width(150.0)
+                                                .show_ui(ui, |ui| {
+                                                    for f in sdroxide_types::Clock::ALL {
+                                                        let picked = ui.selectable_value(
+                                                            &mut chosen,
+                                                            f,
+                                                            f.tr(),
+                                                        );
+                                                        dirty |= picked.clicked();
+                                                    }
+                                                });
+                                            // The way back to a line of the
+                                            // operator's own words — and the way
+                                            // to pin a time that has to stay put.
+                                            let freeze = crate::chrome::chip(
+                                                ui,
+                                                false,
+                                                tr!("sstv-clock-freeze"),
+                                            )
+                                            .on_hover_text(tr!("sstv-clock-freeze-hint"));
+                                            if freeze.clicked() {
+                                                l.text = chosen.text(now);
+                                                l.clock = None;
+                                                dirty = true;
+                                            }
+                                        });
+                                        l.clock = Some(chosen);
+                                    } else if crate::chrome::field(
                                         ui,
                                         egui::TextEdit::singleline(&mut l.text)
                                             .desired_width(250.0)
@@ -2895,6 +2997,16 @@ impl SdroxideApp {
                                         ui.end_row();
                                     }
                                 });
+                            // Says what the line is, where the text field used
+                            // to be: a control that silently prints a time is a
+                            // control the operator cannot predict.
+                            if doc.layers[i].clock.is_some() {
+                                ui.label(
+                                    RichText::new(tr!("sstv-clock-hint"))
+                                        .size(10.0)
+                                        .weak(),
+                                );
+                            }
                             ui.add_space(8.0);
                         }
 
@@ -3215,6 +3327,7 @@ impl SdroxideApp {
                                                 dims.0,
                                                 dims.1,
                                                 Some((&slot.src_rgb, slot.sw, slot.sh)),
+                                                now,
                                             );
                                             crate::sstv::encode_png(&rgb, w, h)
                                         } else {

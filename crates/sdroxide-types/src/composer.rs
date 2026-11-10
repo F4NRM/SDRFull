@@ -83,6 +83,53 @@ impl Default for Strip {
     }
 }
 
+/// **What a clock layer prints**: the time the picture is sent, not the time
+/// the line was typed.
+///
+/// A layer carrying a clock draws this instead of its own [`TextLayer::text`],
+/// worked out when the picture is composed — and a picture is composed at the
+/// moment SEND is pressed, so the line says when it went out. That is the whole
+/// point of it: a date and time typed into a picture is wrong by the time the
+/// operator has finished the QSO, and a received picture always carries the
+/// sender's own time.
+///
+/// Appended to, never reordered — a discriminant is on the wire.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum Clock {
+    /// `2026-11-10 14:32 UTC`
+    #[default]
+    DateTime,
+    /// `14:32 UTC`
+    Time,
+    /// `2026-11-10`
+    Date,
+}
+
+impl Clock {
+    pub const ALL: [Clock; 3] = [Clock::DateTime, Clock::Time, Clock::Date];
+
+    /// The line this clock prints at `unix`, in ISO order so that no reader has
+    /// to guess whether `03-11` is March or November.
+    pub fn text(self, unix: i64) -> String {
+        let (y, mo, d, h, mi, _s) = crate::utc_ymd_hms(unix);
+        match self {
+            Clock::DateTime => format!("{y:04}-{mo:02}-{d:02} {h:02}:{mi:02} UTC"),
+            Clock::Time => format!("{h:02}:{mi:02} UTC"),
+            Clock::Date => format!("{y:04}-{mo:02}-{d:02}"),
+        }
+    }
+
+    /// The name for a log or a config file. The screen's own words come from
+    /// `sdroxide-ui`'s label table.
+    pub fn label(self) -> &'static str {
+        match self {
+            Clock::DateTime => "Date and time (UTC)",
+            Clock::Time => "Time (UTC)",
+            Clock::Date => "Date (UTC)",
+        }
+    }
+}
+
 /// One line of text placed on the picture.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -105,6 +152,11 @@ pub struct TextLayer {
     /// Kept in the document but not drawn — a line to bring back for the next
     /// picture without retyping it.
     pub hidden: bool,
+    /// Printed **instead of** `text` when set: the moment the picture is
+    /// composed, which is the moment it is sent. [`Composer::resolved`] turns
+    /// it into pixels' worth of text; the stored document keeps the clock, so
+    /// next week's picture carries next week's time rather than this one's.
+    pub clock: Option<Clock>,
 }
 
 impl Default for TextLayer {
@@ -120,6 +172,7 @@ impl Default for TextLayer {
             vertical: false,
             band: None,
             hidden: false,
+            clock: None,
         }
     }
 }
@@ -137,7 +190,33 @@ impl Composer {
     /// plain caption, so a preset nobody has composed still sends the picture it
     /// always did.
     pub fn is_active(&self) -> bool {
-        self.layers.iter().any(|l| !l.hidden && !l.text.trim().is_empty())
+        self.layers.iter().any(|l| !l.hidden && (!l.text.trim().is_empty() || l.clock.is_some()))
+    }
+
+    /// Whether any drawn layer is a clock — the editor asks, so it can refresh
+    /// the preview when the minute turns instead of on every frame.
+    pub fn has_clock(&self) -> bool {
+        self.layers.iter().any(|l| !l.hidden && l.clock.is_some())
+    }
+
+    /// The document as it is drawn at `unix`: every clock layer's text worked
+    /// out, everything else untouched.
+    ///
+    /// A copy rather than a mutation, because the stored document must keep the
+    /// clock: it is composed again for the next picture, at that picture's time.
+    /// `now` is an argument rather than read here so the result is a function of
+    /// its input and can be tested without a wall clock.
+    pub fn resolved(&self, unix: i64) -> Composer {
+        if !self.has_clock() {
+            return self.clone();
+        }
+        let mut out = self.clone();
+        for l in &mut out.layers {
+            if let Some(c) = l.clock {
+                l.text = c.text(unix);
+            }
+        }
+        out
     }
 
     /// The default document for a slot that has none: the station's own banner
@@ -215,10 +294,18 @@ impl Composer {
     }
 
     /// Every layer's text, for a summary line in a panel that has no room for
-    /// the picture.
+    /// the picture. A clock layer has no text of its own, so it says what it is.
     pub fn summary(&self) -> String {
-        let drawn: Vec<&str> =
-            self.layers.iter().filter(|l| !l.hidden).map(|l| l.text.trim()).collect();
+        let drawn: Vec<&str> = self
+            .layers
+            .iter()
+            .filter(|l| !l.hidden)
+            .map(|l| match l.clock {
+                Some(c) => c.label(),
+                None => l.text.trim(),
+            })
+            .filter(|s| !s.is_empty())
+            .collect();
         drawn.join(" · ")
     }
 }
@@ -290,6 +377,59 @@ mod tests {
             let top = l.y * 256.0 - 20.0;
             assert!(top >= -0.5, "line at y={} starts above the picture", l.y);
         }
+    }
+
+    // ── the clock ──
+
+    /// 2026-11-10 14:32:07 UTC.
+    const AT: i64 = 1_794_321_127;
+
+    /// **A clock layer prints the time it is composed at**, not the time it was
+    /// added, and the three formats say exactly what they claim.
+    #[test]
+    fn a_clock_layer_prints_utc_in_the_format_it_carries() {
+        assert_eq!(Clock::DateTime.text(AT), "2026-11-10 14:32 UTC");
+        assert_eq!(Clock::Time.text(AT), "14:32 UTC");
+        assert_eq!(Clock::Date.text(AT), "2026-11-10");
+        // Two days later it is that day, which is the property that makes a
+        // saved layout still honest next week.
+        assert_eq!(Clock::Date.text(AT + 2 * 86_400), "2026-11-12");
+        // And the minute, not the second, is what a picture carries.
+        assert_eq!(Clock::Time.text(AT + 59), "14:33 UTC");
+    }
+
+    /// **The stored document keeps the clock.** Resolving is a copy, so the
+    /// same layout composed again prints the second picture's time.
+    #[test]
+    fn resolving_a_clock_leaves_the_stored_document_alone() {
+        let mut c = Composer::default();
+        c.layers.push(TextLayer { clock: Some(Clock::Time), ..TextLayer::default() });
+        let first = c.resolved(AT);
+        assert_eq!(first.layers[0].text, "14:32 UTC");
+        assert_eq!(c.layers[0].text, "", "the stored document was given a time");
+        assert_eq!(c.layers[0].clock, Some(Clock::Time));
+        assert_eq!(c.resolved(AT + 3_600).layers[0].text, "15:32 UTC");
+        // A layer with no clock is left exactly as it was.
+        let mut plain = Composer::default();
+        plain.layers.push(TextLayer { text: "CQ".into(), ..TextLayer::default() });
+        assert_eq!(plain.resolved(AT), plain);
+    }
+
+    /// **A clock layer is a drawn line.** Without this a clock-only document
+    /// reads as empty, the preset falls back to the station's banner, and the
+    /// line the operator added is never printed.
+    #[test]
+    fn a_clock_layer_makes_a_document_active() {
+        let mut c = Composer::default();
+        c.layers.push(TextLayer { clock: Some(Clock::Date), ..TextLayer::default() });
+        assert!(c.has_clock());
+        assert!(c.is_active(), "a clock-only document was treated as empty");
+        c.layers[0].hidden = true;
+        assert!(!c.is_active(), "a hidden clock is not drawn");
+        assert!(!c.has_clock());
+        // The summary line says what the line is rather than nothing.
+        c.layers[0].hidden = false;
+        assert_eq!(c.summary(), "Date (UTC)");
     }
 }
 

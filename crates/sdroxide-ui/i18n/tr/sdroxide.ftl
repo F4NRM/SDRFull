@@ -9647,3 +9647,19 @@ publicsdr-near-kiwi = YAKIN KIWI
 publicsdr-near-kiwi-tip = Locator'ınıza en yakın, boş kanalı olan { $n } KiwiSDR alıcısı, en yakın olan önce. Birini bir CAT telsizinin bant görünümü olarak kullanın.
 
 publicsdr-near-kiwi-no-grid = YAKIN KIWI için locator'ınız gerekir: alıcıları mesafeye göre sıralamak için istasyon ayarlarında girin.
+
+sstv-add-clock = ＋ UTC
+
+sstv-add-clock-hint = Görselin gönderildiği tarih ve saati yazdıran bir satır ekle
+
+sstv-clock-date-time = Tarih ve saat (UTC)
+
+sstv-clock-time = Saat (UTC)
+
+sstv-clock-date = Tarih (UTC)
+
+sstv-clock-freeze = Sabitle
+
+sstv-clock-freeze-hint = Bu satırı, gösterdiği saate sabitlenmiş sıradan metne çevir
+
+sstv-clock-hint = Görselin gönderildiği andaki tarih ve saati yazar — hazırlandığı saati değil.

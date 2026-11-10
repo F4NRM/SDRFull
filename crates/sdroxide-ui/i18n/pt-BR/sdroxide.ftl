@@ -9647,3 +9647,19 @@ publicsdr-near-kiwi = KIWI PRÓXIMO
 publicsdr-near-kiwi-tip = Somente os { $n } receptores KiwiSDR mais próximos do seu locator que têm um canal livre, o mais próximo primeiro. Use um como visão de banda de um rádio CAT.
 
 publicsdr-near-kiwi-no-grid = KIWI PRÓXIMO precisa do seu locator: informe-o nas configurações da estação para ordenar os receptores por distância.
+
+sstv-add-clock = ＋ UTC
+
+sstv-add-clock-hint = Acrescentar uma linha que imprime a data e a hora do envio da imagem
+
+sstv-clock-date-time = Data e hora (UTC)
+
+sstv-clock-time = Hora (UTC)
+
+sstv-clock-date = Data (UTC)
+
+sstv-clock-freeze = Fixar
+
+sstv-clock-freeze-hint = Transforma esta linha em texto comum, fixado na hora mostrada
+
+sstv-clock-hint = Imprime a data e a hora do momento em que a imagem é enviada — não a do momento em que foi feita.

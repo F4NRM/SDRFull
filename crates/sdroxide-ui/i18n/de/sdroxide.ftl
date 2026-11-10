@@ -9639,3 +9639,19 @@ publicsdr-near-kiwi = KIWI NAH
 publicsdr-near-kiwi-tip = Nur die { $n } KiwiSDR-Empfänger, die Ihrem Locator am nächsten sind und einen freien Kanal haben, der nächste zuerst. Als Bandansicht für ein CAT-Funkgerät verwendbar.
 
 publicsdr-near-kiwi-no-grid = KIWI NAH braucht Ihren Locator: Tragen Sie ihn in den Stationseinstellungen ein, um die Empfänger nach Entfernung zu ordnen.
+
+sstv-add-clock = ＋ UTC
+
+sstv-add-clock-hint = Eine Zeile einfügen, die Datum und Uhrzeit des Versendens ausgibt
+
+sstv-clock-date-time = Datum und Uhrzeit (UTC)
+
+sstv-clock-time = Uhrzeit (UTC)
+
+sstv-clock-date = Datum (UTC)
+
+sstv-clock-freeze = Fixieren
+
+sstv-clock-freeze-hint = Macht diese Zeile zu gewöhnlichem Text, festgehalten auf der angezeigten Zeit
+
+sstv-clock-hint = Gibt Datum und Uhrzeit des Moments aus, in dem das Bild gesendet wird — nicht die Zeit, zu der es erstellt wurde.

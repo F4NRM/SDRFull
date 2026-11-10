@@ -2390,8 +2390,17 @@ use sdroxide_types::{
 /// `limited` at its tail (it rides `ServerMsg::CallsignResult` whole): QRZ cut
 /// the record short for lack of an XML subscription. A v293 client ignores it.
 /// `PROTO_VERSION` 293 → 294, `VERSION_BYTE` 0x71 → 0x72.
-pub const PROTO_VERSION: u16 = 294;
-const VERSION_BYTE: u8 = 0x72;
+///
+/// v295: **the SSTV date and time line (issue #650).**
+/// [`sdroxide_types::TextLayer`] gains `clock` at its tail — the composer layer
+/// prints the time the picture is composed at instead of its own text, so a
+/// picture says when it went out. Layers ride `Composer` whole inside
+/// `ImagePresets`, `Command::ImageSetComposer` and the template commands, so the
+/// appended field moves every one of those layouts. `#[serde(default)]` on the
+/// layer keeps a stored `sstv_presets.json` loading unchanged.
+/// `PROTO_VERSION` 294 → 295, `VERSION_BYTE` 0x72 → 0x73.
+pub const PROTO_VERSION: u16 = 295;
+const VERSION_BYTE: u8 = 0x73;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3460,6 +3469,7 @@ mod tests {
                                     fill2: Some([0, 0, 20]),
                                 }),
                                 hidden: false,
+                                clock: None,
                             }],
                         },
                     },
@@ -3531,12 +3541,23 @@ mod tests {
             ClientMsg::Command(Command::ImageSetComposer {
                 slot: 4,
                 composer: sdroxide_types::Composer {
-                    layers: vec![sdroxide_types::TextLayer {
-                        text: "PSE K".into(),
-                        x: 0.5,
-                        y: 0.8,
-                        ..sdroxide_types::TextLayer::default()
-                    }],
+                    layers: vec![
+                        sdroxide_types::TextLayer {
+                            text: "PSE K".into(),
+                            x: 0.5,
+                            y: 0.8,
+                            ..sdroxide_types::TextLayer::default()
+                        },
+                        // A clock layer: an option field and an empty text, which
+                        // is the shape a misplaced field would corrupt worst.
+                        sdroxide_types::TextLayer {
+                            clock: Some(sdroxide_types::Clock::Time),
+                            x: 0.5,
+                            y: 0.94,
+                            px: 20,
+                            ..sdroxide_types::TextLayer::default()
+                        },
+                    ],
                 },
             }),
             // ...and an empty one, which is what "this preset uses the banner"
@@ -3698,7 +3719,9 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
+        // v295: the SSTV clock layer (`TextLayer::clock`) appended at the tail
+        // of a `Composer` layer, which rides the picture preset messages.
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3754,7 +3777,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3776,7 +3799,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -3906,9 +3929,13 @@ mod tests {
         // 316 since the two Dynamic DNS fields were appended at the end
         // (PROTO_VERSION 260 → 261). Appended, so an older peer reads the
         // struct it knows and the two new bytes are simply not there.
+        //
+        // 318 since `qrz_card` (286) and `qrz_card_off` (291) were appended at
+        // the tail, two bools. The pin was not moved for either — the test had
+        // been failing since 291 — and this is the conscious edit they owed it.
         assert_eq!(
             (net.len(), fnv1a(&net)),
-            (316, 9_696_214_884_124_040_590),
+            (318, 13_712_061_205_942_838_718),
             "NetworkConfig's wire layout shifted — append fields, never insert them"
         );
     }
@@ -4541,7 +4568,7 @@ mod tests {
     fn the_wefax_revert_slant_is_appended_last() {
         let last = encode(&ClientMsg::Command(Command::WefaxRevertSlant)).unwrap();
         let before = encode(&ClientMsg::Command(Command::ImportMemoriesFiled(vec![]))).unwrap();
-        assert_eq!(last[0], 0x71);
+        assert_eq!(last[0], 0x73);
         // `before` is the version, the message and variant tags, then the empty
         // list's length byte; `last` is the same tags with the variant one on.
         // The variant number is a varint: its low byte is one more, the rest
@@ -4833,7 +4860,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

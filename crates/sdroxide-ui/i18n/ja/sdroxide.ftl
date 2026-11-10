@@ -9595,3 +9595,19 @@ publicsdr-near-kiwi = 近くのKIWI
 publicsdr-near-kiwi-tip = ロケーターに最も近く、空きチャンネルのあるKiwiSDR受信機を近い順に{ $n }台だけ表示します。CAT無線機のバンド表示として使えます。
 
 publicsdr-near-kiwi-no-grid = 近くのKIWIにはロケーターが必要です。局の設定で入力すると、受信機を距離順に並べられます。
+
+sstv-add-clock = ＋ UTC
+
+sstv-add-clock-hint = 画像を送信した日時を印字する行を追加
+
+sstv-clock-date-time = 日付と時刻 (UTC)
+
+sstv-clock-time = 時刻 (UTC)
+
+sstv-clock-date = 日付 (UTC)
+
+sstv-clock-freeze = 固定
+
+sstv-clock-freeze-hint = この行を、表示中の時刻で固定した通常のテキストに変える
+
+sstv-clock-hint = 画像を送信する瞬間の日時を印字します（作成した時刻ではありません）。
