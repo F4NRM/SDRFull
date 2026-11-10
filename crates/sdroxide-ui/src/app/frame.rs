@@ -641,6 +641,7 @@ struct ChildWindow {
 impl ChildWindow {
     /// A window whose own width earns its tier — a spectrum, an operating
     /// panel, a tool.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     fn own(app: &SdroxideApp) -> Self {
         Self {
             salt: app.radio_id,
@@ -651,6 +652,7 @@ impl ChildWindow {
 
     /// A desk tool, desktop-shaped whatever its height — the RX control
     /// console, the band selector, the rotator.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     fn desk(app: &SdroxideApp) -> Self {
         Self {
             salt: app.radio_id,

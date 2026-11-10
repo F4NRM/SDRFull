@@ -558,6 +558,7 @@ impl SdroxideApp {
     }
 
     /// Re-read the operator's own station file and lay it over the schedule.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub(in crate::app) fn reload_broadcast_stations(&mut self) {
         self.broadcast = sdroxide_types::broadcast::with_utilities(
             crate::app::persist::load_broadcast_stations(),

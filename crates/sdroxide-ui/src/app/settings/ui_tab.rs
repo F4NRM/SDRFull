@@ -1101,6 +1101,7 @@ pub(in crate::app) fn workspaces_section(
 }
 
 /// A detachable module's name in the settings rows, in the interface language.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 fn module_label(m: sdroxide_types::DetachableModule) -> String {
     use sdroxide_types::DetachableModule as M;
     match m {

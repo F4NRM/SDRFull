@@ -58,8 +58,10 @@ pub(in crate::app) struct MorseState {
     pub(in crate::app) progress: MorseProgress,
     tab: Tab,
     /// Reference pane: text to render as Morse.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     text: String,
     /// Reference pane: Morse to render as text.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     code: String,
     /// Practice topic: what the PLAY button sends.
     play_text: String,

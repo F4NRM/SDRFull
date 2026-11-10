@@ -189,6 +189,7 @@ const PTT_TEXT: f32 = 15.0;
 /// only a mouse has. See [`SdroxideApp::held_ptt`].
 /// The on-screen name of a module's window (the types crate carries the English
 /// one, which is also what logs and tests read).
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 fn module_window_name(m: sdroxide_types::DetachableModule) -> String {
     use sdroxide_types::DetachableModule as M;
     match m {
