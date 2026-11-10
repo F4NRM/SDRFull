@@ -2696,10 +2696,6 @@ mod tests {
         );
     }
 
-    /// Free-run: feed the RX the picture audio *after* the VIS header (as if we
-    /// tuned in mid-transmission). With the mode pre-selected it should lock onto
-    /// the sync cadence and decode.
-    #[test]
     /// **A picture says how much of it arrived as a picture.**
     ///
     /// The share of lines whose sync pulse was found where the mode says is
