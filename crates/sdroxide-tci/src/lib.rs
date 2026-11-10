@@ -203,7 +203,10 @@ mod tests {
         let addr = listener.local_addr().expect("addr");
         drop(listener);
 
-        let e = connect_socket(&addr, "127.0.0.1", addr.port(), Duration::from_secs(1))
+        // Windows answers a closed port only after its SYN retries, about two
+        // seconds on the loopback; a shorter wait reports a timeout instead of
+        // the refusal this test is about.
+        let e = connect_socket(&addr, "127.0.0.1", addr.port(), Duration::from_secs(5))
             .expect_err("nothing is listening there");
         assert!(e.contains("ExpertSDR3"), "{e}");
         assert!(e.contains("MB1"), "{e}");
