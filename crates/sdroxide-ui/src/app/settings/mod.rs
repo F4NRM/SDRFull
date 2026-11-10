@@ -2475,10 +2475,23 @@ impl SdroxideApp {
                 }
             }
             // Persist the latest edits, then rebuild the live source (no restart).
+            // A change to nothing but the waterfall overlay must not reopen the
+            // radio: it is a display setting that happens to live in radio.json.
+            let only_overlay = radio_edit.as_ref().is_some_and(|cfg| {
+                self.radio_cfg.as_ref().is_some_and(|old| {
+                    let mut same = old.clone();
+                    same.band_plan_overlay_enabled = cfg.band_plan_overlay_enabled;
+                    same.band_plan_overlay = cfg.band_plan_overlay.clone();
+                    &same == cfg
+                })
+            });
             if let Some(cfg) = &radio_edit {
                 self.ctrl.set_radio_config(cfg.clone());
+                self.radio_cfg = Some(cfg.clone());
             }
-            self.ctrl.reopen_source();
+            if !only_overlay {
+                self.ctrl.reopen_source();
+            }
             // An Apply here can move a *device* between two engines, and the
             // other engine has to be told or nothing happens. Three cases, and
             // reopening all of them covers each:
