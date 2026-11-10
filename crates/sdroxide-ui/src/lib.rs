@@ -601,6 +601,27 @@ pub fn window_title(detail: &str) -> String {
     if detail.is_empty() { base } else { format!("{base} — {detail}") }
 }
 
+/// Set the window/tab title to `title`.
+///
+/// Native: drives the OS title bar through an egui viewport command. Web: sets
+/// `document.title` directly, because eframe's web backend does not handle
+/// `ViewportCommand::Title` (it would only log a warning and leave the static
+/// title from `index.html` in place). Same string on both, so a web session's
+/// tab matches the native window's title bar.
+pub fn set_window_title(ctx: &eframe::egui::Context, title: &str) {
+    #[cfg(not(target_arch = "wasm32"))]
+    ctx.send_viewport_cmd(eframe::egui::ViewportCommand::Title(title.to_string()));
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = ctx;
+        if let Some(window) = web_sys::window() {
+            if let Some(document) = window.document() {
+                document.set_title(title);
+            }
+        }
+    }
+}
+
 /// The application icon, for [`eframe::egui::ViewportBuilder::with_icon`].
 ///
 /// This is what window managers show in the taskbar/dock and in alt-tab; the

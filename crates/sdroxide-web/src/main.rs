@@ -241,6 +241,9 @@ mod web {
                 // browser holds a whole station exactly as the desktop client
                 // does. (The list is also at `radios` beside this page, for
                 // anyone looking from outside the app.)
+                // Match the native window's title bar: program, version. The
+                // static <title> in index.html only carries the name.
+                document.set_title(&sdroxide_ui::window_title(""));
                 let first = radio_query(&search);
                 // The tab carries the version, as the desktop window does: the
                 // static page says only the name, and nothing else in the
