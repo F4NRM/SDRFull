@@ -1,8 +1,8 @@
 ﻿# TODO â€” SDR Oxide Brown
 
-Working queue. Rules in AGENTS.md. Last updated 2026-11-08.
+Working queue. Rules in AGENTS.md. Last updated 2026-11-10.
 
-State: `main` at crate 2.3.0, PROTO_VERSION 292 (0x70). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0 (re-measured 2026-11-08). Open issues: 10 (re-measured 2026-11-07).
+State: `main` at crate 2.3.0, PROTO_VERSION 295 (0x73). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 3 (#655, #665, #666; re-measured 2026-11-10). Open issues: 4 (re-measured 2026-11-10).
 
 ## Task tracking rules
 
@@ -158,6 +158,9 @@ Everything else that was in this list has been merged or closed since â€” s
 - AppImage â€” beslissing nodig.
 
 ## Recently done
+- 2026-11-10 — Zero warnings, PRs #670 and #672 (added by F4NRM, owned by Claude): `check --workspace --all-targets` and the wasm check of `sdroxide-ui` build with no warning. Dead code removed where nothing reached it (the audio-rate field of the TCI receiver, the Public-SDR USE confirmation, the STANAG receiver's unused resampler, the WEFAX sensitivity helper, `system_language_name`, the NAVTEX header's unused parameters and dead reverse branch); test-only helpers are `#[cfg(test)]`; Linux-only code carries a scoped `allow(dead_code)`; egui's `Panel::show` replaces `show_inside`. The browser build's allowance is limited to the build without the `remote` feature, plus nine scoped ones with it. A test no longer opens a native file dialog (save, open, pick).
+- 2026-11-10 — TCI connection-test failure in the operator's language, PR #669 (added by F4NRM, owned by Claude): a failed TCP connect travels as data (`ConnectFailure`, in a new `ProbeAnswer::TestFailed`, appended last; `PROTO_VERSION` 294 → 295, `VERSION_BYTE` 0x72 → 0x73) and the interface words it with three messages in all eleven languages. The other backends (Pluto, KiwiSDR, SpyServer, SmartSDR, Icom network) keep English messages.
+- 2026-11-10 — Test and build fixes found by a full `cargo test --workspace` on `main` (added by F4NRM, owned by Claude): `sdroxide-ism` links `r_433` after the shim and `netapi32` on Windows (#658); four stale pins and fixtures (#660); the scanner test's speaking carrier at −34 dBFS (#661); two timing-sensitive tests given the time Windows needs (#662); `hpsdr` `duc_pacing` tolerates the odd UDP loss on the loopback (#667); `pluto` keeps the board's address from connect time for the wedge probe (#668). Two were real defects: the server did not flush the reliable lane when a session's handle was dropped (#663), and a TCI timeout message did not name the SDR program (#664).
 - 2026-11-10 — Line endings, no exception left (added by F4NRM, owned by Claude): the five data files that #652 kept as CRLF (`cty.dat`, `sked-fallback.csv`, the three solar fixtures) are LF too, their five `-text` lines are gone from `.gitattributes`, and `git ls-files --eol` shows no `i/crlf` or `i/mixed` at all. Their parsers use `lines()`/`trim()`; the entity, broadcast and solar tests pass. AGENTS.md section updated.
 - 2026-11-10 — Line endings back to LF, CRLF no longer possible (added by F4NRM, owned by Claude): the project was LF from its first commit; PR 507 (2026-11-06) turned about 1290 files to CRLF by accident. The tree is renormalised to LF (1289 files, no change of content: `git diff --ignore-space-at-eol` is empty apart from the workflow file), `.gitattributes` (`* text=auto eol=lf`, five data files kept `-text`), `.editorconfig`, `newline_style = "Unix"` and a `line-endings` workflow that fails a push or PR adding CRLF. AGENTS.md section rewritten.
 - 2026-11-10 — Version in the web client's tab title (added by F4NRM, owned by Claude): the browser tab said only "SDR Oxide Brown" (the static page title); the desktop window already carried the version. The web client now sets the tab title to the same `window_title` ("SDR Oxide Brown 2.3.0.2.2"). Not seen in a real browser here.
