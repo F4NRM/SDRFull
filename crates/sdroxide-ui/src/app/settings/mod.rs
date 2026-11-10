@@ -3526,12 +3526,35 @@ impl SdroxideApp {
 
                 transverter_table(ui, cfg);
 
-                self.settings_panadapter(ui, cfg);
+                // Bandplan Waterfall Overlay (above RX/TX).
+                {
+                    let cfg = io.radio_edit.get_or_insert_with(sdroxide_types::RadioConfig::default);
+                    ui.label(tr!("settings-radio-bandplan-waterfall-overlay")).on_hover_text(tr!("settings-radio-bandplan-waterfall-overlay-hint"));
+                    ui.checkbox(&mut cfg.band_plan_overlay_enabled, tr!("settings-radio-bandplan-waterfall-overlay-enable"));
+                    if cfg.band_plan_overlay_enabled {
+                        let mut choice = cfg.band_plan_overlay.clone();
+                        egui::ComboBox::from_id_salt("overlay-band-plan")
+                            .selected_text(choice.as_deref().unwrap_or("none"))
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut choice, None, tr!("settings-general-band-plan-built-in"));
+                                for p in &self.band_plans {
+                                    ui.selectable_value(&mut choice, Some(p.file.clone()), p.name.clone());
+                                }
+                            });
+                        cfg.band_plan_overlay = choice;
+                    }
+                    ui.add_space(6.0);
+                    ui.separator();
+                    ui.add_space(6.0);
+                }
+
+                self.settings_panadapter(ui, io.radio_edit.get_or_insert_with(sdroxide_types::RadioConfig::default));
 
                 // Transmit EQ: mic/modulator-path DSP, not a device feature.
                 // It applies the same way regardless of which interface is
                 // selected above, so it sits here rather than in one of the
                 // per-backend sections below.
+                let cfg = io.radio_edit.get_or_insert_with(sdroxide_types::RadioConfig::default);
                 // The band plan: TX and RX per band. Every radio has its RX list,
                 // so this is outside the transmit-only block.
                 band_plan_table(ui, cfg, self.caps.as_ref(), self.tx_capable());
@@ -3598,25 +3621,6 @@ impl SdroxideApp {
                 // One container per backend, so a section's rows are laid out by
                 // the section: it is a vertical stack, not a row of the page.
                 ui.vertical(|ui| {
-                    // Bandplan Waterfall Overlay (above RX/TX).
-                    let cfg = io.radio_edit.get_or_insert_with(sdroxide_types::RadioConfig::default);
-                    ui.label(tr!("settings-radio-bandplan-waterfall-overlay")).on_hover_text(tr!("settings-radio-bandplan-waterfall-overlay-hint"));
-                    ui.checkbox(&mut cfg.band_plan_overlay_enabled, tr!("settings-radio-bandplan-waterfall-overlay-enable"));
-                    if cfg.band_plan_overlay_enabled {
-                        let mut choice = cfg.band_plan_overlay.clone();
-                        egui::ComboBox::from_id_salt("overlay-band-plan")
-                            .selected_text(choice.as_deref().unwrap_or("none"))
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut choice, None, tr!("settings-general-band-plan-built-in"));
-                                for p in &self.band_plans {
-                                    ui.selectable_value(&mut choice, Some(p.file.clone()), p.name.clone());
-                                }
-                            });
-                        cfg.band_plan_overlay = choice;
-                    }
-                    ui.add_space(6.0);
-                    ui.separator();
-                    ui.add_space(6.0);
                     match backend {
                         Backend::Soapy => {
                             self.settings_device_tab(ui, cmds);
