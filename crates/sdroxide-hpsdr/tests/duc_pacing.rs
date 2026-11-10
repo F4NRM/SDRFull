@@ -98,7 +98,16 @@ fn duc_datagrams_are_paced_at_the_stream_rate() {
     stop.store(true, Ordering::Relaxed);
     radio.join().unwrap();
 
-    assert_eq!(arrivals.len(), want, "every datagram should arrive");
+    // UDP promises no delivery, and the Windows loopback does drop one now and
+    // then: a run was seen to send all 80 datagrams with no send error (traced
+    // on the sender) and receive 79, or 78, without any change to the pacer. So
+    // a couple of losses are allowed; the pacing checks below are the point of
+    // this test and stay exact.
+    assert!(
+        arrivals.len() + 2 >= want,
+        "only {} of {want} datagrams arrived: more than the odd loss on the loopback",
+        arrivals.len()
+    );
     let early = arrivals.iter().filter(|t| **t < Duration::from_millis(10)).count();
     assert!(early <= 10, "{early} datagrams in the first 10 ms: sent as a burst, not paced");
     let spread = *arrivals.last().unwrap() - arrivals[0];

@@ -3930,9 +3930,9 @@ mod tests {
         // (PROTO_VERSION 260 → 261). Appended, so an older peer reads the
         // struct it knows and the two new bytes are simply not there.
         //
-        // 318 since `qrz_card` (286) and `qrz_card_off` (291) were appended at
-        // the tail, two bools. The pin was not moved for either — the test had
-        // been failing since 291 — and this is the conscious edit they owed it.
+        // 318 since the QRZ card's two switches (`qrz_card`, `qrz_card_off`:
+        // a bool each) were appended after them. Same rule: the pin had not
+        // followed, this is the conscious edit those fields owed it.
         assert_eq!(
             (net.len(), fnv1a(&net)),
             (318, 13_712_061_205_942_838_718),
@@ -4562,13 +4562,16 @@ mod tests {
         assert_eq!(decode::<ClientMsg>(&encode(&msg).unwrap()).unwrap(), msg);
     }
 
-    /// v293: the revert of the weather fax auto-slant is the last variant of
-    /// `Command`, so the ones before it keep their positions.
+    /// v293: the revert of the weather fax auto-slant was appended to
+    /// `Command` right after `ImportMemoriesFiled`, so the ones before it keep
+    /// their positions. Variants appended since sit after it; this test pins
+    /// its position, not that it is still the last one, and reads the version
+    /// byte from the crate so a later bump does not stale it.
     #[test]
     fn the_wefax_revert_slant_is_appended_last() {
         let last = encode(&ClientMsg::Command(Command::WefaxRevertSlant)).unwrap();
         let before = encode(&ClientMsg::Command(Command::ImportMemoriesFiled(vec![]))).unwrap();
-        assert_eq!(last[0], 0x73);
+        assert_eq!(last[0], VERSION_BYTE);
         // `before` is the version, the message and variant tags, then the empty
         // list's length byte; `last` is the same tags with the variant one on.
         // The variant number is a varint: its low byte is one more, the rest

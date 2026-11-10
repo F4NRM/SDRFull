@@ -95,33 +95,40 @@ pub(crate) fn split_addr(address: &str) -> Result<(String, u16), String> {
 /// broken radio or a wrong address, so the likeliest cause goes in the message.
 ///
 /// Only for the two failures that mean it. A refusal is an answer — something is
-/// at that address and nothing is serving TCI there — and a timeout is the
-/// absence of one, which is a different problem with a different fix.
+/// at that address and nothing is serving TCI there. A timeout is the absence of
+/// one, so the host and the firewall come first; but Windows reports a closed
+/// port as a timeout when the wait is shorter than its SYN retries (about two
+/// seconds on the loopback), so the SDR program is named there too.
 pub(crate) fn connect_socket(
     sockaddr: &std::net::SocketAddr,
     host: &str,
     port: u16,
     timeout: Duration,
 ) -> Result<TcpStream, String> {
-    TcpStream::connect_timeout(sockaddr, timeout).map_err(|e| {
-        let why = match e.kind() {
-            std::io::ErrorKind::ConnectionRefused => Some(
-                "nothing is serving TCI on that port. TCI comes from the SDR program — \
-                 ExpertSDR3, Thetis — and not from the radio itself, so it has to be running \
-                 with TCI switched on in its settings. On a standalone set such as an MB1 \
-                 that is the copy running inside the radio",
-            ),
-            std::io::ErrorKind::TimedOut => Some(
-                "no answer at that address. Check the host, and that a firewall is not in \
-                 the way",
-            ),
-            _ => None,
-        };
-        match why {
-            Some(w) => format!("connect {host}:{port}: {e} — {w}"),
-            None => format!("connect {host}:{port}: {e}"),
-        }
-    })
+    TcpStream::connect_timeout(sockaddr, timeout).map_err(|e| connect_error(host, port, &e))
+}
+
+/// The sentence for a failed connection, kept apart from the socket so each
+/// case can be tested without having to provoke it on the network.
+pub(crate) fn connect_error(host: &str, port: u16, e: &std::io::Error) -> String {
+    let why = match e.kind() {
+        std::io::ErrorKind::ConnectionRefused => Some(
+            "nothing is serving TCI on that port. TCI comes from the SDR program — \
+             ExpertSDR3, Thetis — and not from the radio itself, so it has to be running \
+             with TCI switched on in its settings. On a standalone set such as an MB1 \
+             that is the copy running inside the radio",
+        ),
+        std::io::ErrorKind::TimedOut => Some(
+            "no answer at that address. Check the host, and that a firewall is not in \
+             the way. If the SDR program that serves TCI (ExpertSDR3, Thetis) is not \
+             running with TCI switched on, a closed port can look like this on Windows",
+        ),
+        _ => None,
+    };
+    match why {
+        Some(w) => format!("connect {host}:{port}: {e} — {w}"),
+        None => format!("connect {host}:{port}: {e}"),
+    }
 }
 
 /// Test a TCI server: connect, read the status burst until `ready;` (or
@@ -190,6 +197,20 @@ pub fn test_connection(address: &str, timeout: Duration) -> Result<String, Strin
 mod tests {
     use super::*;
 
+    /// A timeout is not a refusal, but on Windows a closed port can look like
+    /// one, so its message names the SDR program as well as the firewall.
+    #[test]
+    fn a_timeout_names_the_firewall_and_the_program() {
+        let e = std::io::Error::from(std::io::ErrorKind::TimedOut);
+        let m = connect_error("192.168.1.9", 50001, &e);
+        assert!(m.contains("firewall"), "{m}");
+        assert!(m.contains("ExpertSDR3"), "{m}");
+        assert!(m.contains("connect 192.168.1.9:50001"), "{m}");
+        // Any other failure stays the plain fact, with no advice attached.
+        let other = std::io::Error::from(std::io::ErrorKind::PermissionDenied);
+        assert!(!connect_error("h", 1, &other).contains("ExpertSDR3"));
+    }
+
     /// A refused TCI port is the commonest way to meet this client, and on its
     /// own it reads as a broken radio: TCI is served by the SDR program and not
     /// by the transceiver, so a standalone set with nothing started inside it
@@ -203,7 +224,10 @@ mod tests {
         let addr = listener.local_addr().expect("addr");
         drop(listener);
 
-        let e = connect_socket(&addr, "127.0.0.1", addr.port(), Duration::from_secs(1))
+        // Windows answers a closed port only after its SYN retries, about two
+        // seconds on the loopback; a shorter wait reports a timeout instead of
+        // the refusal this test is about.
+        let e = connect_socket(&addr, "127.0.0.1", addr.port(), Duration::from_secs(5))
             .expect_err("nothing is listening there");
         assert!(e.contains("ExpertSDR3"), "{e}");
         assert!(e.contains("MB1"), "{e}");
