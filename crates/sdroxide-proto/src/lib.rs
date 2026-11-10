@@ -2390,8 +2390,15 @@ use sdroxide_types::{
 /// `limited` at its tail (it rides `ServerMsg::CallsignResult` whole): QRZ cut
 /// the record short for lack of an XML subscription. A v293 client ignores it.
 /// `PROTO_VERSION` 293 → 294, `VERSION_BYTE` 0x71 → 0x72.
-pub const PROTO_VERSION: u16 = 294;
-const VERSION_BYTE: u8 = 0x72;
+///
+/// v295: **connection-test failures in the operator's language.**
+/// [`sdroxide_types::ProbeAnswer`] gains `TestFailed(TestKind, ConnectFailure)`,
+/// appended: a failed TCP connect as data (why, host, port, the system's own
+/// words) instead of English text, so the interface words it itself. Only the
+/// TCI test sends it so far. A v294 client does not know the variant.
+/// `PROTO_VERSION` 294 → 295, `VERSION_BYTE` 0x72 → 0x73.
+pub const PROTO_VERSION: u16 = 295;
+const VERSION_BYTE: u8 = 0x73;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3698,7 +3705,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3754,7 +3761,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3776,7 +3783,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4771,6 +4778,15 @@ mod tests {
             }]),
             ProbeAnswer::Test(TestKind::Pluto, Ok("AD9364, 70 MHz – 6 GHz".into())),
             ProbeAnswer::Test(TestKind::Tci, Err("connection refused".into())),
+            ProbeAnswer::TestFailed(
+                TestKind::Tci,
+                sdroxide_types::ConnectFailure {
+                    why: sdroxide_types::ConnectWhy::Refused,
+                    host: "192.168.1.9".into(),
+                    port: 50001,
+                    detail: "Connection refused (os error 10061)".into(),
+                },
+            ),
             ProbeAnswer::Unsupported,
         ];
         for a in answers {
@@ -4840,7 +4856,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (294, 0x72));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

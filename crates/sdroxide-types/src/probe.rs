@@ -271,4 +271,29 @@ pub enum ProbeAnswer {
     /// The answer to [`DeviceProbe::PublicSdrCheck`]: the receiver asked about,
     /// and `Ok` with what answered or `Err` with why nothing did.
     PublicSdrCheck { network: PublicSdrNetwork, address: String, result: Result<String, String> },
+    /// A connection test that failed at the TCP connect, as data rather than
+    /// as English text, so the interface can say it in the operator's own
+    /// language. Appended last, like every variant.
+    TestFailed(TestKind, ConnectFailure),
+}
+
+/// Why a TCP connect did not succeed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ConnectWhy {
+    /// The host answered and nothing listens on that port.
+    Refused,
+    /// No answer within the time allowed.
+    TimedOut,
+    /// Anything else (no route, access denied, …); see `detail`.
+    Other,
+}
+
+/// A failed connect, structured: what was tried, why it failed, and the
+/// system's own words for it (the OS's message, not translated).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConnectFailure {
+    pub why: ConnectWhy,
+    pub host: String,
+    pub port: u16,
+    pub detail: String,
 }
