@@ -9596,18 +9596,20 @@ publicsdr-near-kiwi-tip = ロケーターに最も近く、空きチャンネル
 
 publicsdr-near-kiwi-no-grid = 近くのKIWIにはロケーターが必要です。局の設定で入力すると、受信機を距離順に並べられます。
 
-sstv-add-clock = ＋ UTC
+sstv-add-clock = ＋ 日付/時刻
 
-sstv-add-clock-hint = 画像を送信した日時を印字する行を追加
+sstv-add-clock-hint = 画像を送信した日時を印字する行を追加（UTC または現地時刻）
 
-sstv-clock-date-time = 日付と時刻 (UTC)
+sstv-clock-date-time = 日付と時刻
 
-sstv-clock-time = 時刻 (UTC)
+sstv-clock-time = 時刻
 
-sstv-clock-date = 日付 (UTC)
-
-sstv-clock-freeze = 固定
+sstv-clock-date = 日付
 
 sstv-clock-freeze-hint = この行を、表示中の時刻で固定した通常のテキストに変える
 
 sstv-clock-hint = 画像を送信する瞬間の日時を印字します（作成した時刻ではありません）。
+
+sstv-clock-local = 現地時刻
+
+sstv-clock-local-hint = UTC の代わりに局の現地時刻を印字します（夏時間を含む）

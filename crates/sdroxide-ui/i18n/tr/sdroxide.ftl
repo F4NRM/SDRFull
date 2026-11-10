@@ -9648,18 +9648,20 @@ publicsdr-near-kiwi-tip = Locator'ınıza en yakın, boş kanalı olan { $n } Ki
 
 publicsdr-near-kiwi-no-grid = YAKIN KIWI için locator'ınız gerekir: alıcıları mesafeye göre sıralamak için istasyon ayarlarında girin.
 
-sstv-add-clock = ＋ UTC
+sstv-add-clock = ＋ Tarih/saat
 
-sstv-add-clock-hint = Görselin gönderildiği tarih ve saati yazdıran bir satır ekle
+sstv-add-clock-hint = Görselin gönderildiği tarih ve saati yazdıran bir satır ekle — UTC veya kendi saatinizle
 
-sstv-clock-date-time = Tarih ve saat (UTC)
+sstv-clock-date-time = Tarih ve saat
 
-sstv-clock-time = Saat (UTC)
+sstv-clock-time = Saat
 
-sstv-clock-date = Tarih (UTC)
-
-sstv-clock-freeze = Sabitle
+sstv-clock-date = Tarih
 
 sstv-clock-freeze-hint = Bu satırı, gösterdiği saate sabitlenmiş sıradan metne çevir
 
 sstv-clock-hint = Görselin gönderildiği andaki tarih ve saati yazar — hazırlandığı saati değil.
+
+sstv-clock-local = Yerel saat
+
+sstv-clock-local-hint = UTC yerine istasyonun yerel saatini yazdır — yaz saati dahil

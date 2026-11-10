@@ -9640,18 +9640,20 @@ publicsdr-near-kiwi-tip = Nur die { $n } KiwiSDR-Empfänger, die Ihrem Locator a
 
 publicsdr-near-kiwi-no-grid = KIWI NAH braucht Ihren Locator: Tragen Sie ihn in den Stationseinstellungen ein, um die Empfänger nach Entfernung zu ordnen.
 
-sstv-add-clock = ＋ UTC
+sstv-add-clock = ＋ Datum/Uhrzeit
 
-sstv-add-clock-hint = Eine Zeile einfügen, die Datum und Uhrzeit des Versendens ausgibt
+sstv-add-clock-hint = Eine Zeile einfügen, die Datum und Uhrzeit des Versendens ausgibt — in UTC oder in Ihrer Ortszeit
 
-sstv-clock-date-time = Datum und Uhrzeit (UTC)
+sstv-clock-date-time = Datum und Uhrzeit
 
-sstv-clock-time = Uhrzeit (UTC)
+sstv-clock-time = Uhrzeit
 
-sstv-clock-date = Datum (UTC)
-
-sstv-clock-freeze = Fixieren
+sstv-clock-date = Datum
 
 sstv-clock-freeze-hint = Macht diese Zeile zu gewöhnlichem Text, festgehalten auf der angezeigten Zeit
 
 sstv-clock-hint = Gibt Datum und Uhrzeit des Moments aus, in dem das Bild gesendet wird — nicht die Zeit, zu der es erstellt wurde.
+
+sstv-clock-local = Ortszeit
+
+sstv-clock-local-hint = Die Ortszeit der Station statt UTC ausgeben — Sommerzeit eingeschlossen

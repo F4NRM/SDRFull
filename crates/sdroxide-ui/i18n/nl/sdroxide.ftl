@@ -9648,18 +9648,20 @@ publicsdr-near-kiwi-tip = Alleen de { $n } KiwiSDR-ontvangers die het dichtst bi
 
 publicsdr-near-kiwi-no-grid = KIWI DICHTBIJ heeft uw locator nodig: vul die in bij de stationsinstellingen om ontvangers op afstand te rangschikken.
 
-sstv-add-clock = ＋ UTC
+sstv-add-clock = ＋ Datum/tijd
 
-sstv-add-clock-hint = Een regel toevoegen die de datum en tijd van verzenden afdrukt
+sstv-add-clock-hint = Een regel toevoegen die de datum en tijd van verzenden afdrukt — in UTC of in uw eigen tijd
 
-sstv-clock-date-time = Datum en tijd (UTC)
+sstv-clock-date-time = Datum en tijd
 
-sstv-clock-time = Tijd (UTC)
+sstv-clock-time = Tijd
 
-sstv-clock-date = Datum (UTC)
-
-sstv-clock-freeze = Vastzetten
+sstv-clock-date = Datum
 
 sstv-clock-freeze-hint = Maakt van deze regel gewone tekst, vastgezet op de getoonde tijd
 
 sstv-clock-hint = Drukt de datum en tijd af van het moment waarop de foto wordt verzonden — niet die van het maken.
+
+sstv-clock-local = Lokale tijd
+
+sstv-clock-local-hint = De lokale tijd van het station afdrukken in plaats van UTC — zomertijd inbegrepen

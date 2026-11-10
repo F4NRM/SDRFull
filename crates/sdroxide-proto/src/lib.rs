@@ -3551,7 +3551,10 @@ mod tests {
                         // A clock layer: an option field and an empty text, which
                         // is the shape a misplaced field would corrupt worst.
                         sdroxide_types::TextLayer {
-                            clock: Some(sdroxide_types::Clock::Time),
+                            clock: Some(sdroxide_types::Clock {
+                                part: sdroxide_types::ClockPart::Time,
+                                zone: sdroxide_types::ClockZone::Local,
+                            }),
                             x: 0.5,
                             y: 0.94,
                             px: 20,

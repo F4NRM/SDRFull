@@ -9586,18 +9586,20 @@ publicsdr-near-kiwi-tip = 仅显示离您的定位符最近且有空闲通道的
 
 publicsdr-near-kiwi-no-grid = “附近KIWI”需要您的定位符：请在电台设置中填写，以便按距离对接收机排序。
 
-sstv-add-clock = ＋ UTC
+sstv-add-clock = ＋ 日期/时间
 
-sstv-add-clock-hint = 添加一行，打印图像发送的日期和时间
+sstv-add-clock-hint = 添加一行，打印图像发送的日期和时间——UTC 或您的本地时间
 
-sstv-clock-date-time = 日期和时间 (UTC)
+sstv-clock-date-time = 日期和时间
 
-sstv-clock-time = 时间 (UTC)
+sstv-clock-time = 时间
 
-sstv-clock-date = 日期 (UTC)
-
-sstv-clock-freeze = 固定
+sstv-clock-date = 日期
 
 sstv-clock-freeze-hint = 把这一行变成普通文本，固定在所显示的时间
 
 sstv-clock-hint = 打印图像发送那一刻的日期和时间，而不是制作它的时间。
+
+sstv-clock-local = 本地时间
+
+sstv-clock-local-hint = 打印本站的本地时间而不是 UTC，包含夏令时

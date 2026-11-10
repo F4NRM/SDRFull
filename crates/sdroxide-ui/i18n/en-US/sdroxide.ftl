@@ -9675,19 +9675,22 @@ publicsdr-near-kiwi-tip = Only the { $n } KiwiSDR receivers closest to your loca
 publicsdr-near-kiwi-no-grid = NEAR KIWI needs your locator: set it in the station settings to rank receivers by distance.
 
 # Chip in the picture editor beside '+ Text' and '+ Strip': adds a line that prints the UTC date and time.
-sstv-add-clock = ＋ UTC
+sstv-add-clock = ＋ Date/time
 
-sstv-add-clock-hint = Add a line that prints the date and time the picture is sent
+sstv-add-clock-hint = Add a line that prints the date and time the picture is sent — in UTC or in your own time
 
-sstv-clock-date-time = Date and time (UTC)
+sstv-clock-date-time = Date and time
 
-sstv-clock-time = Time (UTC)
+sstv-clock-time = Time
 
-sstv-clock-date = Date (UTC)
+sstv-clock-date = Date
 
 # Chip beside the clock format: turns the clock line into ordinary text showing the time it currently shows.
-sstv-clock-freeze = Freeze
-
 sstv-clock-freeze-hint = Turn this line into ordinary text, fixed at the time it shows
 
 sstv-clock-hint = Prints the date and time of the moment the picture is sent — not the time it was made.
+
+# Checkbox beside the clock format in the picture editor: print the station's own time instead of UTC.
+sstv-clock-local = Local time
+
+sstv-clock-local-hint = Print the station's own time instead of UTC — daylight saving included

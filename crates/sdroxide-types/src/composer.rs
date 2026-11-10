@@ -95,38 +95,74 @@ impl Default for Strip {
 ///
 /// Appended to, never reordered — a discriminant is on the wire.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub enum Clock {
-    /// `2026-11-10 14:32 UTC`
+pub enum ClockPart {
+    /// `2026-11-10 14:32`
     #[default]
     DateTime,
-    /// `14:32 UTC`
+    /// `14:32`
     Time,
     /// `2026-11-10`
     Date,
 }
 
-impl Clock {
-    pub const ALL: [Clock; 3] = [Clock::DateTime, Clock::Time, Clock::Date];
-
-    /// The line this clock prints at `unix`, in ISO order so that no reader has
-    /// to guess whether `03-11` is March or November.
-    pub fn text(self, unix: i64) -> String {
-        let (y, mo, d, h, mi, _s) = crate::utc_ymd_hms(unix);
-        match self {
-            Clock::DateTime => format!("{y:04}-{mo:02}-{d:02} {h:02}:{mi:02} UTC"),
-            Clock::Time => format!("{h:02}:{mi:02} UTC"),
-            Clock::Date => format!("{y:04}-{mo:02}-{d:02}"),
-        }
-    }
+impl ClockPart {
+    pub const ALL: [ClockPart; 3] = [ClockPart::DateTime, ClockPart::Time, ClockPart::Date];
 
     /// The name for a log or a config file. The screen's own words come from
     /// `sdroxide-ui`'s label table.
     pub fn label(self) -> &'static str {
         match self {
-            Clock::DateTime => "Date and time (UTC)",
-            Clock::Time => "Time (UTC)",
-            Clock::Date => "Date (UTC)",
+            ClockPart::DateTime => "Date and time",
+            ClockPart::Time => "Time",
+            ClockPart::Date => "Date",
         }
+    }
+}
+
+/// **Whose clock** a clock layer prints. UTC is the default, as it is everywhere
+/// else in the program; local is the operator's own zone, as a station that
+/// stamps its pictures by hand would write it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ClockZone {
+    #[default]
+    Utc,
+    /// The operator's zone, daylight saving included — the offset is the caller's
+    /// to work out for that instant, because it is a political fact about the
+    /// date rather than something a Unix timestamp carries.
+    Local,
+}
+
+/// A clock layer's printing: which part of the moment, and in whose zone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct Clock {
+    pub part: ClockPart,
+    pub zone: ClockZone,
+}
+
+impl Clock {
+    /// The line this clock prints at `unix`, whose local offset is
+    /// `offset_secs` east of Greenwich. ISO order, so that no reader has to
+    /// guess whether `03-11` is March or November.
+    ///
+    /// The zone is written after a UTC line and left off a local one: a reader
+    /// of a picture assumes the sender's own time, so `14:32` is what it is,
+    /// while UTC has to be said.
+    pub fn text(self, unix: i64, offset_secs: i64) -> String {
+        let at = match self.zone {
+            ClockZone::Utc => unix,
+            ClockZone::Local => unix + offset_secs,
+        };
+        let (y, mo, d, h, mi, _s) = crate::utc_ymd_hms(at);
+        let zone = if self.zone == ClockZone::Utc { " UTC" } else { "" };
+        match self.part {
+            ClockPart::DateTime => format!("{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}{zone}"),
+            ClockPart::Time => format!("{h:02}:{mi:02}{zone}"),
+            ClockPart::Date => format!("{y:04}-{mo:02}-{d:02}"),
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        self.part.label()
     }
 }
 
@@ -199,21 +235,23 @@ impl Composer {
         self.layers.iter().any(|l| !l.hidden && l.clock.is_some())
     }
 
-    /// The document as it is drawn at `unix`: every clock layer's text worked
-    /// out, everything else untouched.
+    /// The document as it is drawn at `unix` — whose local offset is
+    /// `offset_secs` — every clock layer's text worked out, everything else
+    /// untouched.
     ///
     /// A copy rather than a mutation, because the stored document must keep the
     /// clock: it is composed again for the next picture, at that picture's time.
-    /// `now` is an argument rather than read here so the result is a function of
-    /// its input and can be tested without a wall clock.
-    pub fn resolved(&self, unix: i64) -> Composer {
+    /// The moment is an argument rather than read here so the result is a
+    /// function of its input and can be tested without a wall clock or a
+    /// timezone.
+    pub fn resolved(&self, unix: i64, offset_secs: i64) -> Composer {
         if !self.has_clock() {
             return self.clone();
         }
         let mut out = self.clone();
         for l in &mut out.layers {
             if let Some(c) = l.clock {
-                l.text = c.text(unix);
+                l.text = c.text(unix, offset_secs);
             }
         }
         out
@@ -387,32 +425,61 @@ mod tests {
     /// **A clock layer prints the time it is composed at**, not the time it was
     /// added, and the three formats say exactly what they claim.
     #[test]
-    fn a_clock_layer_prints_utc_in_the_format_it_carries() {
-        assert_eq!(Clock::DateTime.text(AT), "2026-11-10 14:32 UTC");
-        assert_eq!(Clock::Time.text(AT), "14:32 UTC");
-        assert_eq!(Clock::Date.text(AT), "2026-11-10");
+    fn a_clock_layer_prints_in_the_format_it_carries() {
+        let utc = |part| Clock { part, zone: ClockZone::Utc };
+        assert_eq!(utc(ClockPart::DateTime).text(AT, 0), "2026-11-10 14:32 UTC");
+        assert_eq!(utc(ClockPart::Time).text(AT, 0), "14:32 UTC");
+        assert_eq!(utc(ClockPart::Date).text(AT, 0), "2026-11-10");
         // Two days later it is that day, which is the property that makes a
         // saved layout still honest next week.
-        assert_eq!(Clock::Date.text(AT + 2 * 86_400), "2026-11-12");
+        assert_eq!(utc(ClockPart::Date).text(AT + 2 * 86_400, 0), "2026-11-12");
         // And the minute, not the second, is what a picture carries.
-        assert_eq!(Clock::Time.text(AT + 59), "14:33 UTC");
+        assert_eq!(utc(ClockPart::Time).text(AT + 59, 0), "14:33 UTC");
+    }
+
+    /// **A local clock prints the operator's own time**, offset and daylight
+    /// saving included, and says nothing about the zone: a reader of a picture
+    /// assumes the sender's time, where UTC has to be named. A date alone is the
+    /// same in both zones unless the offset crosses midnight — and then it moves,
+    /// which is the point of asking for the offset at that instant.
+    #[test]
+    fn a_local_clock_prints_the_stations_time_and_leaves_off_the_zone() {
+        let local = |part| Clock { part, zone: ClockZone::Local };
+        // Central Europe in November: UTC+1.
+        assert_eq!(local(ClockPart::DateTime).text(AT, 3_600), "2026-11-10 15:32");
+        assert_eq!(local(ClockPart::Time).text(AT, 3_600), "15:32");
+        assert_eq!(local(ClockPart::Date).text(AT, 3_600), "2026-11-10");
+        // Half an hour before midnight UTC, one hour east: tomorrow locally.
+        let late = 1_794_321_127 - 15 * 3_600; // 2026-11-09 23:32 UTC
+        assert_eq!(local(ClockPart::Date).text(late, 3_600), "2026-11-10");
+        assert_eq!(local(ClockPart::Date).text(late, 0), "2026-11-09");
+        // West of Greenwich it goes back a day the other way.
+        let dawn = 1_794_321_127 - 14 * 3_600; // 2026-11-10 00:32 UTC
+        assert_eq!(local(ClockPart::Date).text(dawn, 0), "2026-11-10");
+        assert_eq!(local(ClockPart::Date).text(dawn, -5 * 3_600), "2026-11-09");
     }
 
     /// **The stored document keeps the clock.** Resolving is a copy, so the
     /// same layout composed again prints the second picture's time.
     #[test]
     fn resolving_a_clock_leaves_the_stored_document_alone() {
+        let clock = Clock { part: ClockPart::Time, zone: ClockZone::Utc };
         let mut c = Composer::default();
-        c.layers.push(TextLayer { clock: Some(Clock::Time), ..TextLayer::default() });
-        let first = c.resolved(AT);
+        c.layers.push(TextLayer { clock: Some(clock), ..TextLayer::default() });
+        let first = c.resolved(AT, 0);
         assert_eq!(first.layers[0].text, "14:32 UTC");
         assert_eq!(c.layers[0].text, "", "the stored document was given a time");
-        assert_eq!(c.layers[0].clock, Some(Clock::Time));
-        assert_eq!(c.resolved(AT + 3_600).layers[0].text, "15:32 UTC");
+        assert_eq!(c.layers[0].clock, Some(clock));
+        assert_eq!(c.resolved(AT + 3_600, 0).layers[0].text, "15:32 UTC");
+        // The zone is a property of the document, so the same layout can put a
+        // local time on the picture without being rewritten.
+        let mut local = c.clone();
+        local.layers[0].clock = Some(Clock { part: ClockPart::Time, zone: ClockZone::Local });
+        assert_eq!(local.resolved(AT, 3_600).layers[0].text, "15:32");
         // A layer with no clock is left exactly as it was.
         let mut plain = Composer::default();
         plain.layers.push(TextLayer { text: "CQ".into(), ..TextLayer::default() });
-        assert_eq!(plain.resolved(AT), plain);
+        assert_eq!(plain.resolved(AT, 0), plain);
     }
 
     /// **A clock layer is a drawn line.** Without this a clock-only document
@@ -420,8 +487,9 @@ mod tests {
     /// line the operator added is never printed.
     #[test]
     fn a_clock_layer_makes_a_document_active() {
+        let clock = Clock { part: ClockPart::Date, zone: ClockZone::Utc };
         let mut c = Composer::default();
-        c.layers.push(TextLayer { clock: Some(Clock::Date), ..TextLayer::default() });
+        c.layers.push(TextLayer { clock: Some(clock), ..TextLayer::default() });
         assert!(c.has_clock());
         assert!(c.is_active(), "a clock-only document was treated as empty");
         c.layers[0].hidden = true;
@@ -429,7 +497,7 @@ mod tests {
         assert!(!c.has_clock());
         // The summary line says what the line is rather than nothing.
         c.layers[0].hidden = false;
-        assert_eq!(c.summary(), "Date (UTC)");
+        assert_eq!(c.summary(), "Date");
     }
 }
 

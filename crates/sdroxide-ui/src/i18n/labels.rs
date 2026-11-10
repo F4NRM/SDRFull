@@ -30,12 +30,12 @@ pub(crate) trait Tr: Copy {
     fn tr(self) -> String;
 }
 
-impl Tr for sdroxide_types::Clock {
+impl Tr for sdroxide_types::ClockPart {
     fn tr(self) -> String {
         match self {
-            sdroxide_types::Clock::DateTime => tr!("sstv-clock-date-time"),
-            sdroxide_types::Clock::Time => tr!("sstv-clock-time"),
-            sdroxide_types::Clock::Date => tr!("sstv-clock-date"),
+            sdroxide_types::ClockPart::DateTime => tr!("sstv-clock-date-time"),
+            sdroxide_types::ClockPart::Time => tr!("sstv-clock-time"),
+            sdroxide_types::ClockPart::Date => tr!("sstv-clock-date"),
         }
     }
 }

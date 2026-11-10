@@ -9657,18 +9657,20 @@ publicsdr-near-kiwi-tip = Solo i { $n } ricevitori KiwiSDR più vicini al tuo lo
 
 publicsdr-near-kiwi-no-grid = KIWI VICINO richiede il tuo locator: impostalo nelle impostazioni della stazione per ordinare i ricevitori per distanza.
 
-sstv-add-clock = ＋ UTC
+sstv-add-clock = ＋ Data/ora
 
-sstv-add-clock-hint = Aggiungi una riga che stampa la data e l'ora di invio dell'immagine
+sstv-add-clock-hint = Aggiungi una riga che stampa la data e l'ora di invio dell'immagine, in UTC o alla vostra ora
 
-sstv-clock-date-time = Data e ora (UTC)
+sstv-clock-date-time = Data e ora
 
-sstv-clock-time = Ora (UTC)
+sstv-clock-time = Ora
 
-sstv-clock-date = Data (UTC)
-
-sstv-clock-freeze = Blocca
+sstv-clock-date = Data
 
 sstv-clock-freeze-hint = Trasforma questa riga in testo normale, fissato all'ora mostrata
 
 sstv-clock-hint = Stampa la data e l'ora del momento in cui l'immagine viene inviata, non quella in cui è stata preparata.
+
+sstv-clock-local = Ora locale
+
+sstv-clock-local-hint = Stampa l'ora locale della stazione invece dell'UTC — ora legale inclusa
