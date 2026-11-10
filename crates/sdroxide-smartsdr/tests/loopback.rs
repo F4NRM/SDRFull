@@ -444,8 +444,14 @@ fn a_free_client_id_is_still_the_stable_one() {
 fn an_eviction_for_a_duplicate_id_is_reported_as_one() {
     // A client that sees only the TCP close learns nothing, reconnects with the
     // same id, and starts the fight again. The radio does say why, once.
+    //
+    // The delay counts from the registration, and the rest of the handshake
+    // (panadapter, slice, streams) still has to fit inside it: at 300 ms a
+    // Windows run was evicted before `connect` had returned and failed with "the
+    // radio closed the connection". Long enough for the handshake, short enough
+    // for the wait below.
     let sim = SimRadio::start(SimConfig {
-        evict_after: Some(Duration::from_millis(300)),
+        evict_after: Some(Duration::from_millis(1500)),
         ..SimConfig::default()
     })
     .expect("start simulator");
