@@ -83,6 +83,12 @@ shine-rs = "0.1.4"
 # system codec. MPL-2.0.
 symphonia = { version = "0.5", default-features = false, features = ["mp3", "wav", "pcm", "ogg", "vorbis", "flac"] }
 
+# `CLOCK_MONOTONIC_RAW`, for the IQ rate meter in engine.rs: NTP slewing moves
+# `CLOCK_MONOTONIC` (and so `Instant`) by up to 500 ppm, which is more than the
+# drift being measured.
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 # The APRS codec, so the transmit test can read back what the engine sent.
 sdroxide-aprs.workspace = true
