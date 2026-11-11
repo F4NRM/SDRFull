@@ -75,7 +75,7 @@ jobs:
   # more builds.
   targets:
     name: pick targets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       combos: ${{ steps.pick.outputs.combos }}
       stamp: ${{ steps.pick.outputs.stamp }}
@@ -132,7 +132,7 @@ jobs:
           # carry no `container` key, which `build` reads as the empty string and
           # GitHub as "no container".
           platforms='[
-            {"label": "linux-x86_64",         "os": "ubuntu-latest",    "container": "ubuntu:22.04"},
+            {"label": "linux-x86_64",         "os": "ubuntu-24.04",      "container": "ubuntu:22.04"},
             {"label": "windows-x86_64",       "os": "windows-latest"},
             {"label": "macos-aarch64",        "os": "macos-latest"},
             {"label": "macos-x86_64",         "os": "macos-15-intel"}
@@ -141,7 +141,7 @@ jobs:
           # dispatch's `wanted` list. See the note above.
           extra_platforms='[
             {"label": "linux-aarch64",        "os": "ubuntu-24.04-arm", "container": "ubuntu:22.04"},
-            {"label": "linux-x86_64-compat",  "os": "ubuntu-latest",    "container": "ubuntu:22.04"},
+            {"label": "linux-x86_64-compat",  "os": "ubuntu-24.04",      "container": "ubuntu:22.04"},
             {"label": "linux-aarch64-compat", "os": "ubuntu-24.04-arm", "container": "ubuntu:22.04"}
           ]'
           # Every platform is built twice: `soapy` (dynamically links SoapySDR)
@@ -281,7 +281,7 @@ jobs:
   web:
     name: web client (wasm)
     needs: targets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # So the About box in a browser client agrees with the server that served
     # it, rather than naming the release the nightly was cut from.
     env:
@@ -1164,7 +1164,7 @@ jobs:
     # by hand should not publish a partial release. The missing platform is
     # still visible — the run ends red and the release is missing that asset.
     if: ${{ !cancelled() && (github.ref_type == 'tag' || startsWith(github.ref_name, 'v')) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # The curated release notes are read out of `CHANGELOG.md` **at the tag**,
       # and this job had no checkout at all: it only downloaded artifacts, so

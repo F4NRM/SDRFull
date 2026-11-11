@@ -22,7 +22,7 @@ jobs:
   # workflows restore each other's caches.
   web:
     name: web client (wasm)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # Needed although the client builds none of it: cargo resolves the whole
       # workspace first, and sdroxide-hfdl depends on vendor/xng by path. See
