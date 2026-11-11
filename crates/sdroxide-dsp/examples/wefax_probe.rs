@@ -167,6 +167,12 @@ fn decode(audio: &[f32], lpm: WefaxLpm, ioc: WefaxIoc, manual: bool) -> Option<V
                     picture[y] = gray.clone();
                 }
                 WefaxEvent::Complete { lines, by_tone } => {
+                    let (corr, from) = rx.slant_correction();
+                    println!(
+                        "  {at:7.1}s slant: trim {:+.1} ppm, last correction {corr:+.1} ppm from {from} phasing lines{}",
+                        rx.slant_ppm(),
+                        if rx.slant_reverted() { ", auto-slant reverted" } else { "" }
+                    );
                     println!(
                         "  {at:7.1}s complete: {lines} lines, {}",
                         if *by_tone {
