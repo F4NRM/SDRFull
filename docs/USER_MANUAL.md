@@ -6284,7 +6284,7 @@ stays listed). The window has to cover the sondes: centre the radio with the *Ch
 box, and note that a 2.4 MS/s receiver sees about 2.4 MHz of the 5.85 MHz band. The decoder needs a wideband source (a receiver that sends
 I/Q); it is off for a rig that only hands over audio. The setting is kept in `sonde.json`.
 
-**Weather satellites.** The **WXSAT** chip in EXTRAS opens the WEATHER SATELLITES window:
+**Weather satellites.** The **METEOSAT** chip in EXTRAS opens the WEATHER SATELLITES window:
 the picture a weather satellite sends on 137 MHz, drawn as it comes in. The *Signal* choice
 picks the kind. **APT** is the analogue signal of NOAA-15, 18 and 19: channel A on the left
 and channel B on the right, line by line. **LRPT** is the digital signal of Meteor-M2-3

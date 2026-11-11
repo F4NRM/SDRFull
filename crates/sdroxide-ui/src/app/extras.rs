@@ -266,7 +266,7 @@ impl super::SdroxideApp {
             let wx = crate::chrome::chip_sized(
                 ui,
                 self.show_wxsat,
-                "WXSAT",
+                "METEOSAT",
                 egui::vec2(SLOT_W, SLOT_H),
             )
             .on_hover_text(tr!("extras-wxsat-hint"));
