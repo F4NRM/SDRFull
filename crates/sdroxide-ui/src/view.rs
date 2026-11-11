@@ -144,6 +144,12 @@ pub struct ViewState {
     /// lane at all).
     #[serde(default = "wide_waterfall_default")]
     pub wide_waterfall: bool,
+    /// Height of the full-band strip, in points. Dragged from the handle under
+    /// it, like the split between the waterfall and the operating panel; kept
+    /// within [`crate::widgets::wide_spectrum::MIN_STRIP_HEIGHT`] and
+    /// [`crate::widgets::wide_spectrum::MAX_STRIP_HEIGHT`] wherever it is read.
+    #[serde(default = "wide_strip_height_default")]
+    pub wide_strip_height: f32,
     /// Draw the propagation heat under the operating panel's flat map.
     ///
     /// Here and not in [`Solar3dView`], even though the globe has the same
@@ -602,6 +608,7 @@ impl Default for ViewState {
             waterfall_flip: false,
             decode_labels: decode_labels_default(),
             wide_waterfall: wide_waterfall_default(),
+            wide_strip_height: wide_strip_height_default(),
             prop_on_map: false,
             prop_map_mode: prop_map_mode_default(),
             prop_map_band: prop_map_band_default(),
@@ -745,6 +752,11 @@ fn decode_labels_default() -> bool {
 /// full-band lane shows it without anyone having to find the chip first.
 fn wide_waterfall_default() -> bool {
     true
+}
+
+/// Default for [`ViewState::wide_strip_height`] — what the strip always was.
+fn wide_strip_height_default() -> f32 {
+    crate::widgets::wide_spectrum::DEFAULT_STRIP_HEIGHT
 }
 
 /// Default for [`ViewState::spectrum_3d_solid`] — the filled, palette-coloured
@@ -904,6 +916,7 @@ mod tests {
         // array that fell back to `[false; N]` would silently hide every spot
         // for everyone who upgrades, and it would look like the feeds broke.
         assert!(v.wide_waterfall, "the full-band strip stays on offer after an upgrade");
+        assert_eq!(v.wide_strip_height, 96.0, "the strip keeps the height it always had");
         assert_eq!(v.spot_kinds_shown, [true; SPOT_KINDS], "no spot kind is hidden by upgrading");
         assert!(v.auto_fit, "auto-fit is on for everyone, not only for fresh installs");
         assert!(v.flatten, "upgrading should leave the flattening on, as a fresh install has it");

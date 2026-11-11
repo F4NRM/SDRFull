@@ -2345,6 +2345,12 @@ pub struct ClientScreen {
     /// What the meter measures — [`UiSettings::smeter_view`]. Appended last:
     /// this struct rides the wire positionally.
     pub smeter_view: MeterView,
+    /// Height of the full-band strip above the panadapter, in points — the
+    /// client's `ViewState::wide_strip_height`, carried for the same reason as
+    /// [`Self::center_on_vfo`]: the browser's own copy is not reliable, so the
+    /// server keeps it and replays it. Appended last: this struct rides the
+    /// wire positionally.
+    pub wide_strip_height: f32,
 }
 
 impl Default for ClientScreen {
@@ -2392,6 +2398,8 @@ impl ClientScreen {
             spectrum_fill_style: s.spectrum_fill_style,
             broadcast_scope: s.broadcast_scope,
             smeter_view: s.smeter_view,
+            // Filled by the client from its `ViewState`, like the two above.
+            wide_strip_height: 96.0,
         }
     }
 

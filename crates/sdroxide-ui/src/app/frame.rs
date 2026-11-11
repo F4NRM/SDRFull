@@ -1742,9 +1742,28 @@ impl eframe::App for SdroxideApp {
                     &wide,
                     &self.state,
                     self.ui_settings.waterfall_palette,
+                    self.view.wide_strip_height,
                     &mut cmds,
                 );
-                ui.add_space(2.0);
+                // The strip's own height handle, the same grip as between the
+                // waterfall and the operating panel: drag down to grow it.
+                let width = ui.available_width();
+                let hresp = crate::chrome::split_handle(
+                    ui,
+                    egui::vec2(width, 7.0),
+                    Some(crate::theme::PANEL()),
+                );
+                if hresp.dragged() {
+                    self.view.wide_strip_height = crate::widgets::wide_spectrum::clamp_strip_height(
+                        self.view.wide_strip_height + hresp.drag_delta().y,
+                    );
+                }
+                // Once, on release: the server keeps the height (see
+                // `ClientScreen::wide_strip_height`), and a write per frame of
+                // the drag would be sixty of them.
+                if hresp.drag_stopped() {
+                    self.save_screen_to_profile_silent();
+                }
             }
             let frame = self.frame.take();
             // As on the digital path: no fresh frames, no scroll.
@@ -4133,6 +4152,10 @@ impl SdroxideApp {
                         settings.apply_to(&mut self.ui_settings);
                         self.view.center_on_vfo = settings.center_on_vfo;
                         self.view.fft_size = settings.fft_size;
+                        self.view.wide_strip_height =
+                            crate::widgets::wide_spectrum::clamp_strip_height(
+                                settings.wide_strip_height,
+                            );
                         self.client_settings_stored = Some(settings);
                     }
                     // `has_stored == false` is a name-only offer: the profile
@@ -5125,6 +5148,7 @@ impl SdroxideApp {
         let mut screen = sdroxide_types::ClientScreen::from_settings(&self.ui_settings);
         screen.center_on_vfo = self.view.center_on_vfo;
         screen.fft_size = self.view.fft_size;
+        screen.wide_strip_height = self.view.wide_strip_height;
         if self.client_settings_stored == Some(screen) {
             return;
         }
@@ -5145,6 +5169,7 @@ impl SdroxideApp {
         // the client fills them here and puts them back on the way in.
         screen.center_on_vfo = self.view.center_on_vfo;
         screen.fft_size = self.view.fft_size;
+        screen.wide_strip_height = self.view.wide_strip_height;
         self.ctrl.send_client_settings(profile.clone(), screen);
         self.client_settings_stored = Some(screen);
         self.client_settings_status = Some(match &profile {
@@ -5160,6 +5185,7 @@ impl SdroxideApp {
         let mut screen = sdroxide_types::ClientScreen::from_settings(&self.ui_settings);
         screen.center_on_vfo = self.view.center_on_vfo;
         screen.fft_size = self.view.fft_size;
+        screen.wide_strip_height = self.view.wide_strip_height;
         self.ctrl.send_client_settings(profile, screen.clone());
         self.client_settings_stored = Some(screen);
     }
@@ -5371,6 +5397,8 @@ impl SdroxideApp {
                 stored.apply_to(&mut self.ui_settings);
                 self.view.center_on_vfo = stored.center_on_vfo;
                 self.view.fft_size = stored.fft_size;
+                self.view.wide_strip_height =
+                    crate::widgets::wide_spectrum::clamp_strip_height(stored.wide_strip_height);
                 crate::app::persist::persist_ui_settings(&self.ui_settings);
                 self.client_settings_status =
                     Some(tr!("frame-look-back-to-profile"));

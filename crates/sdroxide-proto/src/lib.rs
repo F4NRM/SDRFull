@@ -2406,8 +2406,16 @@ use sdroxide_types::{
 /// layouts. `#[serde(default)]` on the layer keeps a stored
 /// `sstv_presets.json` loading unchanged.
 /// `PROTO_VERSION` 294 → 295, `VERSION_BYTE` 0x72 → 0x73.
-pub const PROTO_VERSION: u16 = 296;
-const VERSION_BYTE: u8 = 0x74;
+///
+/// v297: **the height of the full-band strip.** [`sdroxide_types::ClientScreen`]
+/// gains `wide_strip_height` (f32, points) at its tail: the strip above the
+/// panadapter can be dragged taller or shorter, and the height is kept on the
+/// server with the rest of the screen, not in the browser. `ClientScreen` rides
+/// `ServerMsg::ClientSettings` and `Command::SetClientSettings` whole, so this
+/// is the same appended-field break as v194.
+/// `PROTO_VERSION` 296 → 297, `VERSION_BYTE` 0x74 → 0x75.
+pub const PROTO_VERSION: u16 = 297;
+const VERSION_BYTE: u8 = 0x75;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3731,7 +3739,22 @@ mod tests {
         }
         // v296: the SSTV clock layer (`TextLayer::clock`) appended at the tail
         // of a `Composer` layer, which rides the picture preset messages.
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (296, 0x74));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (297, 0x75));
+        // v297: the strip height at the tail of `ClientScreen`, and it comes
+        // back as sent.
+        let screen = sdroxide_types::ClientScreen {
+            wide_strip_height: 180.0,
+            ..sdroxide_types::ClientScreen::default()
+        };
+        let reply = ServerMsg::ClientSettings(ClientSettingsReply {
+            profile: Some("op".into()),
+            settings: screen,
+            has_stored: true,
+        });
+        match decode::<ServerMsg>(&encode(&reply).unwrap()).unwrap() {
+            ServerMsg::ClientSettings(r) => assert_eq!(r.settings.wide_strip_height, 180.0),
+            _ => panic!("ClientSettings did not round-trip"),
+        }
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3787,7 +3810,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (296, 0x74));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (297, 0x75));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3809,7 +3832,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (296, 0x74));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (297, 0x75));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4882,7 +4905,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (296, 0x74));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (297, 0x75));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),
