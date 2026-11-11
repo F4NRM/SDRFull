@@ -43,8 +43,6 @@ mod fst4;
 mod geo;
 mod hd;
 mod hfdl;
-mod sonde;
-pub mod sonde_export;
 mod ibp;
 mod input;
 mod ism;
@@ -82,6 +80,8 @@ mod satlock;
 mod scanner;
 mod signal_id;
 mod skimmer;
+mod sonde;
+pub mod sonde_export;
 mod spectrum;
 mod speech;
 mod spot;
@@ -188,8 +188,8 @@ pub use digi::{
     WsprRadio, adif_band, adif_records, adif_to_qso_log, adif_to_qso_log_counting_swl,
     clock_health, cq_is_for_us, digi_decode_to_adif_record, digi_decodes_to_adif,
     digi_decodes_to_csv, eu_vhf_rs, fmt_report, next_contest_serial, qso_log_to_adif,
-    qso_log_to_csv, qso_log_to_text, qso_to_adif_record, tx_level_db, tx_level_from_db, utc_ymd_hms, worked_before,
-    ymd_hms_to_unix,
+    qso_log_to_csv, qso_log_to_text, qso_to_adif_record, tx_level_db, tx_level_from_db,
+    utc_ymd_hms, worked_before, ymd_hms_to_unix,
 };
 pub use drm::{
     DrmChannel, DrmCodec, DrmConstellation, DrmRobustness, DrmService, DrmStatus, DrmSync, DrmTime,
@@ -212,10 +212,6 @@ pub use geo::{
     grid4, latlon_to_grid,
 };
 pub use hd::{HdAudioService, HdRadioStatus};
-pub use sonde::{
-    SONDE_BAND_HZ, SONDE_DEFAULT_HZ, SONDE_MAX_TRACKS, SONDE_TRACK_DEPTH, SondePoint,
-    SondeSettings, SondeStatus, SondeTrack,
-};
 pub use hfdl::{
     HFDL_DEFAULT_HZ, HFDL_LANE_RATE_HZ, HFDL_LOG_DEPTH, HfdlDecode, HfdlFix, HfdlSettings,
     HfdlStatus,
@@ -228,7 +224,7 @@ pub use ibp::{
 pub use input::{
     Action, ActionInput, ActionKind, BindingTuning, ButtonMode, InputSettings, KeyBinding,
     KeyChord, MidiBinding, MidiMsg, MidiMsgKind, MidiSettings, MouseButton, MouseButtonBinding,
-    RelativeMode, WheelAction, WheelSettings,
+    RelativeMode, SerialPttOutput, SerialPttSettings, WheelAction, WheelSettings,
 };
 pub use ism::{
     ISM_MAX_DEVICES_DEFAULT, ISM_THRESHOLD_DB_DEFAULT, IsmBurstClass, IsmChannelStatus, IsmFamily,
@@ -284,7 +280,7 @@ pub use publicsdr::{PublicSdrDirectory, PublicSdrEntry, PublicSdrNetwork};
 pub use q65::Q65Mode;
 pub use qo100::{QO100_BEACON_HZ, Qo100Settings, Qo100Status};
 pub use radio::{
-    TxBlock, AirspyConfig, AirspyDevice, AirspyGain, AirspyHfConfig, AirspyHfDevice, AirspyHfModel,
+    AirspyConfig, AirspyDevice, AirspyGain, AirspyHfConfig, AirspyHfDevice, AirspyHfModel,
     AtsMiniConfig, Backend, BandDriveTrim, CAT_IQ_DC_BLOCK_MAX_HZ, CAT_IQ_RATES,
     CAT_SCOPE_MIN_BAUD, CONVERTER_OFFSET_MAX_HZ, CONVERTER_PRESETS, CatConfig, CatFamily,
     ConverterTx, CwKeying, DB_PER_S_UNIT, DIV_FREEZE_ELEMENT, DIV_MODE_ELEMENT, DIV_RATE_ELEMENT,
@@ -304,7 +300,7 @@ pub use radio::{
     SoapyConfig, SoapyDeviceInfo, SoundFormat, SpyServerConfig, SpyServerFormat, StopBits,
     TRUSDX_NG_RX_RATE_CW_HZ, TRUSDX_NG_TX_RATE_HZ, TRUSDX_NG_TX_START_BYTE, TRUSDX_RX_RATE_HZ,
     TRUSDX_TX_ESCAPE_TO, TRUSDX_TX_RATE_HZ, TciConfig, TrUsdxAudio, TrUsdxNgAgc, Transverter,
-    cat_iq_offset_max_hz, converter_preset_name, diversity_cost_note, elad_cat_baud,
+    TxBlock, cat_iq_offset_max_hz, converter_preset_name, diversity_cost_note, elad_cat_baud,
     format_freq_ranges, hackrf_serial_matches, hpsdr_alex_oc, hpsdr_n2adr_oc, parse_freq_ranges,
 };
 pub use rds::{
@@ -345,6 +341,10 @@ pub use signal_id::{
 pub use skimmer::{
     CW_SLOT_CHOICES, CW_SLOTS_DEFAULT, CwEngine, SkimmerKind, SkimmerSettings, SkimmerSpot,
 };
+pub use sonde::{
+    SONDE_BAND_HZ, SONDE_DEFAULT_HZ, SONDE_MAX_TRACKS, SONDE_TRACK_DEPTH, SondePoint,
+    SondeSettings, SondeStatus, SondeTrack,
+};
 pub use spectrum::{
     DEFAULT_DISPLAY_BINS, DEFAULT_ROWS_PER_SEC, MAX_DISPLAY_BINS, MAX_ROWS_PER_SEC, SpectrumConfig,
     SpectrumFrame,
@@ -370,9 +370,9 @@ pub use tciserver::TciServerConfig;
 pub use tone::{CTCSS_TONES, SubTone};
 pub use ui::{
     BandplanKind, BroadcastScope, ChromeStyle, ClassicSection, ClientAcks, ClientScreen,
-    DetachableModule, DetachedState, DetachedWindow, FontSize, LayoutMode, MapStyle, ProgramsFilters, ProgramsState,
-    ProgramsSort, SmeterStyle, Solar3dWindow, SpectrumDetail, SpectrumFillStyle, Speed, UiLanguage, UiSettings, UiTheme,
-    WORKSPACE_MAX, Workspace,
+    DetachableModule, DetachedState, DetachedWindow, FontSize, LayoutMode, MapStyle,
+    ProgramsFilters, ProgramsSort, ProgramsState, SmeterStyle, Solar3dWindow, SpectrumDetail,
+    SpectrumFillStyle, Speed, UiLanguage, UiSettings, UiTheme, WORKSPACE_MAX, Workspace,
 };
 pub use ui::{force_swl, set_force_swl};
 pub use uvpacket::{

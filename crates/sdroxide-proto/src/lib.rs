@@ -2224,8 +2224,8 @@ use sdroxide_types::{
 /// gains `scan` at its tail. The struct rides `RadioState` and
 /// `Command::SetSondeConfig` whole, so a v270 peer reads the extra byte as the
 /// start of the next field. `PROTO_VERSION` 270 → 271, `VERSION_BYTE` 0x5A → 0x5B.
-pub const PROTO_VERSION: u16 = 271;
-const VERSION_BYTE: u8 = 0x5B;
+pub const PROTO_VERSION: u16 = 272;
+const VERSION_BYTE: u8 = 0x5C;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {

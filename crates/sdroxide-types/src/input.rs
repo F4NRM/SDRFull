@@ -924,6 +924,60 @@ pub struct MidiSettings {
     pub bindings: Vec<MidiBinding>,
 }
 
+/// Output line the serial PTT worker asserts to power the DSR/CTS loopback.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SerialPttOutput {
+    Rts,
+    Dtr,
+}
+
+impl Default for SerialPttOutput {
+    fn default() -> Self {
+        SerialPttOutput::Rts
+    }
+}
+
+impl SerialPttOutput {
+    pub fn label(self) -> &'static str {
+        match self {
+            SerialPttOutput::Rts => "RTS",
+            SerialPttOutput::Dtr => "DTR",
+        }
+    }
+}
+
+/// Settings for the "desktop or external microphone" PTT input: a serial (or
+/// USB-serial) port whose handshake lines carry a foot-switch / mic PTT.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SerialPttSettings {
+    pub enabled: bool,
+    pub port_id: String,
+    pub port_name: String,
+    pub output: SerialPttOutput,
+    /// Whether the output line is asserted (high) while enabled.
+    pub output_on: bool,
+    pub input: crate::SenseLine,
+    /// `true` = PTT keys when the input line reads high.
+    pub active_high: bool,
+    pub debounce_ms: u32,
+}
+
+impl Default for SerialPttSettings {
+    fn default() -> Self {
+        SerialPttSettings {
+            enabled: false,
+            port_id: String::new(),
+            port_name: String::new(),
+            output: SerialPttOutput::Rts,
+            output_on: true,
+            input: crate::SenseLine::Dsr,
+            active_high: true,
+            debounce_ms: 20,
+        }
+    }
+}
+
 /// Everything client-local input control needs.
 ///
 /// Persisted as `input.json` on native and in eframe storage on wasm. It lives
@@ -939,6 +993,7 @@ pub struct InputSettings {
     /// stuck-controller backstop. 0 disables the timeout.
     pub ptt_hold_timeout_s: f32,
     pub midi: MidiSettings,
+    pub serial_ptt: SerialPttSettings,
     /// Which set of shipped defaults this file has already seen. See
     /// [`InputSettings::SCHEMA`] and [`InputSettings::migrate`].
     ///
@@ -965,6 +1020,7 @@ impl Default for InputSettings {
             mouse_buttons: Vec::new(),
             ptt_hold_timeout_s: 300.0,
             midi: MidiSettings::default(),
+            serial_ptt: SerialPttSettings::default(),
             schema: InputSettings::SCHEMA,
         }
     }
@@ -1221,6 +1277,9 @@ mod tests {
     fn the_bindings_survive_a_postcard_round_trip() {
         let mut settings = InputSettings::default();
         settings.ptt_hold_timeout_s = 1.25;
+        settings.serial_ptt.enabled = true;
+        settings.serial_ptt.port_name = "COM3".into();
+        settings.serial_ptt.input = crate::SenseLine::Cts;
         settings.keys.push(KeyBinding {
             chord: KeyChord { key: "F13".into(), ctrl: true, ..KeyChord::default() },
             action: Action::Ptt,

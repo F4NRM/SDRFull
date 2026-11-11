@@ -9196,3 +9196,24 @@ sonde-col-temp = Temp.
 sonde-col-humidity = Feuchte
 
 sonde-col-pressure = Druck
+
+settings-net-broadcast-import-needs-station = Mit einer Station verbinden, um zu importieren.
+
+
+
+
+settings-controls-desktop-mic = Tisch- oder externes Mikrofon
+settings-controls-desktop-mic-note = PTT von einem Mikrofon oder Fusschalter an den Handshake-Leitungen eines seriellen (oder USB-seriellen) Ports.
+settings-controls-output-line = Ausgangsleitung
+settings-controls-output-on = Ausgang aktiv
+settings-controls-input-line = Eingangsleitung
+settings-controls-active-level = Aktiver Pegel
+settings-controls-active-high = Hoch
+settings-controls-active-low = Niedrig
+settings-controls-debounce = Entprellung (ms)
+serial-ptt-output-rts = RTS
+serial-ptt-output-dtr = DTR
+
+settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
+settings-controls-choose-serial-port = Choose serial port
+settings-controls-serial-port-chosen = Serial port chosen.

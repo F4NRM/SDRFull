@@ -78,6 +78,8 @@ pub(crate) enum HeldSource {
     Mouse(usize),
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     Midi(usize),
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    SerialPtt,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -502,6 +504,16 @@ pub struct MidiLearn {
     pub row: usize,
 }
 
+#[cfg(target_arch = "wasm32")]
+use std::sync::Mutex;
+
+#[cfg(target_arch = "wasm32")]
+pub static WEB_SERIAL_PTT_PORT: Mutex<Option<js_sys::Object>> = Mutex::new(None);
+#[cfg(target_arch = "wasm32")]
+pub static WEB_SERIAL_PTT_LINE: Mutex<Option<bool>> = Mutex::new(None);
+#[cfg(target_arch = "wasm32")]
+pub static WEB_SERIAL_PTT_PENDING: Mutex<bool> = Mutex::new(false);
+
 /// Client-side control-input state: the bindings, what is currently held, and
 /// (on native) the live MIDI connection.
 pub struct InputRuntime {
@@ -524,6 +536,19 @@ pub struct InputRuntime {
     /// (a step change, say) doesn't tear the connection down.
     #[cfg(not(target_arch = "wasm32"))]
     midi_sent: sdroxide_midi::MidiConfig,
+    /// Open serial port for the "desktop or external microphone" PTT input.
+    #[cfg(not(target_arch = "wasm32"))]
+    serial_ptt_port: Option<Box<dyn serialport::SerialPort>>,
+    #[cfg(not(target_arch = "wasm32"))]
+    serial_ptt_cfg: sdroxide_types::SerialPttSettings,
+    #[cfg(not(target_arch = "wasm32"))]
+    serial_ptt_down: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    serial_ptt_last_change: f64,
+    #[cfg(target_arch = "wasm32")]
+    serial_ptt_down: bool,
+    #[cfg(target_arch = "wasm32")]
+    serial_ptt_last_change: f64,
 }
 
 impl InputRuntime {
@@ -547,6 +572,8 @@ impl InputRuntime {
         };
         #[cfg(target_arch = "wasm32")]
         let _ = ctx;
+        #[cfg(not(target_arch = "wasm32"))]
+        let serial_ptt_cfg = cfg.serial_ptt.clone();
         InputRuntime {
             cfg,
             held: Vec::new(),
@@ -559,7 +586,145 @@ impl InputRuntime {
             midi,
             #[cfg(not(target_arch = "wasm32"))]
             midi_sent,
+            #[cfg(not(target_arch = "wasm32"))]
+            serial_ptt_port: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            serial_ptt_cfg,
+            #[cfg(not(target_arch = "wasm32"))]
+            serial_ptt_down: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            serial_ptt_last_change: 0.0,
+            #[cfg(target_arch = "wasm32")]
+            serial_ptt_down: false,
+            #[cfg(target_arch = "wasm32")]
+            serial_ptt_last_change: 0.0,
         }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn request_web_serial_port(cfg: sdroxide_types::SerialPttSettings) {
+        wasm_bindgen_futures::spawn_local(async move {
+            use js_sys::{Function, Object, Reflect};
+            use wasm_bindgen::JsCast;
+            let Some(window) = web_sys::window() else { return; };
+            let navigator = window.navigator();
+            let serial = match Reflect::get(&navigator, &"serial".into()) {
+                Ok(v) if !v.is_undefined() && !v.is_null() => v,
+                _ => return,
+            };
+            // requestPort()
+            let request_port_fn: Function = match Reflect::get(&serial, &"requestPort".into()) {
+                Ok(v) => v.unchecked_into(),
+                Err(_) => return,
+            };
+            let port_promise: js_sys::Promise = match request_port_fn.call0(&serial) {
+                Ok(v) => v.unchecked_into(),
+                Err(_) => return,
+            };
+            let port_val = match wasm_bindgen_futures::JsFuture::from(port_promise).await {
+                Ok(v) => v,
+                Err(_) => return,
+            };
+            let port: Object = port_val.into();
+            // open({ baudRate: 9600 })
+            if let Ok(open_fn) = Reflect::get(&port, &"open".into()) {
+                let open_fn: Function = open_fn.unchecked_into();
+                let options = Object::new();
+                let _ = Reflect::set(&options, &"baudRate".into(), &9600.into());
+                if let Ok(promise) = open_fn.call1(&port, &options) {
+                    let promise: js_sys::Promise = promise.unchecked_into();
+                    let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+                }
+            }
+            // setSignals
+            if cfg.output_on {
+                if let Ok(set_fn) = Reflect::get(&port, &"setSignals".into()) {
+                    let set_fn: Function = set_fn.unchecked_into();
+                    let sig = Object::new();
+                    match cfg.output {
+                        sdroxide_types::SerialPttOutput::Rts => {
+                            let _ = Reflect::set(&sig, &"requestToSend".into(), &true.into());
+                        }
+                        sdroxide_types::SerialPttOutput::Dtr => {
+                            let _ = Reflect::set(&sig, &"dataTerminalReady".into(), &true.into());
+                        }
+                    }
+                    if let Ok(promise) = set_fn.call1(&port, &sig) {
+                        let promise: js_sys::Promise = promise.unchecked_into();
+                        let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+                    }
+                }
+            }
+            *WEB_SERIAL_PTT_PORT.lock().unwrap() = Some(port);
+            *WEB_SERIAL_PTT_LINE.lock().unwrap() = None;
+        });
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn poll_serial_ptt(
+        &mut self,
+        ctx: &eframe::egui::Context,
+        state: &mut RadioState,
+        ui: &mut UiSink<'_>,
+        cmds: &mut Vec<Command>,
+    ) {
+        use sdroxide_types::SerialPttSettings;
+        let cfg: SerialPttSettings = self.cfg.serial_ptt.clone();
+        if !cfg.enabled {
+            if self.serial_ptt_down {
+                self.serial_ptt_down = false;
+                apply_action(Action::Ptt, ActionInput::Release, ButtonMode::Momentary, state, ui, cmds);
+            }
+            return;
+        }
+        // Request signals if a port is open.
+        let port = WEB_SERIAL_PTT_PORT.lock().unwrap().clone();
+        let Some(port) = port else { return; };
+        if !*WEB_SERIAL_PTT_PENDING.lock().unwrap() {
+            *WEB_SERIAL_PTT_PENDING.lock().unwrap() = true;
+            let port2 = port.clone();
+            let cfg2 = cfg.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                use js_sys::{Function, Reflect};
+                use wasm_bindgen::JsCast;
+                if let Ok(get_fn) = Reflect::get(&port2, &"getSignals".into()) {
+                    let get_fn: Function = get_fn.unchecked_into();
+                    if let Ok(promise) = get_fn.call0(&port2) {
+                        let promise: js_sys::Promise = promise.unchecked_into();
+                        if let Ok(signals) = wasm_bindgen_futures::JsFuture::from(promise).await {
+                            let line = match cfg2.input {
+                                sdroxide_types::SenseLine::Cts => Reflect::get(&signals, &"clearToSend".into())
+                                    .ok()
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(false),
+                                sdroxide_types::SenseLine::Dsr => Reflect::get(&signals, &"dataSetReady".into())
+                                    .ok()
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(false),
+                                sdroxide_types::SenseLine::Dcd => Reflect::get(&signals, &"dataCarrierDetect".into())
+                                    .ok()
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(false),
+                                _ => false,
+                            };
+                            let high = if cfg2.active_high { line } else { !line };
+                            *WEB_SERIAL_PTT_LINE.lock().unwrap() = Some(high);
+                        }
+                    }
+                }
+                *WEB_SERIAL_PTT_PENDING.lock().unwrap() = false;
+            });
+        }
+        // Consume latest line state.
+        let line = *WEB_SERIAL_PTT_LINE.lock().unwrap();
+        if let Some(high) = line {
+            if high != self.serial_ptt_down {
+                self.serial_ptt_down = high;
+                let input = if high { ActionInput::Press } else { ActionInput::Release };
+                apply_action(Action::Ptt, input, ButtonMode::Momentary, state, ui, cmds);
+            }
+        }
+        let _ = ctx;
     }
 
     pub fn persist(&self) {
@@ -709,6 +874,7 @@ impl InputRuntime {
                             // MIDI releases arrive as messages, not as polled
                             // state; only the global conditions above end them.
                             HeldSource::Midi(_) => false,
+                            HeldSource::SerialPtt => false,
                         }
                     })
                     .map(|h| h.src)
@@ -994,6 +1160,138 @@ impl InputRuntime {
         }
     }
 
+    /// Open/close the serial port used for the "desktop or external microphone"
+    /// PTT input, asserting the configured output line while enabled.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn sync_serial_ptt(&mut self) {
+        use sdroxide_types::SerialPttOutput;
+        use serialport::SerialPort;
+        let want = self.cfg.serial_ptt.clone();
+        if want == self.serial_ptt_cfg && self.serial_ptt_port.is_some() == want.enabled {
+            // Nothing to do; keep port open state consistent with enabled flag.
+            if !want.enabled {
+                self.serial_ptt_port = None;
+                self.serial_ptt_down = false;
+            }
+            return;
+        }
+        // Close first.
+        self.serial_ptt_port = None;
+        self.serial_ptt_down = false;
+        self.serial_ptt_cfg = want.clone();
+        if !want.enabled || want.port_id.is_empty() && want.port_name.is_empty() {
+            return;
+        }
+        // Resolve port name.
+        let name =
+            if !want.port_name.is_empty() { want.port_name.clone() } else { want.port_id.clone() };
+        // Open.
+        let mut port = serialport::new(&name, 9600)
+            .data_bits(serialport::DataBits::Eight)
+            .parity(serialport::Parity::None)
+            .stop_bits(serialport::StopBits::One)
+            .flow_control(serialport::FlowControl::None)
+            .timeout(std::time::Duration::from_millis(10))
+            .open();
+        let Ok(mut p) = port else {
+            return;
+        };
+        // Configure output line.
+        let assert_on = want.output_on;
+        match want.output {
+            SerialPttOutput::Rts => {
+                let _ = p.write_request_to_send(assert_on);
+            }
+            SerialPttOutput::Dtr => {
+                let _ = p.write_data_terminal_ready(assert_on);
+            }
+        }
+        // Make sure the other output is deasserted (avoid resetting radios).
+        match want.output {
+            SerialPttOutput::Rts => {
+                let _ = p.write_data_terminal_ready(false);
+            }
+            SerialPttOutput::Dtr => {
+                let _ = p.write_request_to_send(false);
+            }
+        }
+        self.serial_ptt_port = Some(p);
+    }
+
+    /// Drain the serial PTT worker and apply edges.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn poll_serial_ptt(
+        &mut self,
+        ctx: &eframe::egui::Context,
+        state: &mut RadioState,
+        ui: &mut UiSink<'_>,
+        cmds: &mut Vec<Command>,
+    ) {
+        use serialport::SerialPort;
+        self.sync_serial_ptt();
+        let cfg = self.cfg.serial_ptt.clone();
+        if !cfg.enabled {
+            if self.serial_ptt_down {
+                self.serial_ptt_down = false;
+                let src = HeldSource::SerialPtt;
+                if self.release(src).is_some() {
+                    // no-op
+                }
+                apply_action(
+                    Action::Ptt,
+                    ActionInput::Release,
+                    ButtonMode::Momentary,
+                    state,
+                    ui,
+                    cmds,
+                );
+            }
+            return;
+        }
+        let Some(port) = self.serial_ptt_port.as_mut() else {
+            return;
+        };
+        let raw = match cfg.input {
+            sdroxide_types::SenseLine::Cts => port.read_clear_to_send(),
+            sdroxide_types::SenseLine::Dsr => port.read_data_set_ready(),
+            sdroxide_types::SenseLine::Dcd => port.read_carrier_detect(),
+            _ => Ok(false),
+        };
+        let Ok(line) = raw else {
+            // Port error: unkey and drop.
+            if self.serial_ptt_down {
+                self.serial_ptt_down = false;
+                apply_action(
+                    Action::Ptt,
+                    ActionInput::Release,
+                    ButtonMode::Momentary,
+                    state,
+                    ui,
+                    cmds,
+                );
+            }
+            self.serial_ptt_port = None;
+            return;
+        };
+        let high = if cfg.active_high { line } else { !line };
+        let now = ctx.input(|i| i.time);
+        let debounce = cfg.debounce_ms as f64 / 1000.0;
+        if high != self.serial_ptt_down && (now - self.serial_ptt_last_change) >= debounce {
+            self.serial_ptt_last_change = now;
+            self.serial_ptt_down = high;
+            let input = if high { ActionInput::Press } else { ActionInput::Release };
+            // Track held source for consistency.
+            let src = HeldSource::SerialPtt;
+            if high {
+                self.press(src, Action::Ptt, ButtonMode::Momentary, now);
+            } else {
+                let _ = self.release(src);
+            }
+            apply_action(Action::Ptt, input, ButtonMode::Momentary, state, ui, cmds);
+        }
+        let _ = ctx;
+    }
+
     /// Live MIDI connection state, for the settings dialog.
     pub fn midi_status(&self) -> MidiStatusView {
         #[cfg(not(target_arch = "wasm32"))]
@@ -1037,6 +1335,7 @@ impl InputRuntime {
             HeldSource::Midi(ix) => {
                 self.cfg.midi.bindings.get(ix).map(|b| (b.action, b.button_mode))
             }
+            HeldSource::SerialPtt => Some((Action::Ptt, ButtonMode::Momentary)),
         }
     }
 }

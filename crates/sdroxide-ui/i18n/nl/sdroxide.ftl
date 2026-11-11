@@ -9206,3 +9206,24 @@ sonde-col-temp = Temp.
 sonde-col-humidity = Vochtigheid
 
 sonde-col-pressure = Druk
+
+settings-net-broadcast-import-needs-station = Verbind met een station om te importeren.
+
+
+
+
+settings-controls-desktop-mic = Tafel- of extern microfoon
+settings-controls-desktop-mic-note = PTT van een microfoon of voetschakelaar op de handshake-lijnen van een seriële (of USB-seriële) poort.
+settings-controls-output-line = Uitgangslijn
+settings-controls-output-on = Uitgang aan
+settings-controls-input-line = Ingangslijn
+settings-controls-active-level = Actief niveau
+settings-controls-active-high = Hoog
+settings-controls-active-low = Laag
+settings-controls-debounce = Ontdendering (ms)
+serial-ptt-output-rts = RTS
+serial-ptt-output-dtr = DTR
+
+settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
+settings-controls-choose-serial-port = Choose serial port
+settings-controls-serial-port-chosen = Serial port chosen.

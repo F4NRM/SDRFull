@@ -139,22 +139,26 @@ fn action_combo(
 ) -> bool {
     use sdroxide_types::Action;
     let mut changed = false;
-    ComboBox::from_id_salt(id).width(210.0).selected_text(action_label(*action)).show_styled(ui, |ui| {
-        let mut group = "";
-        let all =
-            Action::all().into_iter().chain(memories.iter().map(|m| Action::MemoryRecall(m.id)));
-        for a in all {
-            if a.group() != group {
-                group = a.group();
-                ui.add_space(4.0);
-                ui.label(RichText::new(action_group_label(group)).small().weak());
+    ComboBox::from_id_salt(id).width(210.0).selected_text(action_label(*action)).show_styled(
+        ui,
+        |ui| {
+            let mut group = "";
+            let all = Action::all()
+                .into_iter()
+                .chain(memories.iter().map(|m| Action::MemoryRecall(m.id)));
+            for a in all {
+                if a.group() != group {
+                    group = a.group();
+                    ui.add_space(4.0);
+                    ui.label(RichText::new(action_group_label(group)).small().weak());
+                }
+                if ui.selectable_label(*action == a, action_label(a)).clicked() {
+                    *action = a;
+                    changed = true;
+                }
             }
-            if ui.selectable_label(*action == a, action_label(a)).clicked() {
-                *action = a;
-                changed = true;
-            }
-        }
-    });
+        },
+    );
     changed
 }
 
@@ -179,12 +183,14 @@ pub(in crate::app) fn settings_controls_tab(
     let cfg = &mut *io.input_edit;
     let key_capture = &mut *io.key_capture;
 
-    ui.label(RichText::new(tr!("settings-controls-keyboard")).size(14.0).strong().color(crate::theme::CYAN()));
-    ui.add_space(4.0);
-    super::note(
-        ui,
-        &tr!("settings-controls-click-shortcut-rebind-then-press"),
+    ui.label(
+        RichText::new(tr!("settings-controls-keyboard"))
+            .size(14.0)
+            .strong()
+            .color(crate::theme::CYAN()),
     );
+    ui.add_space(4.0);
+    super::note(ui, &tr!("settings-controls-click-shortcut-rebind-then-press"));
     ui.add_space(4.0);
     ui.label(RichText::new(tr!("settings-controls-click-shortcut-rebind-then-press")).weak());
     ui.add_space(6.0);
@@ -206,7 +212,11 @@ pub(in crate::app) fn settings_controls_tab(
 
             for (i, b) in cfg.keys.iter_mut().enumerate() {
                 let capturing = *key_capture == Some(i);
-                let label = if capturing { tr!("settings-controls-press-key").to_string() } else { b.chord.label() };
+                let label = if capturing {
+                    tr!("settings-controls-press-key").to_string()
+                } else {
+                    b.chord.label()
+                };
                 if crate::chrome::chip(ui, capturing, RichText::new(label).monospace()).clicked() {
                     *key_capture = if capturing { None } else { Some(i) };
                 }
@@ -226,7 +236,9 @@ pub(in crate::app) fn settings_controls_tab(
                             // The sign of `value` is the direction, so one
                             // action can have an up key and a down key.
                             let mut down = b.value < 0.0;
-                            if crate::chrome::checkbox(ui, &mut down, tr!("settings-controls-down")).changed() {
+                            if crate::chrome::checkbox(ui, &mut down, tr!("settings-controls-down"))
+                                .changed()
+                            {
                                 b.value = if down { -1.0 } else { 1.0 };
                             }
                         });
@@ -247,7 +259,11 @@ pub(in crate::app) fn settings_controls_tab(
                 }
 
                 crate::chrome::checkbox(ui, &mut b.enabled, "");
-                if ui.small_button("✕").on_hover_text(tr!("settings-controls-remove-binding")).clicked() {
+                if ui
+                    .small_button("✕")
+                    .on_hover_text(tr!("settings-controls-remove-binding"))
+                    .clicked()
+                {
                     remove = Some(i);
                 }
                 ui.end_row();
@@ -376,12 +392,14 @@ pub(in crate::app) fn settings_controls_tab(
     ui.separator();
     ui.end_row();
     ui.add_space(6.0);
-    ui.label(RichText::new(tr!("settings-controls-mouse-buttons")).size(14.0).strong().color(crate::theme::CYAN()));
-    ui.add_space(4.0);
-    super::note(
-        ui,
-        &tr!("settings-controls-left-right-buttons-are-reserved"),
+    ui.label(
+        RichText::new(tr!("settings-controls-mouse-buttons"))
+            .size(14.0)
+            .strong()
+            .color(crate::theme::CYAN()),
     );
+    ui.add_space(4.0);
+    super::note(ui, &tr!("settings-controls-left-right-buttons-are-reserved"));
     ui.add_space(4.0);
     ui.label(RichText::new(tr!("settings-controls-left-right-buttons-are-reserved")).weak());
     ui.add_space(6.0);
@@ -445,6 +463,11 @@ pub(in crate::app) fn settings_controls_tab(
         midi_status,
         last_midi,
     );
+
+    ui.add_space(8.0);
+    ui.separator();
+    ui.add_space(6.0);
+    settings_serial_ptt_section(ui, cfg);
 }
 
 /// MIDI control surfaces: port selection, a live message readout, and the
@@ -471,16 +494,10 @@ fn settings_midi_section(
     );
     ui.add_space(4.0);
     if !status.supported {
-        super::note(
-            ui,
-            &tr!("settings-controls-midi-controllers-need-native-app"),
-        );
+        super::note(ui, &tr!("settings-controls-midi-controllers-need-native-app"));
         return;
     }
-    super::note(
-        ui,
-        &tr!("settings-controls-any-class-compliant-midi-surface"),
-    );
+    super::note(ui, &tr!("settings-controls-any-class-compliant-midi-surface"));
     ui.add_space(6.0);
     crate::chrome::checkbox(ui, &mut cfg.midi.enabled, tr!("settings-controls-enable"));
     ui.add_space(6.0);
@@ -531,7 +548,10 @@ fn settings_midi_section(
         // Naming the control that just moved is what makes an unlabelled
         // surface bindable at all.
         match last_midi {
-            Some((msg, v)) => super::note(ui, &tr!("settings-controls-last-midi", message = midi_msg_label(&msg), value = v)),
+            Some((msg, v)) => super::note(
+                ui,
+                &tr!("settings-controls-last-midi", message = midi_msg_label(&msg), value = v),
+            ),
             None => super::note(ui, &tr!("settings-controls-move-control-see-here")),
         };
     });
@@ -555,7 +575,11 @@ fn settings_midi_section(
 
             for (i, b) in cfg.midi.bindings.iter_mut().enumerate() {
                 let learning = learn.map(|l| l.row) == Some(i);
-                let label = if learning { tr!("settings-controls-move").to_string() } else { midi_msg_label(&b.msg) };
+                let label = if learning {
+                    tr!("settings-controls-move").to_string()
+                } else {
+                    midi_msg_label(&b.msg)
+                };
                 if crate::chrome::chip(ui, learning, RichText::new(label).monospace())
                     .on_hover_text(tr!("settings-controls-click-then-move-control-you"))
                     .clicked()
@@ -591,19 +615,24 @@ fn settings_midi_section(
                                     .range(0.0..=4.0)
                                     .prefix("×"),
                             )
-                            .on_hover_text(tr!("settings-controls-speed-sensitivity-spin-faster-tune"));
+                            .on_hover_text(tr!(
+                                "settings-controls-speed-sensitivity-spin-faster-tune"
+                            ));
                             // Sign/magnitude and 64-centred encoders are
                             // indistinguishable from small movements, so a wrong
                             // guess shows up as a knob that turns the wrong way.
-                            crate::chrome::checkbox(ui, &mut b.tuning.invert, tr!("settings-controls-rev"));
+                            crate::chrome::checkbox(
+                                ui,
+                                &mut b.tuning.invert,
+                                tr!("settings-controls-rev"),
+                            );
                         });
                     }
                     ActionKind::Momentary => {
                         ui.label("");
                         ui.horizontal(|ui| {
                             for m in ButtonMode::ALL {
-                                if crate::chrome::chip(ui, b.button_mode == m, m.tr()).clicked()
-                                {
+                                if crate::chrome::chip(ui, b.button_mode == m, m.tr()).clicked() {
                                     b.button_mode = m;
                                 }
                             }
@@ -642,10 +671,137 @@ fn settings_midi_section(
     });
 
     ui.add_space(8.0);
-    super::note(
-        ui,
-        &tr!("settings-controls-endless-jog-encoders-send-relative"),
+    super::note(ui, &tr!("settings-controls-endless-jog-encoders-send-relative"));
+}
+
+/// "Desktop or external microphone": PTT from a serial/USB-serial port's
+/// handshake lines.
+fn settings_serial_ptt_section(ui: &mut egui::Ui, cfg: &mut sdroxide_types::InputSettings) {
+    use sdroxide_types::{SenseLine, SerialPttOutput};
+    #[cfg(target_arch = "wasm32")]
+    use crate::input::WEB_SERIAL_PTT_PORT;
+
+    ui.label(
+        RichText::new(tr!("settings-controls-desktop-mic"))
+            .size(14.0)
+            .strong()
+            .color(crate::theme::CYAN()),
     );
+    ui.add_space(4.0);
+    super::note(ui, &tr!("settings-controls-desktop-mic-note"));
+    ui.add_space(6.0);
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        super::note(ui, &tr!("settings-controls-web-serial-needs-chromium"));
+        if crate::chrome::chip(ui, false, tr!("settings-controls-choose-serial-port")).clicked() {
+            crate::input::InputRuntime::request_web_serial_port(cfg.serial_ptt.clone());
+        }
+        if WEB_SERIAL_PTT_PORT.lock().unwrap().is_some() {
+            super::note(ui, &tr!("settings-controls-serial-port-chosen"));
+        }
+        return;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let sp = cfg.serial_ptt.clone();
+        crate::chrome::checkbox(ui, &mut cfg.serial_ptt.enabled, tr!("settings-controls-enable"));
+        ui.add_space(6.0);
+        ui.add_enabled_ui(cfg.serial_ptt.enabled, |ui| {
+            // Enumerate ports locally (client side), not the engine's.
+            let mut ports: Vec<String> = serialport::available_ports()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|p| p.port_name)
+                .collect();
+            ports.sort();
+            ports.dedup();
+
+            egui::Grid::new("serial-ptt-ports")
+                .num_columns(2)
+                .spacing([12.0, 6.0])
+                .min_row_height(ui.spacing().interact_size.y)
+                .show(ui, |ui| {
+                    ui.label(tr!("settings-controls-controller"));
+                    // Reuse midi_port_combo shape manually.
+                    let sel = &mut cfg.serial_ptt.port_name;
+                    let sel_id = &mut cfg.serial_ptt.port_id;
+                    let shown = if sel.is_empty() {
+                        tr!("settings-controls-none").to_string()
+                    } else {
+                        sel.clone()
+                    };
+                    ComboBox::from_id_salt("serial-ptt-port")
+                        .width(280.0)
+                        .selected_text(shown)
+                        .show_styled(ui, |ui| {
+                            if ui
+                                .selectable_label(sel.is_empty(), tr!("settings-controls-none"))
+                                .clicked()
+                            {
+                                sel.clear();
+                                sel_id.clear();
+                            }
+                            for p in &ports {
+                                if ui.selectable_label(sel == p, p).clicked() {
+                                    *sel = p.clone();
+                                    *sel_id = p.clone();
+                                }
+                            }
+                        });
+                    ui.end_row();
+
+                    ui.label(tr!("settings-controls-output-line"));
+                    ComboBox::from_id_salt("serial-ptt-output")
+                        .width(120.0)
+                        .selected_text(cfg.serial_ptt.output.tr())
+                        .show_styled(ui, |ui| {
+                            for o in [SerialPttOutput::Rts, SerialPttOutput::Dtr] {
+                                if ui.selectable_label(cfg.serial_ptt.output == o, o.tr()).clicked()
+                                {
+                                    cfg.serial_ptt.output = o;
+                                }
+                            }
+                        });
+                    ui.end_row();
+
+                    ui.label(tr!("settings-controls-output-on"));
+                    crate::chrome::checkbox(ui, &mut cfg.serial_ptt.output_on, "");
+                    ui.end_row();
+
+                    ui.label(tr!("settings-controls-input-line"));
+                    ComboBox::from_id_salt("serial-ptt-input")
+                        .width(120.0)
+                        .selected_text(cfg.serial_ptt.input.tr())
+                        .show_styled(ui, |ui| {
+                            for s in [SenseLine::Dsr, SenseLine::Cts, SenseLine::Dcd] {
+                                if ui.selectable_label(cfg.serial_ptt.input == s, s.tr()).clicked()
+                                {
+                                    cfg.serial_ptt.input = s;
+                                }
+                            }
+                        });
+                    ui.end_row();
+
+                    ui.label(tr!("settings-controls-active-level"));
+                    let mut high = cfg.serial_ptt.active_high;
+                    if ui.selectable_label(high, tr!("settings-controls-active-high")).clicked() {
+                        high = true;
+                    }
+                    if ui.selectable_label(!high, tr!("settings-controls-active-low")).clicked() {
+                        high = false;
+                    }
+                    cfg.serial_ptt.active_high = high;
+                    ui.end_row();
+
+                    ui.label(tr!("settings-controls-debounce"));
+                    ui.add(egui::DragValue::new(&mut cfg.serial_ptt.debounce_ms).range(0..=200));
+                    ui.end_row();
+                });
+            let _ = sp;
+        });
+    }
 }
 
 /// Port dropdown that keeps both the stable id and the human name — the id

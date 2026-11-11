@@ -9213,3 +9213,24 @@ sonde-col-temp = Ð¢ÐµÐ¼Ð¿.
 sonde-col-humidity = Ð’Ð»Ð°Ð¶Ð½.
 
 sonde-col-pressure = Ð”Ð°Ð²Ð».
+
+settings-net-broadcast-import-needs-station = Подключитесь к станции для импорта.
+
+
+
+
+settings-controls-desktop-mic = Настольный или внешний микрофон
+settings-controls-desktop-mic-note = PTT от микрофона или ножного переключателя, подключенного к линиям рукопожатия последовательного (или USB-serial) порта.
+settings-controls-output-line = Выходная линия
+settings-controls-output-on = Выход активен
+settings-controls-input-line = Входная линия
+settings-controls-active-level = Активный уровень
+settings-controls-active-high = Высокий
+settings-controls-active-low = Низкий
+settings-controls-debounce = Антидребезг (мс)
+serial-ptt-output-rts = RTS
+serial-ptt-output-dtr = DTR
+
+settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
+settings-controls-choose-serial-port = Choose serial port
+settings-controls-serial-port-chosen = Serial port chosen.

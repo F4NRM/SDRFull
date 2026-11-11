@@ -9136,3 +9136,24 @@ sonde-col-temp = æ°”æ¸©
 sonde-col-humidity = æ¹¿åº¦
 
 sonde-col-pressure = æ°”åŽ‹
+
+settings-net-broadcast-import-needs-station = 连接到电台以导入。
+
+
+
+
+settings-controls-desktop-mic = 台式或外置麦克风
+settings-controls-desktop-mic-note = 来自连接到串口（或USB串口）握手线的麦克风或脚踏开关的PTT。
+settings-controls-output-line = 输出线
+settings-controls-output-on = 输出启用
+settings-controls-input-line = 输入线
+settings-controls-active-level = 有效电平
+settings-controls-active-high = 高
+settings-controls-active-low = 低
+settings-controls-debounce = 消抖 (ms)
+serial-ptt-output-rts = RTS
+serial-ptt-output-dtr = DTR
+
+settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
+settings-controls-choose-serial-port = Choose serial port
+settings-controls-serial-port-chosen = Serial port chosen.
