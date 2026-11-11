@@ -33,13 +33,27 @@ use sdroxide_types::{Command, RadioState, SpectrumFrame};
 
 use crate::{colormap, widgets::spectrum_view};
 
-/// Height of the strip, in points.
-pub const STRIP_HEIGHT: f32 = 96.0;
+/// Height the strip has until the operator drags it, in points.
+pub const DEFAULT_STRIP_HEIGHT: f32 = 96.0;
+/// Shortest and tallest the strip may be dragged to, in points. The floor keeps
+/// the frequency scale and a few rows readable; the ceiling stops it taking the
+/// panadapter's room on a normal screen.
+pub const MIN_STRIP_HEIGHT: f32 = 40.0;
+pub const MAX_STRIP_HEIGHT: f32 = 400.0;
+
+/// A height read from the saved view, or dragged to, brought inside the limits.
+/// A value that is not a number (a hand-edited file) falls back to the default.
+pub fn clamp_strip_height(h: f32) -> f32 {
+    if h.is_finite() { h.clamp(MIN_STRIP_HEIGHT, MAX_STRIP_HEIGHT) } else { DEFAULT_STRIP_HEIGHT }
+}
 
 /// Rows of history kept. At ~20 frames a second this is about six seconds —
 /// long enough to see a band opening without the strip turning into a second
 /// waterfall competing with the main one.
 const ROWS: usize = 120;
+
+/// Width of the tuned-frequency line, in points.
+const VFO_LINE_WIDTH: f32 = 3.0;
 
 /// A click tunes to a multiple of this. 100 Hz is finer than a pixel of a
 /// 32 MHz strip, so it never fights the hover readout showing where it lands.
@@ -201,6 +215,7 @@ pub fn show(
     frame: &SpectrumFrame,
     state: &RadioState,
     palette: usize,
+    height: f32,
     cmds: &mut Vec<Command>,
 ) {
     wf.push(frame, palette);
@@ -209,7 +224,7 @@ pub fn show(
     // Nothing else here drags: the span is fixed, so there is no pan or zoom to
     // arbitrate against.
     let (rect, resp) = ui.allocate_exact_size(
-        Vec2::new(ui.available_width(), STRIP_HEIGHT),
+        Vec2::new(ui.available_width(), clamp_strip_height(height)),
         Sense::click_and_drag(),
     );
     if !ui.is_rect_visible(rect) {
@@ -350,11 +365,12 @@ pub fn show(
     }
 
     // The tuned frequency.
+    // Three points of red over a dark edge: on a 30 MHz strip a one-pixel line
+    // was lost against the bars of the waterfall behind it.
     let vfo_x = x_of(state.active_freq_hz());
-    painter.line_segment(
-        [Pos2::new(vfo_x, rect.top()), Pos2::new(vfo_x, rect.bottom())],
-        Stroke::new(1.0, Color32::from_rgb(255, 190, 60)),
-    );
+    let vfo_line = [Pos2::new(vfo_x, rect.top()), Pos2::new(vfo_x, rect.bottom())];
+    painter.line_segment(vfo_line, Stroke::new(VFO_LINE_WIDTH + 2.0, Color32::from_black_alpha(170)));
+    painter.line_segment(vfo_line, Stroke::new(VFO_LINE_WIDTH, Color32::from_rgb(255, 60, 50)));
 
     // The auto-ranged window, so the scale is not a mystery.
     painter.text(
@@ -497,7 +513,16 @@ mod tests {
     /// A strip 100 pt wide starting 10 pt in, so a mapping that forgets
     /// `rect.left()` fails instead of passing by symmetry.
     fn strip() -> Rect {
-        Rect::from_min_size(Pos2::new(10.0, 0.0), Vec2::new(100.0, STRIP_HEIGHT))
+        Rect::from_min_size(Pos2::new(10.0, 0.0), Vec2::new(100.0, DEFAULT_STRIP_HEIGHT))
+    }
+
+    #[test]
+    fn the_strip_height_stays_inside_its_limits() {
+        assert_eq!(clamp_strip_height(DEFAULT_STRIP_HEIGHT), DEFAULT_STRIP_HEIGHT);
+        assert_eq!(clamp_strip_height(1.0), MIN_STRIP_HEIGHT);
+        assert_eq!(clamp_strip_height(5000.0), MAX_STRIP_HEIGHT);
+        assert_eq!(clamp_strip_height(f32::NAN), DEFAULT_STRIP_HEIGHT);
+        assert_eq!(clamp_strip_height(f32::INFINITY), DEFAULT_STRIP_HEIGHT);
     }
 
     #[test]
