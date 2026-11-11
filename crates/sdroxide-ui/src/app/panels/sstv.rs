@@ -2852,190 +2852,199 @@ impl SdroxideApp {
                                 }
                             });
                             ui.add_space(4.0);
-                            let l = &mut doc.layers[i];
-                            egui::Grid::new("composer-layer-grid")
-                                .num_columns(2)
-                                .spacing([10.0, 6.0])
-                                .show(ui, |ui| {
-                                    ui.label(tr!("panels-text"));
-                                    if let Some(c) = l.clock {
-                                        // A clock line has no text of its own:
-                                        // what it prints is the time, so the
-                                        // choices left are which part of it and
-                                        // whose clock.
-                                        let mut chosen = c;
-                                        ui.horizontal(|ui| {
-                                            egui::ComboBox::from_id_salt("composer-clock")
-                                                .selected_text(chosen.part.tr())
-                                                .width(110.0)
-                                                .show_ui(ui, |ui| {
-                                                    for f in sdroxide_types::ClockPart::ALL {
-                                                        let picked = ui.selectable_value(
-                                                            &mut chosen.part,
-                                                            f,
-                                                            f.tr(),
-                                                        );
-                                                        dirty |= picked.clicked();
-                                                    }
-                                                });
-                                            // UTC is the default, as it is
-                                            // everywhere else in the program;
-                                            // the station's own zone is one tick
-                                            // away, daylight saving included.
-                                            let mut local =
-                                                chosen.zone == sdroxide_types::ClockZone::Local;
-                                            if crate::chrome::checkbox(
-                                                ui,
-                                                &mut local,
-                                                &tr!("sstv-clock-local"),
-                                            )
-                                            .on_hover_text(tr!("sstv-clock-local-hint"))
-                                            .changed()
-                                            {
-                                                chosen.zone = if local {
-                                                    sdroxide_types::ClockZone::Local
-                                                } else {
-                                                    sdroxide_types::ClockZone::Utc
-                                                };
-                                                dirty = true;
-                                            }
-                                            // The way back to a line of the
-                                            // operator's own words — and the way
-                                            // to pin a time that has to stay put.
-                                            if ui
-                                                .add(egui::Button::new("❄").small())
-                                                .on_hover_text(tr!("sstv-clock-freeze-hint"))
-                                                .clicked()
-                                            {
-                                                l.text = chosen.text(when.unix, when.offset);
-                                                l.clock = None;
-                                                dirty = true;
-                                            }
-                                        });
-                                        l.clock = Some(chosen);
-                                    } else if crate::chrome::field(
-                                        ui,
-                                        egui::TextEdit::singleline(&mut l.text)
-                                            .desired_width(250.0)
-                                            .hint_text(tr!("sstv-line-text-hint")),
-                                    )
-                                    .changed()
-                                    {
-                                        dirty = true;
-                                    }
-                                    ui.end_row();
-
-                                    ui.label(tr!("sstv-face"));
-                                    egui::ComboBox::from_id_salt("composer-face")
-                                        .selected_text(l.face.label())
-                                        .width(180.0)
-                                        .show_ui(ui, |ui| {
-                                            for f in sdroxide_types::Face::ALL {
-                                                if ui
-                                                    .selectable_value(&mut l.face, f, f.label())
-                                                    .clicked()
+                            // **The layer may have been deleted just now.** The
+                            // selection still points at `i` for this frame while
+                            // the list has already shrunk, and indexing
+                            // `doc.layers[i]` here is what crashed when the last
+                            // line was removed: there is no layer at that index
+                            // any more. Nothing is drawn for the rest of this
+                            // frame; the next frame's selection already points
+                            // at the layer that took its place, or at nothing.
+                            if let Some(l) = doc.layers.get_mut(i) {
+                                egui::Grid::new("composer-layer-grid")
+                                    .num_columns(2)
+                                    .spacing([10.0, 6.0])
+                                    .show(ui, |ui| {
+                                        ui.label(tr!("panels-text"));
+                                        if let Some(c) = l.clock {
+                                            // A clock line has no text of its own:
+                                            // what it prints is the time, so the
+                                            // choices left are which part of it and
+                                            // whose clock.
+                                            let mut chosen = c;
+                                            ui.horizontal(|ui| {
+                                                egui::ComboBox::from_id_salt("composer-clock")
+                                                    .selected_text(chosen.part.tr())
+                                                    .width(110.0)
+                                                    .show_ui(ui, |ui| {
+                                                        for f in sdroxide_types::ClockPart::ALL {
+                                                            let picked = ui.selectable_value(
+                                                                &mut chosen.part,
+                                                                f,
+                                                                f.tr(),
+                                                            );
+                                                            dirty |= picked.clicked();
+                                                        }
+                                                    });
+                                                // UTC is the default, as it is
+                                                // everywhere else in the program;
+                                                // the station's own zone is one tick
+                                                // away, daylight saving included.
+                                                let mut local =
+                                                    chosen.zone == sdroxide_types::ClockZone::Local;
+                                                if crate::chrome::checkbox(
+                                                    ui,
+                                                    &mut local,
+                                                    &tr!("sstv-clock-local"),
+                                                )
+                                                .on_hover_text(tr!("sstv-clock-local-hint"))
+                                                .changed()
                                                 {
+                                                    chosen.zone = if local {
+                                                        sdroxide_types::ClockZone::Local
+                                                    } else {
+                                                        sdroxide_types::ClockZone::Utc
+                                                    };
                                                     dirty = true;
                                                 }
-                                            }
-                                        });
-                                    ui.end_row();
-
-                                    ui.label(tr!("sstv-size"));
-                                    let resp = crate::chrome::slider(
-                                        ui,
-                                        egui::Slider::new(&mut l.px, 8..=96).suffix(" px"),
-                                    );
-                                    dirty |= resp.changed();
-                                    ui.end_row();
-
-                                    ui.label(tr!("sstv-colour"));
-                                    ui.horizontal(|ui| {
-                                        dirty |= ui
-                                            .color_edit_button_srgb(&mut l.ink)
-                                            .on_hover_text(tr!("sstv-the-letters"))
-                                            .changed();
-                                        let mut outlined = l.outline.is_some();
-                                        if crate::chrome::checkbox(ui, &mut outlined, &tr!("sstv-composer-outline"))
-                                            .changed()
-                                        {
-                                            l.outline = outlined.then_some([0, 0, 0]);
-                                            dirty = true;
-                                        }
-                                        if let Some(oc) = &mut l.outline {
-                                            dirty |= ui
-                                                .color_edit_button_srgb(oc)
-                                                .on_hover_text(tr!("sstv-the-edge"))
-                                                .changed();
-                                        }
-                                    });
-                                    ui.end_row();
-
-                                    ui.label(tr!("sstv-placement"));
-                                    if crate::chrome::checkbox(
-                                        ui,
-                                        &mut l.vertical,
-                                        &tr!("sstv-down-frame"),
-                                    )
-                                    .on_hover_text(tr!("sstv-down-frame-hint"))
-                                    .changed()
-                                    {
-                                        dirty = true;
-                                    }
-                                    ui.end_row();
-
-                                    ui.label(tr!("sstv-strip"));
-                                    ui.horizontal(|ui| {
-                                        let mut banded = l.band.is_some();
-                                        if crate::chrome::checkbox(ui, &mut banded, &tr!("sstv-behind"))
-                                            .on_hover_text(tr!("sstv-behind-hint"))
-                                            .changed()
-                                        {
-                                            l.band = banded.then(|| Strip {
-                                                thickness: 28,
-                                                fill: [160, 16, 16],
-                                                fill2: None,
+                                                // The way back to a line of the
+                                                // operator's own words — and the way
+                                                // to pin a time that has to stay put.
+                                                if ui
+                                                    .add(egui::Button::new("❄").small())
+                                                    .on_hover_text(tr!("sstv-clock-freeze-hint"))
+                                                    .clicked()
+                                                {
+                                                    l.text = chosen.text(when.unix, when.offset);
+                                                    l.clock = None;
+                                                    dirty = true;
+                                                }
                                             });
+                                            l.clock = Some(chosen);
+                                        } else if crate::chrome::field(
+                                            ui,
+                                            egui::TextEdit::singleline(&mut l.text)
+                                                .desired_width(250.0)
+                                                .hint_text(tr!("sstv-line-text-hint")),
+                                        )
+                                        .changed()
+                                        {
                                             dirty = true;
                                         }
-                                        if let Some(b) = &mut l.band {
-                                            dirty |= ui
-                                                .color_edit_button_srgb(&mut b.fill)
-                                                .on_hover_text(tr!("sstv-strip-first-edge"))
-                                                .changed();
-                                            let mut grad = b.fill2.is_some();
-                                            if crate::chrome::checkbox(ui, &mut grad, &tr!("sstv-composer-fade"))
-                                                .changed()
-                                            {
-                                                b.fill2 = grad.then_some([0, 0, 0]);
-                                                dirty = true;
-                                            }
-                                            if let Some(c) = &mut b.fill2 {
-                                                dirty |= ui.color_edit_button_srgb(c).changed();
-                                            }
-                                        }
-                                    });
-                                    ui.end_row();
-                                    if let Some(b) = &mut l.band {
-                                        ui.label(tr!("sstv-thickness"));
+                                        ui.end_row();
+
+                                        ui.label(tr!("sstv-face"));
+                                        egui::ComboBox::from_id_salt("composer-face")
+                                            .selected_text(l.face.label())
+                                            .width(180.0)
+                                            .show_ui(ui, |ui| {
+                                                for f in sdroxide_types::Face::ALL {
+                                                    if ui
+                                                        .selectable_value(&mut l.face, f, f.label())
+                                                        .clicked()
+                                                    {
+                                                        dirty = true;
+                                                    }
+                                                }
+                                            });
+                                        ui.end_row();
+
+                                        ui.label(tr!("sstv-size"));
                                         let resp = crate::chrome::slider(
                                             ui,
-                                            egui::Slider::new(&mut b.thickness, 4..=120)
-                                                .suffix(" px"),
+                                            egui::Slider::new(&mut l.px, 8..=96).suffix(" px"),
                                         );
                                         dirty |= resp.changed();
                                         ui.end_row();
-                                    }
-                                });
-                            // Says what the line is, where the text field used
-                            // to be: a control that silently prints a time is a
-                            // control the operator cannot predict.
-                            if doc.layers[i].clock.is_some() {
-                                ui.label(
-                                    RichText::new(tr!("sstv-clock-hint"))
-                                        .size(10.0)
-                                        .weak(),
-                                );
+
+                                        ui.label(tr!("sstv-colour"));
+                                        ui.horizontal(|ui| {
+                                            dirty |= ui
+                                                .color_edit_button_srgb(&mut l.ink)
+                                                .on_hover_text(tr!("sstv-the-letters"))
+                                                .changed();
+                                            let mut outlined = l.outline.is_some();
+                                            if crate::chrome::checkbox(ui, &mut outlined, &tr!("sstv-composer-outline"))
+                                                .changed()
+                                            {
+                                                l.outline = outlined.then_some([0, 0, 0]);
+                                                dirty = true;
+                                            }
+                                            if let Some(oc) = &mut l.outline {
+                                                dirty |= ui
+                                                    .color_edit_button_srgb(oc)
+                                                    .on_hover_text(tr!("sstv-the-edge"))
+                                                    .changed();
+                                            }
+                                        });
+                                        ui.end_row();
+
+                                        ui.label(tr!("sstv-placement"));
+                                        if crate::chrome::checkbox(
+                                            ui,
+                                            &mut l.vertical,
+                                            &tr!("sstv-down-frame"),
+                                        )
+                                        .on_hover_text(tr!("sstv-down-frame-hint"))
+                                        .changed()
+                                        {
+                                            dirty = true;
+                                        }
+                                        ui.end_row();
+
+                                        ui.label(tr!("sstv-strip"));
+                                        ui.horizontal(|ui| {
+                                            let mut banded = l.band.is_some();
+                                            if crate::chrome::checkbox(ui, &mut banded, &tr!("sstv-behind"))
+                                                .on_hover_text(tr!("sstv-behind-hint"))
+                                                .changed()
+                                            {
+                                                l.band = banded.then(|| Strip {
+                                                    thickness: 28,
+                                                    fill: [160, 16, 16],
+                                                    fill2: None,
+                                                });
+                                                dirty = true;
+                                            }
+                                            if let Some(b) = &mut l.band {
+                                                dirty |= ui
+                                                    .color_edit_button_srgb(&mut b.fill)
+                                                    .on_hover_text(tr!("sstv-strip-first-edge"))
+                                                    .changed();
+                                                let mut grad = b.fill2.is_some();
+                                                if crate::chrome::checkbox(ui, &mut grad, &tr!("sstv-composer-fade"))
+                                                    .changed()
+                                                {
+                                                    b.fill2 = grad.then_some([0, 0, 0]);
+                                                    dirty = true;
+                                                }
+                                                if let Some(c) = &mut b.fill2 {
+                                                    dirty |= ui.color_edit_button_srgb(c).changed();
+                                                }
+                                            }
+                                        });
+                                        ui.end_row();
+                                        if let Some(b) = &mut l.band {
+                                            ui.label(tr!("sstv-thickness"));
+                                            let resp = crate::chrome::slider(
+                                                ui,
+                                                egui::Slider::new(&mut b.thickness, 4..=120)
+                                                    .suffix(" px"),
+                                            );
+                                            dirty |= resp.changed();
+                                            ui.end_row();
+                                        }
+                                    });
+                                // Says what the line is, where the text field used
+                                // to be: a control that silently prints a time is a
+                                // control the operator cannot predict.
+                                if l.clock.is_some() {
+                                    ui.label(
+                                        RichText::new(tr!("sstv-clock-hint"))
+                                            .size(10.0)
+                                            .weak(),
+                                    );
+                                }
                             }
                             ui.add_space(8.0);
                         }
@@ -4230,6 +4239,42 @@ mod qsl_tests {
             ..Default::default()
         };
         assert_eq!(qsl.written.as_deref(), Some("/home/operator/Pictures/qsl.png"));
+    }
+}
+
+#[cfg(test)]
+mod editor_tests {
+    use super::*;
+    use sdroxide_types::{Composer, TextLayer};
+
+    /// **Deleting the last line must not index past the end.** The crash the
+    /// operator reported: in the picture editor, press delete and the program
+    /// goes down. The panel checks `i < doc.layers.len()` *before* the delete,
+    /// so for the rest of that frame `i` can point at nothing — and the layer's
+    /// own controls used to index `doc.layers[i]` there.
+    #[test]
+    fn the_index_of_a_just_deleted_layer_is_not_indexed() {
+        let mut doc = Composer::default();
+        doc.layers.push(TextLayer::default());
+        let i = 0usize;
+        doc.layers.remove(i);
+
+        // What the controls did before: plain indexing, which is the panic.
+        // Kept as evidence that the fault was real and not guessed from a
+        // screenshot — with the panic hook silenced so a passing run stays
+        // readable.
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let panicked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = doc.layers[i].clone();
+        }))
+        .is_err();
+        std::panic::set_hook(previous);
+        assert!(panicked, "indexing the deleted layer must be the crash removed here");
+
+        // What they do now: nothing to draw, until the next frame's selection
+        // points at the layer that took its place (or at none of them).
+        assert!(doc.layers.get_mut(i).is_none(), "there is no layer at that index");
     }
 }
 
