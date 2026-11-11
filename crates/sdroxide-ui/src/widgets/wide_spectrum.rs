@@ -69,6 +69,15 @@ fn pan_centre(start_hz: f64, dx_px: f32, span_hz: f64, width_px: f32) -> f64 {
     (start_hz - f64::from(dx_px) * span_hz / f64::from(width_px)).max(0.0)
 }
 
+/// Whether the main waterfall's view has moved enough, since the strip last
+/// looked, to take the strip's window along: a thousandth of the strip's span,
+/// which is under a pixel on any screen, so the window keeps up with a slow
+/// scroll but a view that merely stays put sends nothing. The first look
+/// (`seen` is `None`) never moves it — opening a window must not jerk the strip.
+fn view_moved(seen: Option<f64>, centre_hz: f64, strip_span_hz: f64) -> bool {
+    seen.is_some_and(|s| (centre_hz - s).abs() > strip_span_hz / 1000.0)
+}
+
 /// The wheel and the pinch of one frame as a number of zoom steps (fractional;
 /// up and out are positive and negative). Scrolling up and spreading the
 /// fingers both zoom in.
@@ -261,6 +270,7 @@ pub fn show(
     state: &RadioState,
     palette: usize,
     height: f32,
+    view: Option<(f64, f64)>,
     cmds: &mut Vec<Command>,
 ) {
     wf.push(frame, palette);
@@ -375,6 +385,22 @@ pub fn show(
         }
     }
 
+    // The main waterfall's own scrolling drives the strip too: when the view
+    // there is moved to look at another part of the band, the strip's window
+    // goes with it, so what is being explored is also what the strip shows.
+    // Only on a front end whose window can be placed (the same test as the
+    // zoom), and only when the view's centre has moved, so the strip is still
+    // free to be scrolled on its own in between.
+    let view_id = ui.id().with("wide-view-centre");
+    if let Some((vlo, vhi)) = view.filter(|(lo, hi)| hi > lo) {
+        let centre = (vlo + vhi) / 2.0;
+        let seen: Option<f64> = ui.data(|d| d.get_temp(view_id));
+        if strip_zoom(state).is_some() && view_moved(seen, centre, frame.span_hz) {
+            cmds.push(Command::SetWideWindow(Some(centre)));
+        }
+        ui.data_mut(|d| d.insert_temp(view_id, centre));
+    }
+
     painter.rect_filled(rect, 2.0, Color32::BLACK);
     let ctx = ui.ctx().clone();
     if let Some(tex) = wf.texture(&ctx) {
@@ -459,6 +485,23 @@ pub fn show(
     }
 
     // The tuned frequency.
+    // The stretch of band the main waterfall is showing, when it is not the
+    // slice outlined above (zoomed out, or scrolled away from the received one).
+    if let Some((vlo, vhi)) = view.filter(|(lo, hi)| hi > lo) {
+        let (vx0, vx1) = (x_of(vlo), x_of(vhi));
+        if (vx0 - sx0).abs() > 1.5 || (vx1 - sx1).abs() > 1.5 {
+            painter.rect_stroke(
+                Rect::from_min_max(
+                    Pos2::new(vx0, rect.top() + 1.0),
+                    Pos2::new(vx1.max(vx0 + 2.0), rect.bottom() - 1.0),
+                ),
+                0.0,
+                Stroke::new(1.0, Color32::from_white_alpha(200)),
+                StrokeKind::Inside,
+            );
+        }
+    }
+
     // Three points of red over a dark edge: on a 30 MHz strip a one-pixel line
     // was lost against the bars of the waterfall behind it.
     let vfo_x = x_of(state.active_freq_hz());
@@ -632,6 +675,16 @@ mod tests {
         let (s, rest) = whole_steps(zoom_input(20.0, 1.0));
         assert_eq!(s, 0);
         assert_eq!(whole_steps(rest + zoom_input(35.0, 1.0)).0, 1);
+    }
+
+    #[test]
+    fn the_strip_follows_the_main_view_only_when_it_has_moved() {
+        let span = 1_875_000.0;
+        assert!(!view_moved(None, 7e6, span), "the first look never moves it");
+        assert!(!view_moved(Some(7e6), 7e6, span), "a view that stays put sends nothing");
+        assert!(!view_moved(Some(7e6), 7e6 + 1000.0, span), "under a pixel is not a move");
+        assert!(view_moved(Some(7e6), 7e6 + 100_000.0, span));
+        assert!(view_moved(Some(7e6), 7e6 - 100_000.0, span));
     }
 
     #[test]
