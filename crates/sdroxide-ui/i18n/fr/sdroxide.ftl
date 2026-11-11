@@ -9684,3 +9684,18 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Pris en compte au prochain démarrage. Automatique utilise DirectX 12, et OpenGL avec les anciens pilotes AMD qui dessinent la cascade en bandes horizontales plates. Essayez OpenGL si votre cascade n'affiche que des lignes horizontales.
+
+settings-controls-desktop-mic = Micro de table ou externe
+settings-controls-desktop-mic-note = PTT depuis un micro ou pedale branche sur les lignes de handshake d'un port serie (ou USB-serie).
+settings-controls-output-line = Ligne de sortie
+settings-controls-output-on = Sortie active
+settings-controls-input-line = Ligne d'entree
+settings-controls-active-level = Niveau actif
+settings-controls-active-high = Haut
+settings-controls-active-low = Bas
+settings-controls-debounce = Anti-rebond (ms)
+serial-ptt-output-rts = RTS
+serial-ptt-output-dtr = DTR
+settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
+settings-controls-choose-serial-port = Choose serial port
+settings-controls-serial-port-chosen = Serial port chosen.

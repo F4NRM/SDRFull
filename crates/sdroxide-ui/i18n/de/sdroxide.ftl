@@ -9673,3 +9673,18 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Wirkt beim nächsten Start. Automatisch nutzt DirectX 12 und OpenGL bei alten AMD-Treibern, die das Wasserfalldiagramm als flache horizontale Streifen zeichnen. Probieren Sie OpenGL, wenn Ihr Wasserfall nur waagerechte Linien zeigt.
+
+settings-controls-desktop-mic = Tisch- oder externes Mikrofon
+settings-controls-desktop-mic-note = PTT von einem Mikrofon oder Fusschalter an den Handshake-Leitungen eines seriellen (oder USB-seriellen) Ports.
+settings-controls-output-line = Ausgangsleitung
+settings-controls-output-on = Ausgang aktiv
+settings-controls-input-line = Eingangsleitung
+settings-controls-active-level = Aktiver Pegel
+settings-controls-active-high = Hoch
+settings-controls-active-low = Niedrig
+settings-controls-debounce = Entprellung (ms)
+serial-ptt-output-rts = RTS
+serial-ptt-output-dtr = DTR
+settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
+settings-controls-choose-serial-port = Choose serial port
+settings-controls-serial-port-chosen = Serial port chosen.

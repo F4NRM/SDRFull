@@ -9681,3 +9681,18 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Vale a partir da próxima inicialização. Automático usa DirectX 12, e OpenGL com drivers AMD antigos que desenham a cachoeira como faixas horizontais planas. Experimente OpenGL se a cachoeira mostrar apenas linhas horizontais.
+
+settings-controls-desktop-mic = Microfone de mesa ou externo
+settings-controls-desktop-mic-note = PTT de microfone ou pedal ligado as linhas de handshake de uma porta serial (ou USB-serial).
+settings-controls-output-line = Linha de saida
+settings-controls-output-on = Saida ativa
+settings-controls-input-line = Linha de entrada
+settings-controls-active-level = Nivel ativo
+settings-controls-active-high = Alto
+settings-controls-active-low = Baixo
+settings-controls-debounce = Debounce (ms)
+serial-ptt-output-rts = RTS
+serial-ptt-output-dtr = DTR
+settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
+settings-controls-choose-serial-port = Choose serial port
+settings-controls-serial-port-chosen = Serial port chosen.

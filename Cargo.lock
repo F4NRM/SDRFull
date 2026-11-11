@@ -6209,6 +6209,7 @@ dependencies = [
  "sdroxide-version",
  "serde",
  "serde_json",
+ "serialport",
  "sys-locale",
  "tracing",
  "ureq",

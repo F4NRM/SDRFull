@@ -2420,8 +2420,8 @@ use sdroxide_types::{
 /// frequency without tuning, or `None` to follow the dial again. A v297 station
 /// does not know the variant.
 /// `PROTO_VERSION` 297 → 298, `VERSION_BYTE` 0x75 → 0x76.
-pub const PROTO_VERSION: u16 = 298;
-const VERSION_BYTE: u8 = 0x76;
+pub const PROTO_VERSION: u16 = 299;
+const VERSION_BYTE: u8 = 0x77;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {

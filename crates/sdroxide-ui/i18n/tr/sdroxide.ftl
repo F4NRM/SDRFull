@@ -9681,3 +9681,18 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Bir sonraki başlatmada geçerli olur. Otomatik, DirectX 12 kullanır; şelaleyi düz yatay bantlar olarak çizen eski AMD sürücülerinde ise OpenGL kullanır. Şelaleniz yalnızca yatay çizgiler gösteriyorsa OpenGL'i deneyin.
+
+settings-controls-desktop-mic = Masa veya harici mikrofon
+settings-controls-desktop-mic-note = Seri (veya USB-seri) portun el sikisma hatlarina bagli mikrofon veya ayak anahtarindan PTT.
+settings-controls-output-line = Cikis hatti
+settings-controls-output-on = Cikis aktif
+settings-controls-input-line = Giris hatti
+settings-controls-active-level = Aktif seviye
+settings-controls-active-high = Yuksek
+settings-controls-active-low = Dusuk
+settings-controls-debounce = Debounce (ms)
+serial-ptt-output-rts = RTS
+serial-ptt-output-dtr = DTR
+settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
+settings-controls-choose-serial-port = Choose serial port
+settings-controls-serial-port-chosen = Serial port chosen.
