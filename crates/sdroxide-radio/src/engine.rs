@@ -11546,6 +11546,7 @@ impl Engine {
                     d.wefax_revert_slant();
                 }
             }
+            SetWideWindow(hz) => self.source.set_wide_center_hz(hz),
             SstvTx { mode, png } => {
                 // Decode the UI-composed PNG to RGB and queue it; the controller
                 // keys TX on the next poll.

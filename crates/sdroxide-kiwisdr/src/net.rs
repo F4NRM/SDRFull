@@ -76,6 +76,8 @@ pub fn spawn(cfg: &KiwiConfig, ident: &str, center_hz: f64) -> Result<KiwiHandle
         center_milli_hz: AtomicI64::new((center_hz * 1000.0) as i64),
         wf_speed: AtomicU8::new(cfg.wf_speed.clamp(1, 4)),
         wf_zoom: AtomicU8::new(cfg.wf_zoom.min(sdroxide_types::KiwiConfig::WF_ZOOM_MAX)),
+        wf_pan_milli_hz: AtomicI64::new(crate::handle::NO_PAN),
+        wf_pan_dial_milli_hz: AtomicI64::new(0),
         stop: AtomicBool::new(false),
     });
 
@@ -452,14 +454,36 @@ fn wanted_window(shared: &Shared, info: &KiwiInfo, have: (u8, f64)) -> Option<(u
         let cf = info.center_hz / 1e3;
         return (have != (0, cf)).then_some((0, cf));
     }
-    let span = info.bandwidth_hz / f64::from(1u32 << zoom);
-    let dial = shared.center_milli_hz.load(Ordering::Relaxed) as f64 / 1000.0;
+    let dial_milli = shared.center_milli_hz.load(Ordering::Relaxed);
+    let pan_milli = shared.wf_pan_milli_hz.load(Ordering::Relaxed);
+    // A scrolled window counts only while the dial has not moved since.
+    let pan = (pan_milli != crate::handle::NO_PAN
+        && shared.wf_pan_dial_milli_hz.load(Ordering::Relaxed) == dial_milli)
+        .then_some(pan_milli as f64 / 1000.0);
+    window_for(zoom, dial_milli as f64 / 1000.0, pan, info.center_hz, info.bandwidth_hz, have)
+}
+
+/// The decision behind [`wanted_window`], on plain numbers.
+///
+/// A window the operator scrolled (`pan`) is exact: it moves for any change
+/// worth a pixel, since a drag that waited for a quarter of the span would not
+/// look like a drag. One following the dial keeps the hysteresis described
+/// above.
+fn window_for(
+    zoom: u8,
+    dial_hz: f64,
+    pan: Option<f64>,
+    band_center_hz: f64,
+    band_hz: f64,
+    have: (u8, f64),
+) -> Option<(u8, f64)> {
+    let span = band_hz / f64::from(1u32 << zoom);
     // The receiver clamps a window that would reach past a band edge, so clamp
     // it here too and the two agree about what was asked for.
-    let (lo, hi) =
-        (info.center_hz - info.bandwidth_hz / 2.0, info.center_hz + info.bandwidth_hz / 2.0);
-    let cf = dial.clamp(lo + span / 2.0, hi - span / 2.0) / 1e3;
-    if have.0 == zoom && (have.1 - cf).abs() * 1e3 < span / 4.0 {
+    let (lo, hi) = (band_center_hz - band_hz / 2.0, band_center_hz + band_hz / 2.0);
+    let cf = pan.unwrap_or(dial_hz).clamp(lo + span / 2.0, hi - span / 2.0) / 1e3;
+    let slack = if pan.is_some() { span / 1024.0 } else { span / 4.0 };
+    if have.0 == zoom && (have.1 - cf).abs() * 1e3 < slack {
         return None;
     }
     Some((zoom, cf))
@@ -597,6 +621,37 @@ pub(crate) fn split_addr(address: &str) -> Result<(String, u16)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 30 MHz Kiwi, zoom 4: a 1.875 MHz window.
+    const BAND: (f64, f64) = (15e6, 30e6);
+
+    #[test]
+    fn a_scrolled_window_goes_where_it_was_put_and_not_to_the_dial() {
+        let dial = 7_074_000.0;
+        // Following the dial: centred on it.
+        assert_eq!(window_for(4, dial, None, BAND.0, BAND.1, (0, f64::NAN)), Some((4, 7074.0)));
+        // Scrolled 600 kHz up: that is where it goes.
+        let w = window_for(4, dial, Some(7_674_000.0), BAND.0, BAND.1, (4, 7074.0));
+        assert_eq!(w, Some((4, 7674.0)));
+    }
+
+    #[test]
+    fn a_scrolled_window_moves_for_a_small_drag_but_a_followed_one_does_not() {
+        // 5 kHz is well under a quarter of 1.875 MHz: a window following the
+        // dial stays put, a scrolled one moves.
+        assert_eq!(window_for(4, 7_079_000.0, None, BAND.0, BAND.1, (4, 7074.0)), None);
+        assert_eq!(
+            window_for(4, 7_074_000.0, Some(7_079_000.0), BAND.0, BAND.1, (4, 7074.0)),
+            Some((4, 7079.0))
+        );
+    }
+
+    #[test]
+    fn a_scrolled_window_stays_inside_the_receivers_band() {
+        let w = window_for(4, 7_074_000.0, Some(29_900_000.0), BAND.0, BAND.1, (4, 7074.0));
+        // Half a window is 937.5 kHz, so the centre stops 937.5 kHz short of 30 MHz.
+        assert_eq!(w, Some((4, 29_062.5)));
+    }
 
     #[test]
     fn a_redirect_is_followed_to_the_host_and_port_it_names() {

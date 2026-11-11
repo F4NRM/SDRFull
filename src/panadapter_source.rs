@@ -453,6 +453,11 @@ impl IqSource for PanadapterSource {
         Some((center - self.off, span))
     }
 
+    /// The receiver sits `off` above the dial, so its window is placed there.
+    fn set_wide_center_hz(&mut self, hz: Option<f64>) {
+        self.rx.set_wide_center_hz(hz.map(|hz| hz + self.off));
+    }
+
     /// The lent receiver's lane, whose width the I.F. offset does not change.
     fn wide_span_hz(&self) -> f64 {
         self.rx.wide_span_hz()
