@@ -1,8 +1,8 @@
 ﻿# TODO â€” SDR Oxide Brown
 
-Working queue. Rules in AGENTS.md. Last updated 2026-11-10.
+Working queue. Rules in AGENTS.md. Last updated 2026-11-11.
 
-State: `main` at crate 2.3.0, PROTO_VERSION 295 (0x73). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 3 (#655, #665, #666; re-measured 2026-11-10). Open issues: 4 (re-measured 2026-11-10).
+State: `main` at crate 2.3.0, PROTO_VERSION 296 (0x74). Latest release v2.2.3.6.5_brown (pre-release). Open PRs: 1 (re-measured 2026-11-11). Open issues: 3 (re-measured 2026-11-11).
 
 ## Task tracking rules
 
@@ -18,6 +18,7 @@ State: `main` at crate 2.3.0, PROTO_VERSION 295 (0x73). Latest release v2.2.3.6.
   kept current in the state line.
 
 ## Now
+- **The QRZ card is off on 11 m** (added by madmedicnl, owned by Claude) - F4NRM closed #665 with a reason: a gate on the CB *shape* was the wrong way round, because several ITU blocks begin with a digit. The dial decides instead: across 26.0-28.0 MHz (11 m plus the freeband channels either side, stopping short of 10 m) the card asks nothing and draws nothing, whatever the operator's switch says - QRZ has nothing for a CB call, and an amateur callsign may not be used on 11 m anyway. Everywhere else the operator's switch decides; a dial not yet reported leaves it alone. No wire change, no new text. PR #678.
 - **German band plan reset** (added by F4NRM, owned by Claude) - the two shipped German plans (NRW and "Germany (bandplan)", #523 report) are removed and replaced by one "Germany" plan converted from the flat German band list (`bandplan-de`, author F4NRM, allocations stay the built-in IARU ones, so the transmit lockout never moves). Germany still runs on the built-in IARU plan by default; "Germany" is one choice in the Band plan drop-down. A station whose library already exists keeps its old files until RESTORE SHIPPED PLANS (which replaces `bandplan-de` and keeps the old one as `.bak`); a copy of `bandplan-de-nrw` stays in its library until deleted by hand. No wire change.
 - **Per-radio band plan test brought up to date** (added by F4NRM, owned by Claude) - `band_plan_per_radio` expected 14.074 MHz to be refused on a radio whose own plan has no 20 m, but since "Remove the Other row" (`7b66a84d`) a frequency in no band is open once the RX list is confirmed, so the test failed on `main`. It now ticks 40 m only on both radios: A (own plan, 14.074 in no band) tunes there, B (station plan, 20 m off its list) is refused. Test only, no engine change.
 - **WEFAX leaning pages and black stripes** (added by F4NRM, owned by Claude) - on weak paths some pages leaned while others were straight: the auto-slant trim carried over from one page to the next and was believed from a noisy phasing fit. Now each page starts from the operator's trim, a fitted walk must stand 3 standard errors above the pulse scatter, a correction that makes the next window walk back is undone by itself, and a new "Revert slant" chip (`Command::WefaxRevertSlant`, PROTO 293) undoes it by hand for the page; lines the receiver lost (under 15 % of the pixels with signal) repeat the line above, at most 4 in a row, instead of a black stripe. Carrier and false start/end detection untouched. **Not tried on SDRplay, RTL-SDR, Pluto or HackRF hardware** (decoder works on the 12 kHz audio tap, so only their sample-clock error and AGC differ): recordings welcome.
