@@ -42,19 +42,47 @@ pub(crate) fn font(face: Face) -> Option<FontRef<'static>> {
     FontRef::try_from_slice(raw).ok()
 }
 
+/// The moment a picture is composed at: UTC, and the operator's offset from it
+/// at that instant.
+///
+/// One value rather than two arguments, because every clock layer needs both and
+/// the two must belong together — a local line worked out from this instant's
+/// time and last month's offset would be an hour wrong for half the year. Read
+/// once per frame in the panel and passed in, so composing stays a function of
+/// its arguments and a test needs neither a clock nor a timezone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct When {
+    pub(crate) unix: i64,
+    /// Seconds east of Greenwich, daylight saving included.
+    pub(crate) offset: i64,
+}
+
+impl When {
+    /// Now, on this platform, with this instant's own offset.
+    pub(crate) fn now() -> When {
+        let unix = crate::time::now_unix();
+        When { unix, offset: crate::time::local_offset_at(unix) }
+    }
+}
+
 /// Compose the frame: `src` is the base picture in interleaved RGB, or `None`
 /// for a flat dark frame so a layout can be tried before a picture is chosen.
+///
+/// `when` is the moment the picture is being composed at. A layer carrying a
+/// clock prints that moment rather than its own text — the picture is composed
+/// when SEND is pressed, so the line says when it went out.
 pub(crate) fn render(
     doc: &Composer,
     w: u16,
     h: u16,
     src: Option<(&[u8], u16, u16)>,
+    when: When,
 ) -> (Vec<u8>, u16, u16) {
     let mut img = match src {
         Some((rgb, sw, sh)) => crop_scale(rgb, sw, sh, w, h),
         None => vec![24u8; usize::from(w) * usize::from(h) * 3],
     };
-    draw_onto(doc, &mut img, w, h);
+    draw_onto(&doc.resolved(when.unix, when.offset), &mut img, w, h);
     (img, w, h)
 }
 
@@ -185,12 +213,17 @@ fn blit(dst: &mut [u8], w: u16, h: u16, src: &[u8], dw: u16, dh: u16, ox: u16, o
 
 /// The box `doc.layers[i]` covers at frame size `(w, h)`, for hit-testing a drag
 /// and for drawing the selection outline.
-pub(crate) fn layer_box(doc: &Composer, i: usize, w: u16, h: u16) -> Option<Box2> {
+///
+/// `when` is the same moment [`render`] is composing at: a clock layer's box
+/// must be the box of the line it actually prints, or a click lands on a box
+/// that is not there.
+pub(crate) fn layer_box(doc: &Composer, i: usize, w: u16, h: u16, when: When) -> Option<Box2> {
     let l = doc.layers.get(i)?;
     let font = font(l.face)?;
+    let text = l.clock.map_or_else(|| l.text.clone(), |c| c.text(when.unix, when.offset));
     let (w, h) = (f32::from(w), f32::from(h));
     let scale = PxScale::from(f32::from(l.px.max(4)));
-    let half = (text_width(&l.text, &font, scale) / 2.0).max(6.0);
+    let half = (text_width(&text, &font, scale) / 2.0).max(6.0);
     let half_h = (f32::from(l.px.max(4)) * 0.75).max(6.0);
     let (ax, ay) = (l.x * w, l.y * h);
     // A turned line's box is the same width and height, swapped.
@@ -205,12 +238,19 @@ pub(crate) fn layer_box(doc: &Composer, i: usize, w: u16, h: u16) -> Option<Box2
 
 /// The layer under `(px, py)` — topmost first, so the line the operator sees on
 /// top is the one a click picks up.
-pub(crate) fn layer_at(doc: &Composer, px: f32, py: f32, w: u16, h: u16) -> Option<usize> {
+pub(crate) fn layer_at(
+    doc: &Composer,
+    px: f32,
+    py: f32,
+    w: u16,
+    h: u16,
+    when: When,
+) -> Option<usize> {
     for i in (0..doc.layers.len()).rev() {
         if doc.layers[i].hidden {
             continue;
         }
-        if let Some((x0, y0, x1, y1)) = layer_box(doc, i, w, h)
+        if let Some((x0, y0, x1, y1)) = layer_box(doc, i, w, h, when)
             && px >= x0 as f32
             && px <= x1 as f32
             && py >= y0 as f32
@@ -453,6 +493,15 @@ mod tests {
         c
     }
 
+    /// 2026-11-10 14:32 UTC, with the operator on UTC+1 — the moment the clock
+    /// tests compose at.
+    const AT: When = When { unix: 1_794_321_120, offset: 3_600 };
+
+    /// A clock layer in UTC, the default an operator gets.
+    fn clock_at(part: sdroxide_types::ClockPart) -> sdroxide_types::Clock {
+        sdroxide_types::Clock { part, zone: sdroxide_types::ClockZone::Utc }
+    }
+
     fn frame(w: u16, h: u16) -> Vec<u8> {
         // Mid grey, so ink and band are both findable.
         vec![128u8; usize::from(w) * usize::from(h) * 3]
@@ -488,7 +537,7 @@ mod tests {
             outline: None,
             ..Default::default()
         });
-        let (img, w, h) = render(&c, 320, 256, None);
+        let (img, w, h) = render(&c, 320, 256, None, AT);
         let rows = ink_rows(&img, w, h, [255, 0, 0]);
         assert!(!rows.is_empty(), "nothing was printed");
         let mid = rows[rows.len() / 2];
@@ -497,7 +546,7 @@ mod tests {
             "a line at 0.25 of a 256-pixel frame printed at row {mid}"
         );
         // And the same document at another frame size lands at the same place.
-        let (img2, w2, h2) = render(&c, 640, 512, None);
+        let (img2, w2, h2) = render(&c, 640, 512, None, AT);
         let rows2 = ink_rows(&img2, w2, h2, [255, 0, 0]);
         let mid2 = rows2[rows2.len() / 2];
         assert!((mid2 as i32 - 128).abs() < 14, "row {mid2} at double size");
@@ -520,7 +569,7 @@ mod tests {
             band: Some(Strip { thickness: 30, fill: [0, 0, 200], fill2: Some([0, 0, 200]) }),
             ..Default::default()
         });
-        let (img, w, h) = render(&c, 320, 256, None);
+        let (img, w, h) = render(&c, 320, 256, None, AT);
         let rows = ink_rows(&img, w, h, [255, 255, 0]);
         // A turned line is taller than it is wide: it must cover far more rows
         // than a horizontal one of the same text would.
@@ -545,11 +594,11 @@ mod tests {
         let mut c = Composer::default();
         c.layers.push(TextLayer { text: "UNDER".into(), y: 0.5, px: 40, ..Default::default() });
         c.layers.push(TextLayer { text: "OVER".into(), y: 0.5, px: 40, ..Default::default() });
-        assert_eq!(layer_at(&c, 160.0, 128.0, 320, 256), Some(1));
+        assert_eq!(layer_at(&c, 160.0, 128.0, 320, 256, AT), Some(1));
         c.layers[1].hidden = true;
-        assert_eq!(layer_at(&c, 160.0, 128.0, 320, 256), Some(0));
+        assert_eq!(layer_at(&c, 160.0, 128.0, 320, 256, AT), Some(0));
         c.layers[0].hidden = true;
-        assert_eq!(layer_at(&c, 160.0, 128.0, 320, 256), None);
+        assert_eq!(layer_at(&c, 160.0, 128.0, 320, 256, AT), None);
     }
 
     /// Moving a layer's fractions moves its box, which is what a drag does.
@@ -557,10 +606,110 @@ mod tests {
     fn dragging_moves_the_box() {
         let mut c = Composer::default();
         c.layers.push(TextLayer { text: "CQ".into(), x: 0.2, y: 0.2, ..Default::default() });
-        let before = layer_box(&c, 0, 320, 256).unwrap();
+        let before = layer_box(&c, 0, 320, 256, AT).unwrap();
         c.layers[0].x = 0.8;
-        let after = layer_box(&c, 0, 320, 256).unwrap();
+        let after = layer_box(&c, 0, 320, 256, AT).unwrap();
         assert!(after.0 > before.0, "the box did not move right");
+    }
+
+    // ── the clock (issue #650) ──
+
+    /// **A clock layer prints the moment it is composed at**, not a time typed
+    /// into the document — the picture is composed when SEND is pressed, so the
+    /// same layout sent tomorrow says tomorrow.
+    #[test]
+    fn a_clock_layer_prints_the_moment_the_picture_is_composed() {
+        let mut c = Composer::default();
+        c.layers.push(TextLayer {
+            clock: Some(clock_at(sdroxide_types::ClockPart::DateTime)),
+            x: 0.5,
+            y: 0.5,
+            px: 24,
+            ink: [255, 255, 0],
+            ..Default::default()
+        });
+        assert_eq!(c.layers[0].text, "", "the stored document was given a time");
+        let (a, w, h) = render(&c, 320, 256, None, AT);
+        assert!(!ink_rows(&a, w, h, [255, 255, 0]).is_empty(), "the clock drew nothing");
+        let (b, ..) = render(&c, 320, 256, None, When { unix: AT.unix + 60, ..AT });
+        assert_ne!(a, b, "a minute later the picture still said the same minute");
+    }
+
+    /// **The station's own zone reaches the pixels.** A local clock composed for
+    /// an operator on UTC and one on UTC+1 says two different times, and the box
+    /// a click picks up is the box of the line that is printed in each — the
+    /// offset is part of the moment, not a decoration.
+    #[test]
+    fn a_local_clock_prints_the_stations_own_time() {
+        let local = sdroxide_types::Clock {
+            part: sdroxide_types::ClockPart::Time,
+            zone: sdroxide_types::ClockZone::Local,
+        };
+        let mut c = Composer::default();
+        c.layers.push(TextLayer {
+            clock: Some(local),
+            x: 0.5,
+            y: 0.5,
+            px: 24,
+            ink: [255, 255, 0],
+            ..Default::default()
+        });
+        let utc = When { unix: AT.unix, offset: 0 };
+        let east = When { unix: AT.unix, offset: 3_600 };
+        let (a, w, h) = render(&c, 320, 256, None, utc);
+        let (b, ..) = render(&c, 320, 256, None, east);
+        assert!(!ink_rows(&a, w, h, [255, 255, 0]).is_empty(), "the clock drew nothing");
+        assert_ne!(a, b, "the station's offset never reached the picture");
+        // The box is the box of the line as that zone prints it.
+        let mut plain = Composer::default();
+        plain.layers.push(TextLayer {
+            text: local.text(east.unix, east.offset),
+            px: 24,
+            ..Default::default()
+        });
+        assert_eq!(
+            layer_box(&c, 0, 320, 256, east),
+            layer_box(&plain, 0, 320, 256, east),
+            "the local clock's box is not the box of its line"
+        );
+    }
+
+    /// **The box a click picks up is the box of the line that is printed**, not
+    /// of the empty text the stored layer holds — otherwise the operator's own
+    /// time line cannot be grabbed, dragged or outlined.
+    #[test]
+    fn a_clock_layer_is_clicked_where_its_line_is() {
+        let mut clock = TextLayer {
+            clock: Some(clock_at(sdroxide_types::ClockPart::DateTime)),
+            x: 0.5,
+            y: 0.9,
+            px: 24,
+            ..Default::default()
+        };
+        let mut plain = TextLayer {
+            text: clock_at(sdroxide_types::ClockPart::DateTime).text(AT.unix, AT.offset),
+            px: 24,
+            ..Default::default()
+        };
+        plain.y = clock.y;
+        let mut c = Composer::default();
+        c.layers.push(clock.clone());
+        let clock_box = layer_box(&c, 0, 320, 256, AT).unwrap();
+        let mut p = Composer::default();
+        p.layers.push(plain);
+        let plain_box = layer_box(&p, 0, 320, 256, AT).unwrap();
+        assert_eq!(clock_box, plain_box, "the clock's box is not the box of its line");
+        // A click on the printed line finds it — near its left edge, where an
+        // empty layer's little box is not.
+        let cy = (clock_box.1 + clock_box.3) as f32 / 2.0;
+        let left = clock_box.0 as f32 + 20.0;
+        assert_eq!(layer_at(&c, left, cy, 320, 256, AT), Some(0));
+        // With the clock taken off there is nothing to print, and that same
+        // click is on no line at all.
+        clock.clock = None;
+        let mut empty = Composer::default();
+        empty.layers.push(clock);
+        assert_eq!(layer_at(&empty, left, cy, 320, 256, AT), None);
     }
 
     // ── the mosaic ──
@@ -775,7 +924,7 @@ mod tests {
     #[test]
     fn an_empty_slot_composes_onto_a_flat_frame() {
         let c = doc("HI");
-        let (img, w, h) = render(&c, 64, 48, None);
+        let (img, w, h) = render(&c, 64, 48, None, AT);
         assert_eq!(img.len(), 64 * 48 * 3);
         assert_eq!((w, h), (64, 48));
     }
@@ -890,7 +1039,19 @@ mod tests {
             band: Some(Strip { thickness: 26, fill: [0, 40, 120], fill2: Some([0, 0, 30]) }),
             ..Default::default()
         });
-        let (img, w, h) = render(&c, 320, 256, None);
+        // The date and time line (issue #650), where a received picture carries
+        // one: at the foot, over the picture's own edge.
+        c.layers.push(TextLayer {
+            clock: Some(clock_at(sdroxide_types::ClockPart::DateTime)),
+            face: Face::Mono,
+            x: 0.5,
+            y: 0.94,
+            px: 18,
+            ink: [255, 255, 255],
+            band: Some(Strip { thickness: 26, fill: [0, 0, 0], fill2: Some([0, 0, 0]) }),
+            ..Default::default()
+        });
+        let (img, w, h) = render(&c, 320, 256, None, AT);
         let png = crate::sstv::encode_png(&img, w, h).unwrap();
         std::fs::write("/tmp/opencode/composer-sample.png", png).unwrap();
         eprintln!("wrote /tmp/opencode/composer-sample.png");

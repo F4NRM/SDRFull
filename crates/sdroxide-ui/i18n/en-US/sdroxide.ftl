@@ -9674,6 +9674,27 @@ publicsdr-near-kiwi-tip = Only the { $n } KiwiSDR receivers closest to your loca
 
 publicsdr-near-kiwi-no-grid = NEAR KIWI needs your locator: set it in the station settings to rank receivers by distance.
 
+# Chip in the picture editor beside '+ Text' and '+ Strip': adds a line that prints the UTC date and time.
+sstv-add-clock = ＋ Date/time
+
+sstv-add-clock-hint = Add a line that prints the date and time the picture is sent — in UTC or in your own time
+
+sstv-clock-date-time = Date and time
+
+sstv-clock-time = Time
+
+sstv-clock-date = Date
+
+# Chip beside the clock format: turns the clock line into ordinary text showing the time it currently shows.
+sstv-clock-freeze-hint = Turn this line into ordinary text, fixed at the time it shows
+
+sstv-clock-hint = Prints the date and time of the moment the picture is sent — not the time it was made.
+
+# Checkbox beside the clock format in the picture editor: print the station's own time instead of UTC.
+sstv-clock-local = Local time
+
+sstv-clock-local-hint = Print the station's own time instead of UTC — daylight saving included
+
 test-tci-connect-refused = connect { $address }: { $detail } — nothing is serving TCI on that port. TCI comes from the SDR program — ExpertSDR3, Thetis — and not from the radio itself, so it has to be running with TCI switched on in its settings. On a standalone set such as an MB1 that is the copy running inside the radio
 
 test-tci-connect-timed-out = connect { $address }: { $detail } — no answer at that address. Check the host, and that a firewall is not in the way. If the SDR program that serves TCI (ExpertSDR3, Thetis) is not running with TCI switched on, a closed port can look like this on Windows

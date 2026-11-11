@@ -9648,6 +9648,24 @@ publicsdr-near-kiwi-tip = Locator'ınıza en yakın, boş kanalı olan { $n } Ki
 
 publicsdr-near-kiwi-no-grid = YAKIN KIWI için locator'ınız gerekir: alıcıları mesafeye göre sıralamak için istasyon ayarlarında girin.
 
+sstv-add-clock = ＋ Tarih/saat
+
+sstv-add-clock-hint = Görselin gönderildiği tarih ve saati yazdıran bir satır ekle — UTC veya kendi saatinizle
+
+sstv-clock-date-time = Tarih ve saat
+
+sstv-clock-time = Saat
+
+sstv-clock-date = Tarih
+
+sstv-clock-freeze-hint = Bu satırı, gösterdiği saate sabitlenmiş sıradan metne çevir
+
+sstv-clock-hint = Görselin gönderildiği andaki tarih ve saati yazar — hazırlandığı saati değil.
+
+sstv-clock-local = Yerel saat
+
+sstv-clock-local-hint = UTC yerine istasyonun yerel saatini yazdır — yaz saati dahil
+
 test-tci-connect-refused = { $address } adresine bağlantı: { $detail } — o portta TCI sunan hiçbir şey yok. TCI, telsizin kendisinden değil SDR programından — ExpertSDR3, Thetis — gelir; bu yüzden programın çalışıyor ve ayarlarında TCI'nin açık olması gerekir. MB1 gibi tek başına çalışan bir cihazda bu, telsizin içinde çalışan kopyadır
 
 test-tci-connect-timed-out = { $address } adresine bağlantı: { $detail } — bu adresten yanıt yok. Ana bilgisayarı ve bir güvenlik duvarının engellemediğini kontrol edin. TCI sunan SDR programı (ExpertSDR3, Thetis) TCI açık olarak çalışmıyorsa, kapalı bir port Windows'ta böyle görünebilir

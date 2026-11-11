@@ -9648,6 +9648,24 @@ publicsdr-near-kiwi-tip = Somente os { $n } receptores KiwiSDR mais próximos do
 
 publicsdr-near-kiwi-no-grid = KIWI PRÓXIMO precisa do seu locator: informe-o nas configurações da estação para ordenar os receptores por distância.
 
+sstv-add-clock = ＋ Data/hora
+
+sstv-add-clock-hint = Acrescentar uma linha que imprime a data e a hora do envio da imagem, em UTC ou na sua hora
+
+sstv-clock-date-time = Data e hora
+
+sstv-clock-time = Hora
+
+sstv-clock-date = Data
+
+sstv-clock-freeze-hint = Transforma esta linha em texto comum, fixado na hora mostrada
+
+sstv-clock-hint = Imprime a data e a hora do momento em que a imagem é enviada — não a do momento em que foi feita.
+
+sstv-clock-local = Hora local
+
+sstv-clock-local-hint = Imprimir a hora local da estação em vez de UTC — incluindo o horário de verão
+
 test-tci-connect-refused = conexão com { $address }: { $detail } — nada oferece TCI nessa porta. O TCI vem do programa SDR — ExpertSDR3, Thetis — e não do próprio rádio, então ele precisa estar em execução com o TCI ativado nas configurações. Em um aparelho autônomo como o MB1, é a cópia que roda dentro do rádio
 
 test-tci-connect-timed-out = conexão com { $address }: { $detail } — sem resposta nesse endereço. Verifique o host e se um firewall não está atrapalhando. Se o programa SDR que fornece o TCI (ExpertSDR3, Thetis) não estiver em execução com o TCI ativado, uma porta fechada pode aparecer assim no Windows

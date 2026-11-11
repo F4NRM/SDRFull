@@ -30,6 +30,16 @@ pub(crate) trait Tr: Copy {
     fn tr(self) -> String;
 }
 
+impl Tr for sdroxide_types::ClockPart {
+    fn tr(self) -> String {
+        match self {
+            sdroxide_types::ClockPart::DateTime => tr!("sstv-clock-date-time"),
+            sdroxide_types::ClockPart::Time => tr!("sstv-clock-time"),
+            sdroxide_types::ClockPart::Date => tr!("sstv-clock-date"),
+        }
+    }
+}
+
 impl Tr for LayoutMode {
     fn tr(self) -> String {
         match self {

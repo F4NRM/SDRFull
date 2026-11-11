@@ -9586,6 +9586,24 @@ publicsdr-near-kiwi-tip = 仅显示离您的定位符最近且有空闲通道的
 
 publicsdr-near-kiwi-no-grid = “附近KIWI”需要您的定位符：请在电台设置中填写，以便按距离对接收机排序。
 
+sstv-add-clock = ＋ 日期/时间
+
+sstv-add-clock-hint = 添加一行，打印图像发送的日期和时间——UTC 或您的本地时间
+
+sstv-clock-date-time = 日期和时间
+
+sstv-clock-time = 时间
+
+sstv-clock-date = 日期
+
+sstv-clock-freeze-hint = 把这一行变成普通文本，固定在所显示的时间
+
+sstv-clock-hint = 打印图像发送那一刻的日期和时间，而不是制作它的时间。
+
+sstv-clock-local = 本地时间
+
+sstv-clock-local-hint = 打印本站的本地时间而不是 UTC，包含夏令时
+
 test-tci-connect-refused = 连接 { $address }：{ $detail } — 该端口上没有任何程序提供 TCI。TCI 由 SDR 程序（ExpertSDR3、Thetis）提供，而不是由电台本身提供，因此该程序必须在运行，并且已在其设置中开启 TCI。对于 MB1 这类独立机型，指的是电台内部运行的那份程序
 
 test-tci-connect-timed-out = 连接 { $address }：{ $detail } — 该地址没有应答。请检查主机，并确认防火墙没有拦截。如果提供 TCI 的 SDR 程序（ExpertSDR3、Thetis）没有在开启 TCI 的状态下运行，在 Windows 上关闭的端口可能会表现成这样

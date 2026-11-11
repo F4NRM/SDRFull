@@ -2396,9 +2396,18 @@ use sdroxide_types::{
 /// appended: a failed TCP connect as data (why, host, port, the system's own
 /// words) instead of English text, so the interface words it itself. Only the
 /// TCI test sends it so far. A v294 client does not know the variant.
+///
+/// v296: **the SSTV date and time line (issue #650).**
+/// [`sdroxide_types::TextLayer`] gains `clock` at its tail — the composer layer
+/// prints the time the picture is composed at instead of its own text, so a
+/// picture says when it went out, in UTC or in the station's own zone. Layers
+/// ride `Composer` whole inside `ImagePresets`, `Command::ImageSetComposer` and
+/// the template commands, so the appended field moves every one of those
+/// layouts. `#[serde(default)]` on the layer keeps a stored
+/// `sstv_presets.json` loading unchanged.
 /// `PROTO_VERSION` 294 → 295, `VERSION_BYTE` 0x72 → 0x73.
-pub const PROTO_VERSION: u16 = 295;
-const VERSION_BYTE: u8 = 0x73;
+pub const PROTO_VERSION: u16 = 296;
+const VERSION_BYTE: u8 = 0x74;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3467,6 +3476,7 @@ mod tests {
                                     fill2: Some([0, 0, 20]),
                                 }),
                                 hidden: false,
+                                clock: None,
                             }],
                         },
                     },
@@ -3538,12 +3548,26 @@ mod tests {
             ClientMsg::Command(Command::ImageSetComposer {
                 slot: 4,
                 composer: sdroxide_types::Composer {
-                    layers: vec![sdroxide_types::TextLayer {
-                        text: "PSE K".into(),
-                        x: 0.5,
-                        y: 0.8,
-                        ..sdroxide_types::TextLayer::default()
-                    }],
+                    layers: vec![
+                        sdroxide_types::TextLayer {
+                            text: "PSE K".into(),
+                            x: 0.5,
+                            y: 0.8,
+                            ..sdroxide_types::TextLayer::default()
+                        },
+                        // A clock layer: an option field and an empty text, which
+                        // is the shape a misplaced field would corrupt worst.
+                        sdroxide_types::TextLayer {
+                            clock: Some(sdroxide_types::Clock {
+                                part: sdroxide_types::ClockPart::Time,
+                                zone: sdroxide_types::ClockZone::Local,
+                            }),
+                            x: 0.5,
+                            y: 0.94,
+                            px: 20,
+                            ..sdroxide_types::TextLayer::default()
+                        },
+                    ],
                 },
             }),
             // ...and an empty one, which is what "this preset uses the banner"
@@ -3705,7 +3729,9 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
+        // v296: the SSTV clock layer (`TextLayer::clock`) appended at the tail
+        // of a `Composer` layer, which rides the picture preset messages.
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (296, 0x74));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3761,7 +3787,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (296, 0x74));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3783,7 +3809,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (296, 0x74));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4856,7 +4882,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (295, 0x73));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (296, 0x74));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),
