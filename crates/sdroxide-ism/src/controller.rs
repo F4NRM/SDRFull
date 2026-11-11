@@ -289,11 +289,6 @@ impl Worker {
         self.rtl433.as_ref().is_some_and(|l| (freq_hz - l.band.center_hz).abs() <= l.rate_hz / 2.0)
     }
 
-    #[cfg(not(feature = "rtl433"))]
-    fn rtl433_covers(&self, _freq_hz: f64) -> bool {
-        false
-    }
-
     /// Whether the native decoder for `p` should run on a burst from `freq_hz`.
     fn native_runs(&self, p: IsmProtocol, freq_hz: f64) -> bool {
         if !self.cfg.protocol_enabled(p) {
