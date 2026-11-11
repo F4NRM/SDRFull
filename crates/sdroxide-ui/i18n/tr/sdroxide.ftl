@@ -9653,3 +9653,13 @@ test-tci-connect-refused = { $address } adresine bağlantı: { $detail } — o p
 test-tci-connect-timed-out = { $address } adresine bağlantı: { $detail } — bu adresten yanıt yok. Ana bilgisayarı ve bir güvenlik duvarının engellemediğini kontrol edin. TCI sunan SDR programı (ExpertSDR3, Thetis) TCI açık olarak çalışmıyorsa, kapalı bir port Windows'ta böyle görünebilir
 
 test-connect-failed = { $address } adresine bağlantı: { $detail }
+
+settings-ui-graphics = Grafik sürücüsü
+
+settings-ui-graphics-auto = Otomatik
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Bir sonraki başlatmada geçerli olur. Otomatik, DirectX 12 kullanır; şelaleyi düz yatay bantlar olarak çizen eski AMD sürücülerinde ise OpenGL kullanır. Şelaleniz yalnızca yatay çizgiler gösteriyorsa OpenGL'i deneyin.

@@ -9668,3 +9668,13 @@ test-tci-connect-refused = подключение к { $address }: { $detail } �
 test-tci-connect-timed-out = подключение к { $address }: { $detail } — нет ответа по этому адресу. Проверьте хост и не мешает ли брандмауэр. Если SDR-программа, предоставляющая TCI (ExpertSDR3, Thetis), не запущена с включённым TCI, закрытый порт в Windows может выглядеть именно так
 
 test-connect-failed = подключение к { $address }: { $detail }
+
+settings-ui-graphics = Графический драйвер
+
+settings-ui-graphics-auto = Автоматически
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Вступает в силу при следующем запуске. «Автоматически» использует DirectX 12, а на старых драйверах AMD, рисующих водопад плоскими горизонтальными полосами, — OpenGL. Попробуйте OpenGL, если водопад показывает только горизонтальные линии.

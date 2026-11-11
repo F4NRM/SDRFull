@@ -9653,3 +9653,13 @@ test-tci-connect-refused = verbinding met { $address }: { $detail } — niets bi
 test-tci-connect-timed-out = verbinding met { $address }: { $detail } — geen antwoord op dat adres. Controleer de host en of een firewall niet in de weg zit. Als het SDR-programma dat TCI aanbiedt (ExpertSDR3, Thetis) niet draait met TCI ingeschakeld, kan een gesloten poort er onder Windows zo uitzien
 
 test-connect-failed = verbinding met { $address }: { $detail }
+
+settings-ui-graphics = Grafisch stuurprogramma
+
+settings-ui-graphics-auto = Automatisch
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Werkt vanaf de volgende start. Automatisch gebruikt DirectX 12, en OpenGL bij oude AMD-stuurprogramma's die de waterval als vlakke horizontale banden tekenen. Probeer OpenGL als uw waterval alleen horizontale lijnen toont.

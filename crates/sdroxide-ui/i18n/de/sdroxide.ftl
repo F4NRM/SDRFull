@@ -9645,3 +9645,13 @@ test-tci-connect-refused = Verbindung zu { $address }: { $detail } — auf diese
 test-tci-connect-timed-out = Verbindung zu { $address }: { $detail } — keine Antwort unter dieser Adresse. Prüfen Sie den Host und ob eine Firewall im Weg ist. Läuft das SDR-Programm, das TCI anbietet (ExpertSDR3, Thetis), nicht mit aktiviertem TCI, kann ein geschlossener Port unter Windows so aussehen
 
 test-connect-failed = Verbindung zu { $address }: { $detail }
+
+settings-ui-graphics = Grafiktreiber
+
+settings-ui-graphics-auto = Automatisch
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Wirkt beim nächsten Start. Automatisch nutzt DirectX 12 und OpenGL bei alten AMD-Treibern, die das Wasserfalldiagramm als flache horizontale Streifen zeichnen. Probieren Sie OpenGL, wenn Ihr Wasserfall nur waagerechte Linien zeigt.

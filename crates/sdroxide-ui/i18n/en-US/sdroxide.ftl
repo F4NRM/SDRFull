@@ -9679,3 +9679,13 @@ test-tci-connect-refused = connect { $address }: { $detail } — nothing is serv
 test-tci-connect-timed-out = connect { $address }: { $detail } — no answer at that address. Check the host, and that a firewall is not in the way. If the SDR program that serves TCI (ExpertSDR3, Thetis) is not running with TCI switched on, a closed port can look like this on Windows
 
 test-connect-failed = connect { $address }: { $detail }
+
+settings-ui-graphics = Graphics driver
+
+settings-ui-graphics-auto = Automatic
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Takes effect at the next start. Automatic uses DirectX 12, and OpenGL on old AMD drivers that draw the waterfall as flat horizontal bands. Try OpenGL if your waterfall shows only horizontal lines.

@@ -9591,3 +9591,13 @@ test-tci-connect-refused = 连接 { $address }：{ $detail } — 该端口上没
 test-tci-connect-timed-out = 连接 { $address }：{ $detail } — 该地址没有应答。请检查主机，并确认防火墙没有拦截。如果提供 TCI 的 SDR 程序（ExpertSDR3、Thetis）没有在开启 TCI 的状态下运行，在 Windows 上关闭的端口可能会表现成这样
 
 test-connect-failed = 连接 { $address }：{ $detail }
+
+settings-ui-graphics = 图形驱动
+
+settings-ui-graphics-auto = 自动
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = 下次启动时生效。自动模式使用 DirectX 12；在会把瀑布图画成平直横条的旧版 AMD 驱动上则使用 OpenGL。如果瀑布图只显示水平线，请尝试 OpenGL。
