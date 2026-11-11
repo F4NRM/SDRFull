@@ -863,10 +863,12 @@ impl SdrPlayHandle {
     }
 
     pub fn set_if_gr_db(&self, gr: i32) {
+        tracing::info!(target: "sdroxide_sdrplay::gain_change", "IF gain reduction -> {gr} dB (tuner {})", self.tuner);
         self.send(Ctrl::IfGr(self.tuner, gr));
     }
 
     pub fn set_lna_state(&self, state: u8) {
+        tracing::info!(target: "sdroxide_sdrplay::gain_change", "LNA state -> {state} (tuner {})", self.tuner);
         self.send(Ctrl::Lna(self.tuner, state));
     }
 
@@ -882,6 +884,7 @@ impl SdrPlayHandle {
     }
 
     pub fn set_agc(&self, code: i32) {
+        tracing::info!(target: "sdroxide_sdrplay::gain_change", "AGC mode code -> {code} (tuner {})", self.tuner);
         self.send(Ctrl::Agc(self.tuner, code));
         // A diversity pair wants both branches gained the same way, or the
         // filter spends its time chasing one AGC against the other.
