@@ -5903,6 +5903,7 @@ version = "2.3.0"
 dependencies = [
  "crossbeam-channel",
  "image",
+ "libc",
  "num-complex",
  "rayon",
  "rtrb",

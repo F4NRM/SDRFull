@@ -285,7 +285,8 @@ const IQ_RATE_SPAN_S: f64 = 60.0;
 /// The least span, in seconds, a fit is reported for.
 const IQ_RATE_MIN_SPAN_S: f64 = 30.0;
 
-/// The IQ stream's real rate against the PC's monotonic clock — a diagnostic
+/// The IQ stream's real rate against the PC's raw monotonic clock
+/// (`CLOCK_MONOTONIC_RAW` on Linux, see [`raw_clock_s`]) — a diagnostic
 /// for a slant that follows the front-end gain (WEFAX pages whose lines drift
 /// when the gain is moved).
 ///
@@ -300,7 +301,7 @@ const IQ_RATE_MIN_SPAN_S: f64 = 30.0;
 /// `RUST_LOG=info,sdroxide_radio::iq_rate=debug`.
 #[derive(Default)]
 struct IqRateMeter {
-    start: Option<std::time::Instant>,
+    start: Option<f64>,
     delivered: u64,
     /// (seconds since the first block, samples delivered by then).
     points: std::collections::VecDeque<(f64, f64)>,
@@ -310,9 +311,9 @@ struct IqRateMeter {
 
 impl IqRateMeter {
     fn feed(&mut self, n: usize, nominal_hz: f64) {
-        let now = std::time::Instant::now();
+        let now = raw_clock_s();
         let start = *self.start.get_or_insert(now);
-        let t = now.duration_since(start).as_secs_f64();
+        let t = now - start;
         self.delivered += n as u64;
         self.points.push_back((t, self.delivered as f64));
         while self.points.front().is_some_and(|&(t0, _)| t - t0 > IQ_RATE_SPAN_S) {
@@ -347,6 +348,28 @@ impl IqRateMeter {
         );
         self.last_ppm = Some(ppm);
     }
+}
+
+/// Seconds on a clock NTP does not slew: `CLOCK_MONOTONIC_RAW` on Linux, the
+/// monotonic `Instant` elsewhere (which a time service may slew, so the figure
+/// there carries the PC clock's own drift too).
+#[cfg(target_os = "linux")]
+fn raw_clock_s() -> f64 {
+    let mut ts = libc::timespec { tv_sec: 0, tv_nsec: 0 };
+    // SAFETY: `ts` is a valid, writable `timespec` for the whole call.
+    let ok = unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC_RAW, &mut ts) } == 0;
+    if ok { ts.tv_sec as f64 + ts.tv_nsec as f64 * 1e-9 } else { instant_clock_s() }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn raw_clock_s() -> f64 {
+    instant_clock_s()
+}
+
+/// Seconds since the first call, on `Instant`.
+fn instant_clock_s() -> f64 {
+    static ORIGIN: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    ORIGIN.get_or_init(std::time::Instant::now).elapsed().as_secs_f64()
 }
 
 thread_local! {
