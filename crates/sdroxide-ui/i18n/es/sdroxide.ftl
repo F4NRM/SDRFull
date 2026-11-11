@@ -9644,3 +9644,13 @@ test-tci-connect-refused = conexión a { $address }: { $detail } — nada sirve 
 test-tci-connect-timed-out = conexión a { $address }: { $detail } — sin respuesta en esa dirección. Compruebe el host y que un cortafuegos no lo bloquee. Si el programa SDR que sirve TCI (ExpertSDR3, Thetis) no está en marcha con TCI activado, un puerto cerrado puede verse así en Windows
 
 test-connect-failed = conexión a { $address }: { $detail }
+
+settings-ui-graphics = Controlador gráfico
+
+settings-ui-graphics-auto = Automático
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Se aplica en el próximo inicio. Automático usa DirectX 12, y OpenGL con los controladores AMD antiguos que dibujan la cascada como bandas horizontales planas. Pruebe OpenGL si su cascada solo muestra líneas horizontales.

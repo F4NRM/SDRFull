@@ -9601,3 +9601,13 @@ test-tci-connect-refused = { $address } への接続: { $detail } — そのポ�
 test-tci-connect-timed-out = { $address } への接続: { $detail } — そのアドレスから応答がありません。ホストを確認し、ファイアウォールが妨げていないか確認してください。TCI を提供する SDR プログラム（ExpertSDR3、Thetis）が TCI を有効にして起動していない場合、閉じたポートは Windows ではこのように見えることがあります
 
 test-connect-failed = { $address } への接続: { $detail }
+
+settings-ui-graphics = グラフィックドライバー
+
+settings-ui-graphics-auto = 自動
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = 次回の起動から有効になります。自動では DirectX 12 を使い、ウォーターフォールが平らな横縞に描かれる古い AMD ドライバーでは OpenGL を使います。ウォーターフォールが横線だけになる場合は OpenGL をお試しください。

@@ -3986,6 +3986,14 @@ impl SdroxideApp {
                     ui.add_space(6.0);
                     ui_tab::workspaces_section(ui, io.ui_edit, io.workspaces, io.workspace_name);
                 }
+                // Windows only: the one platform with a DirectX 12 / OpenGL choice.
+                #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
+                {
+                    ui.add_space(10.0);
+                    ui.separator();
+                    ui.add_space(6.0);
+                    ui_tab::graphics_section(ui);
+                }
                 ui.add_space(10.0);
                 ui.separator();
                 ui.end_row();

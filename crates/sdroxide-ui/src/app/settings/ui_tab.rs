@@ -1017,6 +1017,37 @@ pub(in crate::app) fn pick_report_picture(
 /// list here rather than behind a shortcut keeps it with the undocked rows it
 /// acts on: the same subject, one screen.
 ///
+/// The graphics API the window opens with — Windows only, where there is a
+/// choice between DirectX 12 and OpenGL (issue #559: an old AMD DirectX 12
+/// driver drew the waterfall as flat bands).
+///
+/// Saved the moment it is picked, in a file the next start reads before any
+/// window exists (`sdroxide_ui::graphics_backend`), so it needs no restart of
+/// the engine, only of the window.
+#[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
+pub(in crate::app) fn graphics_section(ui: &mut egui::Ui) {
+    use crate::GraphicsBackend;
+    let id = egui::Id::new("graphics-backend-choice");
+    let mut cur = ui.data(|d| d.get_temp::<GraphicsBackend>(id)).unwrap_or_else(crate::graphics_backend);
+    ui.label(RichText::new(tr!("settings-ui-graphics")).size(14.0).strong().color(crate::theme::CYAN()));
+    ui.add_space(6.0);
+    let label = |b: GraphicsBackend| match b {
+        GraphicsBackend::Auto => tr!("settings-ui-graphics-auto"),
+        GraphicsBackend::Dx12 => tr!("settings-ui-graphics-dx12"),
+        GraphicsBackend::Gl => tr!("settings-ui-graphics-gl"),
+    };
+    let before = cur;
+    enum_combo(ui, "ui-graphics-backend", &mut cur, &GraphicsBackend::ALL, label);
+    if cur != before {
+        if let Err(e) = crate::set_graphics_backend(cur) {
+            tracing::warn!("could not save the graphics choice: {e}");
+        }
+        ui.data_mut(|d| d.insert_temp(id, cur));
+    }
+    ui.add_space(4.0);
+    super::note_at(ui, &tr!("settings-ui-graphics-note"), Some(11.0));
+}
+
 /// Native only, like the undocked rows above it — the browser has one window and
 /// nothing to arrange.
 #[cfg(not(target_arch = "wasm32"))]

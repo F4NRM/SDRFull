@@ -9653,3 +9653,13 @@ test-tci-connect-refused = conexão com { $address }: { $detail } — nada ofere
 test-tci-connect-timed-out = conexão com { $address }: { $detail } — sem resposta nesse endereço. Verifique o host e se um firewall não está atrapalhando. Se o programa SDR que fornece o TCI (ExpertSDR3, Thetis) não estiver em execução com o TCI ativado, uma porta fechada pode aparecer assim no Windows
 
 test-connect-failed = conexão com { $address }: { $detail }
+
+settings-ui-graphics = Driver gráfico
+
+settings-ui-graphics-auto = Automático
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Vale a partir da próxima inicialização. Automático usa DirectX 12, e OpenGL com drivers AMD antigos que desenham a cachoeira como faixas horizontais planas. Experimente OpenGL se a cachoeira mostrar apenas linhas horizontais.
