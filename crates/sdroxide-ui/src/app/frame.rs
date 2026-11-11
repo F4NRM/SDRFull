@@ -1743,6 +1743,7 @@ impl eframe::App for SdroxideApp {
                     &self.state,
                     self.ui_settings.waterfall_palette,
                     self.view.wide_strip_height,
+                    Some((self.view.view_lo_hz, self.view.view_hi_hz)),
                     &mut cmds,
                 );
                 // The strip's own height handle, the same grip as between the
