@@ -571,3 +571,36 @@ mod tests {
         assert!(take_requests(&ctx).is_empty());
     }
 }
+
+#[cfg(test)]
+mod f4nrm_question {
+    use super::base_call;
+
+    /// **Digit-leading amateur calls are not CB calls.** F4NRM closed #665 on
+    /// the objection that an ITU block whose first character is a digit would be
+    /// swallowed by a CB-shape gate. The two shapes differ at the end: a CB
+    /// call ends in its unit number, an amateur call ends in a letter — so
+    /// these must all still reach QRZ.
+    #[test]
+    fn every_digit_leading_amateur_call_is_still_looked_up() {
+        for call in [
+            "3A2ABC",  // Monaco
+            "4X4ZZ",   // Israel
+            "4Z1AB",   // Israel
+            "5B4ABC",  // Cyprus
+            "7X2ABC",  // Algeria
+            "9A1ABC",  // Croatia
+            "9H1ABC",  // Malta
+            "9V1ABC",  // Singapore
+            "2E0ABC",  // England
+            "1A0AA",   // Sovereign Military Order of Malta
+            "3A2ABC/P", "9A1ABC/QRP",
+        ] {
+            assert_eq!(
+                base_call(call).as_deref(),
+                Some(call.split('/').max_by_key(|p| p.len()).unwrap_or(call)),
+                "{call} must still be asked of QRZ"
+            );
+        }
+    }
+}
