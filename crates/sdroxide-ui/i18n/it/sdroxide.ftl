@@ -9690,18 +9690,3 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Ha effetto al prossimo avvio. Automatico usa DirectX 12, e OpenGL con i vecchi driver AMD che disegnano la cascata come bande orizzontali piatte. Provi OpenGL se la cascata mostra solo linee orizzontali.
-
-settings-controls-desktop-mic = Microfono da tavolo o esterno
-settings-controls-desktop-mic-note = PTT da microfono o pedale collegato alle linee di handshake di una porta seriale (o USB-seriale).
-settings-controls-output-line = Linea di uscita
-settings-controls-output-on = Uscita attiva
-settings-controls-input-line = Linea di ingresso
-settings-controls-active-level = Livello attivo
-settings-controls-active-high = Alto
-settings-controls-active-low = Basso
-settings-controls-debounce = Antirimbalzo (ms)
-serial-ptt-output-rts = RTS
-serial-ptt-output-dtr = DTR
-settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
-settings-controls-choose-serial-port = Choose serial port
-settings-controls-serial-port-chosen = Serial port chosen.

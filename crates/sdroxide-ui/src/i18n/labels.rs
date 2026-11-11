@@ -21,8 +21,8 @@ use sdroxide_types::{
     HpsdrIoRxInput, HydraSdrGain, IcomRxSource, IcomScopeSpan, IsmFamily, IsmProtocol, Js8Speed,
     LimeAuxRole, LookupProvider, MailFolder, MemorySort, MeterView, MouseButton, NrLevel,
     NrStrength, OrbitRings, QsoStep, RdsStandard, Region, RelativeMode, RelayLink, RelayRole,
-    RfeChannel, RfeLink, RfeModeControl, RifpEncoding, ScanKind, ScanResume, SenseLine,
-    SerialPttOutput, Shift, Speed, TlsVerify, ToneMode, UploadNaming, WheelAction,
+    RfeChannel, RfeLink, RfeModeControl, RifpEncoding, ScanKind, ScanResume, SenseLine, Shift,
+    Speed, TlsVerify, ToneMode, UploadNaming, WheelAction,
 };
 
 /// A value's name, in the interface's language.
@@ -926,15 +926,6 @@ impl Tr for SenseLine {
             SenseLine::Cts => tr!("sense-line-cts"),
             SenseLine::Dsr => tr!("sense-line-dsr"),
             SenseLine::Dcd => tr!("sense-line-dcd"),
-        }
-    }
-}
-
-impl Tr for SerialPttOutput {
-    fn tr(self) -> String {
-        match self {
-            SerialPttOutput::Rts => tr!("serial-ptt-output-rts"),
-            SerialPttOutput::Dtr => tr!("serial-ptt-output-dtr"),
         }
     }
 }

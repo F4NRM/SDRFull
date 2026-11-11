@@ -9681,18 +9681,3 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Werkt vanaf de volgende start. Automatisch gebruikt DirectX 12, en OpenGL bij oude AMD-stuurprogramma's die de waterval als vlakke horizontale banden tekenen. Probeer OpenGL als uw waterval alleen horizontale lijnen toont.
-
-settings-controls-desktop-mic = Tafel- of extern microfoon
-settings-controls-desktop-mic-note = PTT van een microfoon of voetschakelaar op de handshake-lijnen van een seriële (of USB-seriële) poort.
-settings-controls-output-line = Uitgangslijn
-settings-controls-output-on = Uitgang aan
-settings-controls-input-line = Ingangslijn
-settings-controls-active-level = Actief niveau
-settings-controls-active-high = Hoog
-settings-controls-active-low = Laag
-settings-controls-debounce = Ontdendering (ms)
-serial-ptt-output-rts = RTS
-serial-ptt-output-dtr = DTR
-settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
-settings-controls-choose-serial-port = Choose serial port
-settings-controls-serial-port-chosen = Serial port chosen.
