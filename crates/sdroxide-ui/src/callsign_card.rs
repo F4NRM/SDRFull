@@ -84,6 +84,34 @@ pub fn set_active(ctx: &egui::Context, active: bool) {
     }
 }
 
+/// The stretch of dial that is the citizens' band: 11 m and the freeband
+/// channels either side of it, stopping short of 10 m at 28 MHz.
+///
+/// Deliberately wider than [`sdroxide_types::Band::M11`]'s own edges: the CB
+/// channels in use run past 26.965–27.405 in several countries, and a station
+/// parked at 27.5 MHz is as much a CB station as one at 27.185.
+pub const CB_LO_HZ: f64 = 26_000_000.0;
+pub const CB_HI_HZ: f64 = 28_000_000.0;
+
+/// **Whether the card is on for a dial at `hz`**, given the operator's own
+/// switch.
+///
+/// Not on 11 m, and that is a decision rather than an accident (PR #665,
+/// F4NRM): the card asks QRZ, QRZ is the amateur database and has nothing for a
+/// CB call, so on that stretch it could only ever come back empty — and an
+/// amateur callsign may not be used there anyway, so the one thing the card is
+/// good for cannot legally happen. Off, no request goes out at all, which is
+/// what "one pointless call per hover" cost.
+///
+/// Anywhere else the operator's switch decides, and a dial that has not been
+/// reported yet (0 Hz) leaves the card alone rather than switching it off.
+pub fn on_for_dial(switch: bool, hz: f64) -> bool {
+    if !switch {
+        return false;
+    }
+    hz <= 0.0 || !(CB_LO_HZ..CB_HI_HZ).contains(&hz)
+}
+
 pub fn is_active(ctx: &egui::Context) -> bool {
     hub(ctx).0.lock().map(|s| s.active).unwrap_or(false)
 }
@@ -477,6 +505,27 @@ mod tests {
         assert_eq!(base_call("?"), None);
         assert_eq!(base_call(""), None);
         assert_eq!(base_call("ABC"), None, "no digit, no call");
+    }
+
+    /// **No card on 11 m**, whatever the operator's switch says: that stretch
+    /// is the citizens' band, QRZ has nothing for a CB call, and an amateur
+    /// callsign may not be used there. Off means no request goes out.
+    #[test]
+    fn the_card_is_off_across_the_citizens_band_and_on_everywhere_else() {
+        // The band itself and the freeband channels either side of it.
+        for hz in [26_965_000.0, 27_185_000.0, 27_405_000.0, 27_555_000.0, 26_500_000.0] {
+            assert!(!on_for_dial(true, hz), "{hz} Hz is the citizens' band");
+        }
+        // 10 m starts at 28.0 and gets its card, as does anything below 26.
+        for hz in [28_000_000.0, 28_074_000.0, 7_100_000.0, 145_500_000.0] {
+            assert!(on_for_dial(true, hz), "{hz} Hz is not the citizens' band");
+        }
+        // The operator's own switch still wins everywhere.
+        for hz in [27_185_000.0, 7_100_000.0] {
+            assert!(!on_for_dial(false, hz), "switch off, {hz} Hz asks nothing");
+        }
+        // A dial that has not been reported yet (0 Hz) does not switch it off.
+        assert!(on_for_dial(true, 0.0));
     }
 
     /// A callsign painted twice (decode and spot) is one card, anchored where

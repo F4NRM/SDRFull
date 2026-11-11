@@ -2286,8 +2286,15 @@ impl eframe::App for SdroxideApp {
         // The QRZ card: whether it is on for the next frame, and the callsigns
         // this frame's hovers asked it for. These go out whatever `auto_lookup`
         // says — that switch is about filling the log form, this one is the
-        // card's own.
-        crate::callsign_card::set_active(&ctx, self.net_cfg_edit.qrz_card_active());
+        // card's own. And on 11 m it is off whatever the switch says: QRZ has
+        // nothing for a CB call (see [`crate::callsign_card::on_for_dial`]).
+        crate::callsign_card::set_active(
+            &ctx,
+            crate::callsign_card::on_for_dial(
+                self.net_cfg_edit.qrz_card_active(),
+                self.state.vfo_a_hz,
+            ),
+        );
         // The one card over the waterfall, then the link in a card that leads
         // to the account page.
         crate::callsign_card::show_floating(&ctx);
