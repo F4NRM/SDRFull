@@ -9696,18 +9696,3 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Вступает в силу при следующем запуске. «Автоматически» использует DirectX 12, а на старых драйверах AMD, рисующих водопад плоскими горизонтальными полосами, — OpenGL. Попробуйте OpenGL, если водопад показывает только горизонтальные линии.
-
-settings-controls-desktop-mic = Настольный или внешний микрофон
-settings-controls-desktop-mic-note = PTT от микрофона или ножного переключателя, подключенного к линиям рукопожатия последовательного (или USB-serial) порта.
-settings-controls-output-line = Выходная линия
-settings-controls-output-on = Выход активен
-settings-controls-input-line = Входная линия
-settings-controls-active-level = Активный уровень
-settings-controls-active-high = Высокий
-settings-controls-active-low = Низкий
-settings-controls-debounce = Антидребезг (мс)
-serial-ptt-output-rts = RTS
-serial-ptt-output-dtr = DTR
-settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
-settings-controls-choose-serial-port = Choose serial port
-settings-controls-serial-port-chosen = Serial port chosen.

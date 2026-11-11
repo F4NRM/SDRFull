@@ -9629,18 +9629,3 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = 次回の起動から有効になります。自動では DirectX 12 を使い、ウォーターフォールが平らな横縞に描かれる古い AMD ドライバーでは OpenGL を使います。ウォーターフォールが横線だけになる場合は OpenGL をお試しください。
-
-settings-controls-desktop-mic = 卓上または外部マイク
-settings-controls-desktop-mic-note = シリアル（またはUSBシリアル）ポートのハンドシェイク線に接続されたマイクやフットスイッチからのPTT。
-settings-controls-output-line = 出力ライン
-settings-controls-output-on = 出力オン
-settings-controls-input-line = 入力ライン
-settings-controls-active-level = アクティブレベル
-settings-controls-active-high = High
-settings-controls-active-low = Low
-settings-controls-debounce = デバウンス (ms)
-serial-ptt-output-rts = RTS
-serial-ptt-output-dtr = DTR
-settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
-settings-controls-choose-serial-port = Choose serial port
-settings-controls-serial-port-chosen = Serial port chosen.
