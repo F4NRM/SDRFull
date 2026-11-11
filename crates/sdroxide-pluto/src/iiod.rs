@@ -744,9 +744,34 @@ impl Connection {
     }
 
     /// Read the `words × 8` hex characters of a channel mask, plus its newline.
+    ///
+    /// Exactly one newline, read as part of the mask the way libiio's client
+    /// does (`words * 8 + 1` bytes) — never [`Self::consume_trailing_newline`].
+    /// The sample data follows straight after it, and a first sample byte of
+    /// 0x0A or 0x0D would be swallowed as framing, leaving the chunk short of
+    /// bytes the board has already sent: the receive stalls of issue #719.
     fn read_mask(&mut self, cmd: &str, words: usize) -> Result<String> {
-        let mut buf = vec![0u8; words * 8];
+        let mut buf = vec![0u8; words * 8 + 1];
         self.read_exact_into(cmd, &mut buf)?;
+        let mut end = buf.pop();
+        if end == Some(b'\r') {
+            // A CRLF-terminated mask: its `\n` is still due, and is framing.
+            let mut lf = [0u8; 1];
+            self.read_exact_into(cmd, &mut lf)?;
+            end = Some(lf[0]);
+        }
+        if end != Some(b'\n') {
+            buf.extend(end);
+            return Err(Error::Protocol {
+                cmd: cmd.to_string(),
+                what: format!(
+                    "expected a {}-character hex channel mask and a newline, got {:?} — the \
+                     chunk framing is not what this client was built for",
+                    words * 8,
+                    String::from_utf8_lossy(&buf)
+                ),
+            });
+        }
         let mask = String::from_utf8_lossy(&buf).to_string();
         if !mask.chars().all(|c| c.is_ascii_hexdigit()) {
             return Err(Error::Protocol {
@@ -758,7 +783,6 @@ impl Connection {
                 ),
             });
         }
-        self.consume_trailing_newline();
         Ok(mask.to_lowercase())
     }
 
@@ -1179,6 +1203,25 @@ mod tests {
         let sent = String::from_utf8_lossy(&sent);
         assert!(sent.contains("WRITEBUF cf-ad9361-dds-core-lpc 4\r\n"), "sent: {sent:?}");
         assert!(sent.ends_with("\u{1}\u{2}\u{3}\u{4}"), "sent: {sent:?}");
+    }
+
+    /// Issue #719: a chunk whose first sample bytes happen to be 0x0A or 0x0D.
+    /// The mask is followed by exactly one newline; anything after it is
+    /// payload. Swallowing every newline-looking byte there left the client
+    /// waiting for bytes the board had already sent, so it never asked for
+    /// the next buffer — the stall on the capture, with every byte ACKed.
+    #[test]
+    fn sample_bytes_that_look_like_newlines_are_payload_not_framing() {
+        let mut script = preamble();
+        script.extend_from_slice(b"4\n00000003\n");
+        script.extend_from_slice(&[b'\n', b'\r', 7, 8]);
+        let mut out = [0u8; 4];
+        let ((n, bytes), _) = with_server(script, |c| {
+            let n = c.read_buf("cf-ad9361-lpc", 2, &mut out).expect("read");
+            (n, out)
+        });
+        assert_eq!(n, 4);
+        assert_eq!(bytes, [b'\n', b'\r', 7, 8]);
     }
 
     /// Closing a buffer that was never open is how the shutdown paths stay
