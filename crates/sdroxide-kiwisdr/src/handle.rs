@@ -135,9 +135,19 @@ pub(crate) struct Shared {
     /// between frames, alongside [`Self::center_milli_hz`], which is what the
     /// window is centred on once it is narrower than the band.
     pub wf_zoom: AtomicU8,
+    /// Where the operator has scrolled the waterfall window to, in millihertz,
+    /// or [`NO_PAN`] while it follows the dial. Only honoured for as long as the
+    /// dial is where it was when this was set ([`Self::wf_pan_dial_milli_hz`]):
+    /// tuning again hands the window back to the dial.
+    pub wf_pan_milli_hz: AtomicI64,
+    /// The dial, in millihertz, when [`Self::wf_pan_milli_hz`] was set.
+    pub wf_pan_dial_milli_hz: AtomicI64,
     /// Both threads stand down when this is set.
     pub stop: AtomicBool,
 }
+
+/// [`Shared::wf_pan_milli_hz`] when the window is not scrolled away.
+pub(crate) const NO_PAN: i64 = i64::MIN;
 
 /// An open session with a KiwiSDR.
 pub struct KiwiHandle {
@@ -250,6 +260,20 @@ impl KiwiHandle {
         self.shared
             .wf_zoom
             .store(zoom.min(sdroxide_types::KiwiConfig::WF_ZOOM_MAX), Ordering::Relaxed);
+    }
+
+    /// Scroll the waterfall window to centre on `hz` without tuning, or give it
+    /// back to the dial with `None`. It stays there until the dial moves: a
+    /// click on the strip, the keyboard, the rig — any tune — ends it.
+    pub fn set_wf_pan(&self, hz: Option<f64>) {
+        match hz {
+            Some(hz) => {
+                let dial = self.shared.center_milli_hz.load(Ordering::Relaxed);
+                self.shared.wf_pan_dial_milli_hz.store(dial, Ordering::Relaxed);
+                self.shared.wf_pan_milli_hz.store((hz * 1000.0) as i64, Ordering::Relaxed);
+            }
+            None => self.shared.wf_pan_milli_hz.store(NO_PAN, Ordering::Relaxed),
+        }
     }
 
     /// The span the receiver's waterfall currently covers, in Hz.

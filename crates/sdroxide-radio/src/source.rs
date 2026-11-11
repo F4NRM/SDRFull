@@ -655,6 +655,16 @@ pub trait IqSource: Send {
         None
     }
 
+    /// Scroll the window of [`IqSource::wide_spectrum_db`] to centre on `hz`
+    /// (on the dial's scale) without tuning, or hand it back to the dial with
+    /// `None`. For a front end whose window is narrower than what it can see
+    /// and can be placed — a KiwiSDR's zoomed waterfall. A scrolled window stays
+    /// where it was put until the dial moves.
+    ///
+    /// Default: nothing to scroll (a full-band lane that already shows
+    /// everything, or no lane at all).
+    fn set_wide_center_hz(&mut self, _hz: Option<f64>) {}
+
     /// How wide [`IqSource::wide_spectrum_db`]'s window is, in Hz — `0.0` for a
     /// source that publishes none.
     ///
@@ -1441,6 +1451,12 @@ impl IqSource for ConvertedSource {
     fn wide_spectrum_db(&mut self, out: &mut Vec<f32>) -> Option<(f64, f64)> {
         let (center, span) = self.inner.wide_spectrum_db(out)?;
         Some((self.down(center), span))
+    }
+
+    /// The window is placed in hardware frequency, so the converter's offset
+    /// goes on the way down, as it does for a tune.
+    fn set_wide_center_hz(&mut self, hz: Option<f64>) {
+        self.inner.set_wide_center_hz(hz.map(|hz| hz + self.step.rx_offset_hz));
     }
 
     /// A converter shifts where the lane sits, never how wide it is.

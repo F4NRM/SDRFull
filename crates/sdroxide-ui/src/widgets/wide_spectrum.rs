@@ -52,6 +52,60 @@ pub fn clamp_strip_height(h: f32) -> f32 {
 /// waterfall competing with the main one.
 const ROWS: usize = 120;
 
+/// How long a zoom step is remembered while waiting for the state to show it.
+const ZOOM_ECHO_S: f64 = 0.6;
+
+/// Wheel points and pinch factor per zoom step.
+const SCROLL_PER_STEP: f32 = 50.0;
+const PINCH_PER_STEP: f32 = 1.5;
+
+/// Where a window centred on `start_hz` goes when the pointer is dragged
+/// `dx_px` to the right across a strip `width_px` wide showing `span_hz`: the
+/// band follows the pointer, so the centre goes the other way. Never below DC.
+fn pan_centre(start_hz: f64, dx_px: f32, span_hz: f64, width_px: f32) -> f64 {
+    if width_px <= 0.0 {
+        return start_hz;
+    }
+    (start_hz - f64::from(dx_px) * span_hz / f64::from(width_px)).max(0.0)
+}
+
+/// Whether the main waterfall's view has moved enough, since the strip last
+/// looked, to take the strip's window along: a thousandth of the strip's span,
+/// which is under a pixel on any screen, so the window keeps up with a slow
+/// scroll but a view that merely stays put sends nothing. The first look
+/// (`seen` is `None`) never moves it — opening a window must not jerk the strip.
+fn view_moved(seen: Option<f64>, centre_hz: f64, strip_span_hz: f64) -> bool {
+    seen.is_some_and(|s| (centre_hz - s).abs() > strip_span_hz / 1000.0)
+}
+
+/// The wheel and the pinch of one frame as a number of zoom steps (fractional;
+/// up and out are positive and negative). Scrolling up and spreading the
+/// fingers both zoom in.
+fn zoom_input(scroll_points: f32, pinch_factor: f32) -> f32 {
+    let pinch = if pinch_factor > 0.0 { pinch_factor.ln() / PINCH_PER_STEP.ln() } else { 0.0 };
+    scroll_points / SCROLL_PER_STEP + pinch
+}
+
+/// Split an accumulated amount into whole steps and what is left over.
+fn whole_steps(acc: f32) -> (i32, f32) {
+    let whole = acc.trunc();
+    (whole as i32, acc - whole)
+}
+
+/// The zoom after `steps` more, inside the receiver's range.
+fn next_zoom(cur: u8, steps: i32) -> u8 {
+    (i32::from(cur) + steps).clamp(0, i32::from(sdroxide_types::KiwiConfig::WF_ZOOM_MAX)) as u8
+}
+
+/// The strip's zoom as the front end reports it, when it has one to change.
+fn strip_zoom(state: &RadioState) -> Option<u8> {
+    state
+        .gains
+        .iter()
+        .find(|(name, _)| name == sdroxide_types::KiwiConfig::WF_ZOOM_ELEMENT)
+        .map(|(_, z)| z.round().clamp(0.0, f64::from(sdroxide_types::KiwiConfig::WF_ZOOM_MAX)) as u8)
+}
+
 /// Width of the tuned-frequency line, in points.
 const VFO_LINE_WIDTH: f32 = 3.0;
 
@@ -216,6 +270,7 @@ pub fn show(
     state: &RadioState,
     palette: usize,
     height: f32,
+    view: Option<(f64, f64)>,
     cmds: &mut Vec<Command>,
 ) {
     wf.push(frame, palette);
@@ -279,6 +334,71 @@ pub fn show(
     }
     if measuring.is_some() || (resp.hovered() && shift) {
         ui.ctx().set_cursor_icon(CursorIcon::Crosshair);
+    }
+
+    // --- scrolling and zooming the strip's window ---------------------------
+    // A drag slides the window along the band without tuning — find the signal,
+    // then click it — and the wheel or a pinch zooms it, where the front end
+    // lets the window be placed (a KiwiSDR's waterfall). The commands are
+    // harmless elsewhere: a front end whose strip already shows everything
+    // ignores them.
+    let pan_id = ui.id().with("wide-pan");
+    if resp.drag_started_by(egui::PointerButton::Primary) && !shift {
+        ui.data_mut(|d| d.insert_temp(pan_id, frame.center_hz));
+    }
+    if resp.dragged_by(egui::PointerButton::Primary)
+        && !shift
+        && measuring.is_none()
+        && let Some(c) = ui.data(|d| d.get_temp::<f64>(pan_id))
+    {
+        // Accumulated here rather than read back from the frame, which arrives
+        // a round trip later and would make the drag lag and overshoot.
+        let c = pan_centre(c, resp.drag_delta().x, frame.span_hz, rect.width());
+        ui.data_mut(|d| d.insert_temp(pan_id, c));
+        cmds.push(Command::SetWideWindow(Some(c)));
+        ui.ctx().set_cursor_icon(CursorIcon::Grabbing);
+    }
+    if let (Some(shown), true) = (strip_zoom(state), resp.hovered()) {
+        let (scroll, pinch) = ui.input(|i| (i.smooth_scroll_delta.y, i.zoom_delta()));
+        let acc_id = ui.id().with("wide-zoom-acc");
+        let want_id = ui.id().with("wide-zoom-want");
+        let acc: f32 = ui.data(|d| d.get_temp(acc_id)).unwrap_or(0.0);
+        let (steps, rest) = whole_steps(acc + zoom_input(scroll, pinch));
+        ui.data_mut(|d| d.insert_temp(acc_id, rest));
+        if steps != 0 {
+            // What was asked a moment ago, until the state echoes it: two notches
+            // in one frame burst must not both start from the old zoom.
+            let now = ui.input(|i| i.time);
+            let cur = match ui.data(|d| d.get_temp::<(u8, f64)>(want_id)) {
+                Some((z, t)) if now - t < ZOOM_ECHO_S => z,
+                _ => shown,
+            };
+            let next = next_zoom(cur, steps);
+            if next != cur {
+                cmds.push(Command::SetGain {
+                    dir: sdroxide_types::Direction::Rx,
+                    element: sdroxide_types::KiwiConfig::WF_ZOOM_ELEMENT.to_string(),
+                    db: f64::from(next),
+                });
+                ui.data_mut(|d| d.insert_temp(want_id, (next, now)));
+            }
+        }
+    }
+
+    // The main waterfall's own scrolling drives the strip too: when the view
+    // there is moved to look at another part of the band, the strip's window
+    // goes with it, so what is being explored is also what the strip shows.
+    // Only on a front end whose window can be placed (the same test as the
+    // zoom), and only when the view's centre has moved, so the strip is still
+    // free to be scrolled on its own in between.
+    let view_id = ui.id().with("wide-view-centre");
+    if let Some((vlo, vhi)) = view.filter(|(lo, hi)| hi > lo) {
+        let centre = (vlo + vhi) / 2.0;
+        let seen: Option<f64> = ui.data(|d| d.get_temp(view_id));
+        if strip_zoom(state).is_some() && view_moved(seen, centre, frame.span_hz) {
+            cmds.push(Command::SetWideWindow(Some(centre)));
+        }
+        ui.data_mut(|d| d.insert_temp(view_id, centre));
     }
 
     painter.rect_filled(rect, 2.0, Color32::BLACK);
@@ -365,6 +485,23 @@ pub fn show(
     }
 
     // The tuned frequency.
+    // The stretch of band the main waterfall is showing, when it is not the
+    // slice outlined above (zoomed out, or scrolled away from the received one).
+    if let Some((vlo, vhi)) = view.filter(|(lo, hi)| hi > lo) {
+        let (vx0, vx1) = (x_of(vlo), x_of(vhi));
+        if (vx0 - sx0).abs() > 1.5 || (vx1 - sx1).abs() > 1.5 {
+            painter.rect_stroke(
+                Rect::from_min_max(
+                    Pos2::new(vx0, rect.top() + 1.0),
+                    Pos2::new(vx1.max(vx0 + 2.0), rect.bottom() - 1.0),
+                ),
+                0.0,
+                Stroke::new(1.0, Color32::from_white_alpha(200)),
+                StrokeKind::Inside,
+            );
+        }
+    }
+
     // Three points of red over a dark edge: on a 30 MHz strip a one-pixel line
     // was lost against the bars of the waterfall behind it.
     let vfo_x = x_of(state.active_freq_hz());
@@ -514,6 +651,47 @@ mod tests {
     /// `rect.left()` fails instead of passing by symmetry.
     fn strip() -> Rect {
         Rect::from_min_size(Pos2::new(10.0, 0.0), Vec2::new(100.0, DEFAULT_STRIP_HEIGHT))
+    }
+
+    #[test]
+    fn dragging_the_strip_right_slides_the_window_down_the_band() {
+        // A 1.875 MHz window over 1000 pt: 100 pt is 187.5 kHz, and the band
+        // follows the pointer, so the centre goes down.
+        let c = pan_centre(7_074_000.0, 100.0, 1_875_000.0, 1000.0);
+        assert!((c - 6_886_500.0).abs() < 1.0, "got {c}");
+        let c = pan_centre(7_074_000.0, -100.0, 1_875_000.0, 1000.0);
+        assert!((c - 7_261_500.0).abs() < 1.0, "got {c}");
+        assert_eq!(pan_centre(50_000.0, 500.0, 1_875_000.0, 1000.0), 0.0, "never below DC");
+        assert_eq!(pan_centre(7e6, 10.0, 1e6, 0.0), 7e6, "a strip with no width does not move");
+    }
+
+    #[test]
+    fn the_wheel_and_the_pinch_zoom_in_steps() {
+        assert_eq!(whole_steps(zoom_input(50.0, 1.0)), (1, 0.0));
+        assert_eq!(whole_steps(zoom_input(-100.0, 1.0)).0, -2);
+        // Spreading the fingers by one step's factor is one step in.
+        assert_eq!(whole_steps(zoom_input(0.0, 1.5001)).0, 1);
+        // Small movements add up instead of being lost.
+        let (s, rest) = whole_steps(zoom_input(20.0, 1.0));
+        assert_eq!(s, 0);
+        assert_eq!(whole_steps(rest + zoom_input(35.0, 1.0)).0, 1);
+    }
+
+    #[test]
+    fn the_strip_follows_the_main_view_only_when_it_has_moved() {
+        let span = 1_875_000.0;
+        assert!(!view_moved(None, 7e6, span), "the first look never moves it");
+        assert!(!view_moved(Some(7e6), 7e6, span), "a view that stays put sends nothing");
+        assert!(!view_moved(Some(7e6), 7e6 + 1000.0, span), "under a pixel is not a move");
+        assert!(view_moved(Some(7e6), 7e6 + 100_000.0, span));
+        assert!(view_moved(Some(7e6), 7e6 - 100_000.0, span));
+    }
+
+    #[test]
+    fn the_zoom_stays_inside_the_receivers_range() {
+        assert_eq!(next_zoom(4, 1), 5);
+        assert_eq!(next_zoom(0, -3), 0);
+        assert_eq!(next_zoom(9, 5), sdroxide_types::KiwiConfig::WF_ZOOM_MAX);
     }
 
     #[test]

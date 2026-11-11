@@ -1558,6 +1558,15 @@ pub enum Command {
     ///
     /// Appended for the usual reason — postcard numbers variants by position.
     WefaxRevertSlant,
+
+    /// Scroll the full-band strip's window to centre on this frequency (Hz, on
+    /// the dial's scale) without tuning, or `None` to give it back to the dial.
+    /// Only a front end whose strip is narrower than what it can see acts on it
+    /// (a KiwiSDR's zoomed waterfall); the others ignore it. The window stays
+    /// where it was put until the dial moves.
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    SetWideWindow(Option<f64>),
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

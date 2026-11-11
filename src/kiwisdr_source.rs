@@ -179,6 +179,11 @@ impl IqSource for KiwiSdrSource {
         Some((frame.center_hz, frame.span_hz))
     }
 
+    /// Scroll the receiver's waterfall window; see [`KiwiHandle::set_wf_pan`].
+    fn set_wide_center_hz(&mut self, hz: Option<f64>) {
+        self.handle.set_wf_pan(hz);
+    }
+
     /// What the receiver's waterfall covers, and so how far the panadapter may
     /// be zoomed out: its whole band at zoom 0, and a power-of-two slice of it
     /// centred on the dial at anything else (issue #303).

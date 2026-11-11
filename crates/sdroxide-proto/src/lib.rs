@@ -2414,8 +2414,14 @@ use sdroxide_types::{
 /// `ServerMsg::ClientSettings` and `Command::SetClientSettings` whole, so this
 /// is the same appended-field break as v194.
 /// `PROTO_VERSION` 296 → 297, `VERSION_BYTE` 0x74 → 0x75.
-pub const PROTO_VERSION: u16 = 297;
-const VERSION_BYTE: u8 = 0x75;
+///
+/// v298: **scrolling the full-band strip.** `Command::SetWideWindow(Option<f64>)`
+/// is appended after `WefaxRevertSlant`: centre the strip's window on a
+/// frequency without tuning, or `None` to follow the dial again. A v297 station
+/// does not know the variant.
+/// `PROTO_VERSION` 297 → 298, `VERSION_BYTE` 0x75 → 0x76.
+pub const PROTO_VERSION: u16 = 298;
+const VERSION_BYTE: u8 = 0x76;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3739,7 +3745,7 @@ mod tests {
         }
         // v296: the SSTV clock layer (`TextLayer::clock`) appended at the tail
         // of a `Composer` layer, which rides the picture preset messages.
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (297, 0x75));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
         // v297: the strip height at the tail of `ClientScreen`, and it comes
         // back as sent.
         let screen = sdroxide_types::ClientScreen {
@@ -3810,7 +3816,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (297, 0x75));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3832,7 +3838,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (297, 0x75));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4616,6 +4622,20 @@ mod tests {
         assert_eq!(decode::<ClientMsg>(&last).unwrap(), ClientMsg::Command(Command::WefaxRevertSlant));
     }
 
+    /// v298: the strip scroll is a new `Command` variant after the ones before
+    /// it, and carries its frequency through.
+    #[test]
+    fn the_wide_window_command_is_appended_and_round_trips() {
+        let last = encode(&ClientMsg::Command(Command::SetWideWindow(None))).unwrap();
+        let before = encode(&ClientMsg::Command(Command::WefaxRevertSlant)).unwrap();
+        assert_eq!(last[0], VERSION_BYTE);
+        assert_eq!(last[2], before[2] + 1, "must directly follow WefaxRevertSlant");
+        for c in [Command::SetWideWindow(None), Command::SetWideWindow(Some(7_674_000.0))] {
+            let m = ClientMsg::Command(c);
+            assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
+        }
+    }
+
     /// The band plan library crosses the wire: the three commands, the list the
     /// station announces and the name of the plan it runs, and the fingerprint a
     /// radio keeps beside its confirmed band lists. Filled rather than left at
@@ -4905,7 +4925,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (297, 0x75));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),
