@@ -465,6 +465,8 @@ fn photo_fit(size: Vec2) -> Vec2 {
 
 /// What a card took on the screen: the box, and the credit line when it has one.
 struct CardDrawn {
+    /// Read by the tests that check the card stays on the screen.
+    #[cfg(test)]
     box_: Rect,
     credit: Option<Rect>,
 }
@@ -565,7 +567,11 @@ fn draw_hover_card(
     }
     // A ring on the symbol itself, so the name is attached to a mark.
     p.circle_stroke(hover.at, 4.5, Stroke::new(1.3, alpha(map.city_label, 220.0)));
-    CardDrawn { box_, credit: credit_rect }
+    CardDrawn {
+        #[cfg(test)]
+        box_,
+        credit: credit_rect,
+    }
 }
 
 /// How far from an airport an aircraft counts as "near" it, km.
@@ -1687,7 +1693,7 @@ mod tests {
     #[test]
     fn aircraft_within_100_km_of_an_airport_are_counted() {
         let a = real_airport("EHAM");
-        let mut at = |dlat: f64| {
+        let at = |dlat: f64| {
             let mut ac = AdsbAircraft::new(1, 0);
             ac.lat = Some(a.lat + dlat);
             ac.lon = Some(a.lon);

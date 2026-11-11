@@ -42,6 +42,7 @@ sdroxide-skimmer = { path = "../sdroxide-skimmer" }
 sdroxide-ism = { path = "../sdroxide-ism" }
 sdroxide-adsb = { path = "../sdroxide-adsb" }
 sdroxide-vdl2 = { path = "../sdroxide-vdl2" }
+sdroxide-vor = { path = "../sdroxide-vor" }
 sdroxide-ais = { path = "../sdroxide-ais" }
 sdroxide-dab = { path = "../sdroxide-dab" }
 sdroxide-qo100 = { path = "../sdroxide-qo100" }
@@ -49,6 +50,8 @@ sdroxide-qo100 = { path = "../sdroxide-qo100" }
 # in the engine off a dedicated downconversion of the raw IQ.
 sdroxide-hfdl = { path = "../sdroxide-hfdl" }
 sdroxide-sonde = { path = "../sdroxide-sonde" }
+sdroxide-meshtastic = { path = "../sdroxide-meshtastic", features = ["engine"] }
+sdroxide-wxsat = { path = "../sdroxide-wxsat" }
 sdroxide-net = { path = "../sdroxide-net" }
 sdroxide-winlink = { path = "../sdroxide-winlink" }
 # Only for `tlesub`: the engine persists the satellite subscriptions and, being

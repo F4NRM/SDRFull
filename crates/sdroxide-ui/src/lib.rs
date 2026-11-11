@@ -7,6 +7,16 @@
 //! its own, so the shared egui pass never sees them and the module runs on both
 //! targets.
 
+// The browser build reaches only part of this crate: the serial, MIDI, file
+// dialog, radio-control and other desktop-only code is compiled there and never
+// called. Real dead code is still reported by the native build, which reaches
+// all of it, so the browser build does not repeat the same warnings.
+//
+// Only without the `remote` feature, which is a build nobody ships (the web
+// client enables it, and reaches nearly all of this); with it, the few items
+// the browser really never calls carry their own scoped allow.
+#![cfg_attr(all(target_arch = "wasm32", not(feature = "remote")), allow(dead_code))]
+
 mod adsb_icons;
 mod adsb_map;
 mod airdata;
@@ -17,6 +27,8 @@ mod aprs_map;
 /// The world the flat maps are drawn from — the globe's own land raster,
 /// sampled on the CPU, plus the border and river geometry and the city table.
 mod basemap;
+/// The QRZ card shown where the pointer rests on a callsign.
+mod callsign_card;
 pub mod chrome;
 pub mod colormap;
 mod digi_map;
@@ -42,6 +54,8 @@ mod login_globe;
 /// browser client drives a single (remote) radio.
 mod multi;
 mod prop_map;
+/// The PUBLIC SDRS window's map view: the receivers where they stand.
+mod publicsdr_map;
 #[cfg(feature = "remote")]
 mod remote;
 /// Asking egui for the next frame at the rate actually asked for.
@@ -226,6 +240,11 @@ struct AdapterSummary {
     name: String,
     /// e.g. `"V3DV Mesa"`.
     driver: String,
+    /// PCI vendor id, e.g. `0x1002` for AMD.
+    vendor: u32,
+    /// A real GPU, not a software renderer such as Microsoft's Basic Render
+    /// Driver.
+    hardware: bool,
 }
 
 /// The file that says the last run died inside the graphics driver.
@@ -362,7 +381,143 @@ fn windows_backends(configured: egui_wgpu::wgpu::Backends) -> Option<egui_wgpu::
     if wgpu::Backends::from_env().is_some() {
         return None;
     }
+    match graphics_backend() {
+        GraphicsBackend::Gl if configured.contains(wgpu::Backends::GL) => {
+            eprintln!("sdroxide: graphics: OpenGL, as chosen in Settings > UI.");
+            return Some(wgpu::Backends::GL);
+        }
+        GraphicsBackend::Dx12 if configured.contains(wgpu::Backends::DX12) => {
+            eprintln!("sdroxide: graphics: DirectX 12, as chosen in Settings > UI.");
+            return Some(wgpu::Backends::DX12);
+        }
+        _ => {}
+    }
+    if configured.contains(wgpu::Backends::GL) && configured.contains(wgpu::Backends::DX12) {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::DX12,
+            ..wgpu::InstanceDescriptor::new_without_display_handle()
+        });
+        let adapters: Vec<AdapterSummary> =
+            pollster::block_on(instance.enumerate_adapters(wgpu::Backends::DX12))
+                .iter()
+                .map(|a| {
+                    let info = a.get_info();
+                    AdapterSummary {
+                        backend: info.backend,
+                        name: info.name,
+                        driver: info.driver,
+                        vendor: info.vendor,
+                        hardware: info.device_type != wgpu::DeviceType::Cpu,
+                    }
+                })
+                .collect();
+        if let Some(gpu) = old_amd_dx12(&adapters) {
+            eprintln!(
+                "sdroxide: graphics: {} ({}) is on a DirectX 12 driver too old to draw the \
+                 waterfall (issue #559), so this window renders through OpenGL instead. \
+                 Choose DirectX 12 in Settings > UI, or set WGPU_BACKEND=dx12, to override.",
+                gpu.name, gpu.driver
+            );
+            return Some(wgpu::Backends::GL);
+        }
+    }
     without_vulkan(configured)
+}
+
+/// The oldest driver numbering that draws the waterfall right on an AMD GPU.
+///
+/// AMD's Windows drivers carry a four-part version whose first part grew from
+/// 8 and 15 (the 2015-16 Catalyst and Crimson drivers) through 21 (2017) to
+/// 31 today. A D3D12 adapter on a pre-21 driver draws the waterfall as flat
+/// horizontal bands while the rest of the picture, and OpenGL on the same chip,
+/// are fine (issue #559: Radeon R4, driver 8.17.10.1404, a 2016 APU).
+#[cfg(not(target_arch = "wasm32"))]
+const AMD_DX12_FIRST_GOOD_DRIVER: u32 = 21;
+
+/// The AMD D3D12 adapter that [`windows_backends`] should not render through —
+/// `Some` only when **every** real D3D12 adapter is a pre-21 AMD one, so a
+/// machine with a sound second GPU is left to pick that one.
+#[cfg(not(target_arch = "wasm32"))]
+fn old_amd_dx12(adapters: &[AdapterSummary]) -> Option<&AdapterSummary> {
+    let mut hardware =
+        adapters.iter().filter(|a| a.backend == egui_wgpu::wgpu::Backend::Dx12 && a.hardware);
+    let first = hardware.clone().next()?;
+    let old = |a: &AdapterSummary| {
+        a.vendor == 0x1002
+            && a.driver
+                .split('.')
+                .next()
+                .and_then(|n| n.trim().parse::<u32>().ok())
+                .is_some_and(|n| n < AMD_DX12_FIRST_GOOD_DRIVER)
+    };
+    hardware.all(old).then_some(first)
+}
+
+/// The graphics API the operator wants the window to open with.
+///
+/// `Auto` is every machine that has not been told otherwise: DirectX 12 with
+/// OpenGL behind it, except where [`old_amd_dx12`] says DirectX 12 draws wrong.
+/// Only Windows has a choice to make; elsewhere eframe's default stands.
+///
+/// It is read before any window exists, so it lives in a small file in the
+/// config directory of the machine the window opens on, not in the settings the
+/// window loads once it is up.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum GraphicsBackend {
+    #[default]
+    Auto,
+    Dx12,
+    Gl,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl GraphicsBackend {
+    pub const ALL: [Self; 3] = [Self::Auto, Self::Dx12, Self::Gl];
+
+    fn tag(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Dx12 => "dx12",
+            Self::Gl => "gl",
+        }
+    }
+
+    fn from_tag(text: &str) -> Self {
+        match text.trim().to_ascii_lowercase().as_str() {
+            "dx12" => Self::Dx12,
+            "gl" => Self::Gl,
+            _ => Self::Auto,
+        }
+    }
+}
+
+/// Where the choice is kept.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn graphics_backend_file() -> Option<std::path::PathBuf> {
+    sdroxide_config::config_dir().ok().map(|d| d.join("graphics-backend.txt"))
+}
+
+/// The saved choice; `Auto` when there is none or it cannot be read.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn graphics_backend() -> GraphicsBackend {
+    graphics_backend_file()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .map(|t| GraphicsBackend::from_tag(&t))
+        .unwrap_or_default()
+}
+
+/// Save the choice for the next start. `Auto` removes the file.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn set_graphics_backend(choice: GraphicsBackend) -> std::io::Result<()> {
+    let Some(path) = graphics_backend_file() else { return Ok(()) };
+    if choice == GraphicsBackend::Auto {
+        return match std::fs::remove_file(&path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e),
+            _ => Ok(()),
+        };
+    }
+    std::fs::write(path, format!("{}\n", choice.tag()))
 }
 
 /// [`windows_backends`] without the platform and environment tests, so the rule
@@ -438,7 +593,13 @@ fn v3dv_backends(configured: egui_wgpu::wgpu::Backends) -> Option<egui_wgpu::wgp
             .iter()
             .map(|a| {
                 let info = a.get_info();
-                AdapterSummary { backend: info.backend, name: info.name, driver: info.driver }
+                AdapterSummary {
+                    backend: info.backend,
+                    name: info.name,
+                    driver: info.driver,
+                    vendor: info.vendor,
+                    hardware: info.device_type != wgpu::DeviceType::Cpu,
+                }
             })
             .collect();
 
@@ -512,12 +673,72 @@ mod windows_backend_tests {
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
+mod old_amd_tests {
+    use super::{AdapterSummary, GraphicsBackend, old_amd_dx12};
+    use crate::egui_wgpu::wgpu::Backend;
+
+    fn dx12(name: &str, driver: &str, vendor: u32, hardware: bool) -> AdapterSummary {
+        AdapterSummary {
+            backend: Backend::Dx12,
+            name: name.to_owned(),
+            driver: driver.to_owned(),
+            vendor,
+            hardware,
+        }
+    }
+
+    /// The two adapters issue #559's log lists.
+    #[test]
+    fn the_radeon_r4_on_its_2016_driver_is_caught() {
+        let list = [
+            dx12("AMD Radeon(TM) R4 Graphics", "8.17.10.1404", 0x1002, true),
+            dx12("Microsoft Basic Render Driver", "10.0.19041.5794", 0x1414, false),
+        ];
+        assert_eq!(old_amd_dx12(&list).map(|a| a.driver.as_str()), Some("8.17.10.1404"));
+    }
+
+    /// A current AMD driver, and other makers, keep DirectX 12.
+    #[test]
+    fn current_drivers_and_other_makers_are_left_alone() {
+        assert!(old_amd_dx12(&[dx12("AMD Radeon RX 7800 XT", "32.0.21013.1000", 0x1002, true)]).is_none());
+        assert!(old_amd_dx12(&[dx12("AMD Radeon R5", "21.19.137.514", 0x1002, true)]).is_none());
+        assert!(old_amd_dx12(&[dx12("Intel(R) HD Graphics 4000", "8.15.10.2342", 0x8086, true)]).is_none());
+        assert!(old_amd_dx12(&[]).is_none());
+    }
+
+    /// A second, sound GPU on the machine is the one eframe will use.
+    #[test]
+    fn a_sound_second_gpu_keeps_directx_12() {
+        let list = [
+            dx12("AMD Radeon(TM) R4 Graphics", "8.17.10.1404", 0x1002, true),
+            dx12("NVIDIA GeForce GTX 1650", "31.0.15.3623", 0x10DE, true),
+        ];
+        assert!(old_amd_dx12(&list).is_none());
+    }
+
+    #[test]
+    fn the_saved_choice_round_trips_and_unknown_text_is_auto() {
+        for c in GraphicsBackend::ALL {
+            assert_eq!(GraphicsBackend::from_tag(c.tag()), c);
+        }
+        assert_eq!(GraphicsBackend::from_tag(" GL\n"), GraphicsBackend::Gl);
+        assert_eq!(GraphicsBackend::from_tag("vulkan"), GraphicsBackend::Auto);
+    }
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod v3dv_tests {
     use super::{AdapterSummary, prefer_gl_over_v3dv};
     use crate::egui_wgpu::wgpu::Backend;
 
     fn adapter(backend: Backend, name: &str, driver: &str) -> AdapterSummary {
-        AdapterSummary { backend, name: name.to_owned(), driver: driver.to_owned() }
+        AdapterSummary {
+            backend,
+            name: name.to_owned(),
+            driver: driver.to_owned(),
+            vendor: 0,
+            hardware: true,
+        }
     }
 
     /// The three adapters a Pi 500 running Raspberry Pi OS bookworm reports,
@@ -585,6 +806,27 @@ mod v3dv_tests {
 pub fn window_title(detail: &str) -> String {
     let base = format!("{} {}", sdroxide_version::FLAVOR, sdroxide_version::VERSION);
     if detail.is_empty() { base } else { format!("{base} — {detail}") }
+}
+
+/// Set the window/tab title to `title`.
+///
+/// Native: drives the OS title bar through an egui viewport command. Web: sets
+/// `document.title` directly, because eframe's web backend does not handle
+/// `ViewportCommand::Title` (it would only log a warning and leave the static
+/// title from `index.html` in place). Same string on both, so a web session's
+/// tab matches the native window's title bar.
+pub fn set_window_title(ctx: &eframe::egui::Context, title: &str) {
+    #[cfg(not(target_arch = "wasm32"))]
+    ctx.send_viewport_cmd(eframe::egui::ViewportCommand::Title(title.to_string()));
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = ctx;
+        if let Some(window) = web_sys::window() {
+            if let Some(document) = window.document() {
+                document.set_title(title);
+            }
+        }
+    }
 }
 
 /// The application icon, for [`eframe::egui::ViewportBuilder::with_icon`].

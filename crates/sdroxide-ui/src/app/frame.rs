@@ -635,6 +635,7 @@ struct ChildWindow {
 impl ChildWindow {
     /// A window whose own width earns its tier — a spectrum, an operating
     /// panel, a tool.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     fn own(app: &SdroxideApp) -> Self {
         Self {
             salt: app.radio_id,
@@ -645,6 +646,7 @@ impl ChildWindow {
 
     /// A desk tool, desktop-shaped whatever its height — the RX control
     /// console, the band selector, the rotator.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     fn desk(app: &SdroxideApp) -> Self {
         Self {
             salt: app.radio_id,
@@ -798,6 +800,8 @@ impl eframe::App for SdroxideApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        // This radio's band plan for everything this frame draws and decides.
+        let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
         let ctx = ui.ctx().clone();
         let now = ctx.input(|i| i.time);
         self.konami.tick(ctx.input(|i| i.stable_dt).min(0.25));
@@ -951,6 +955,7 @@ impl eframe::App for SdroxideApp {
         // A channel list chosen in the memories window: parsed here and sent
         // to the engine, which owns the list and the numbering in it.
         self.poll_chirp_import(&mut cmds);
+        self.poll_band_plan_import(&mut cmds);
         // A "stop after" deadline armed in the REC popup: stop the MP3
         // recording once it passes (issue #520).
         self.poll_recording_timer(&mut cmds);
@@ -1277,6 +1282,8 @@ impl eframe::App for SdroxideApp {
         // The transmit band list: why transmit is off at the dial, then the standing
         // request to check and confirm the list (never dismissable — it stays
         // until the operator has confirmed).
+        // The receive band list, for the band buttons drawn below.
+        super::top_bar::publish_rx_plan(ui.ctx(), self.radio_cfg.as_ref());
         let tx_msg = self.radio_notice.is_none().then(|| self.tx_band_msg.clone()).flatten();
         let tx_note = (self.radio_notice.is_none() && tx_msg.is_none())
             .then(|| self.tx_bands_notice())
@@ -1433,6 +1440,13 @@ impl eframe::App for SdroxideApp {
         // it (`band_menu_fill`), and the narrow dock is not also drawn.
         let cur_mode = self.state.rx[0].mode;
         let center_empty = !self.center_has_content(cur_mode);
+        // The Meshtastic panel, docked: a strip across the bottom of the main
+        // window, under the waterfall and the mode's own panel, whatever the
+        // mode. Taken off the bottom first, so the column below it takes the
+        // rest.
+        if self.show_meshtastic && !self.ui_settings.meshtastic_floating {
+            self.meshtastic_dock_panel(ui, &mut cmds);
+        }
         // A docked band/mode selector takes a column off the right of the
         // panadapter before either draws. Shown here, after the top bar and the
         // notices, so the column sits beside the waterfall rather than under the
@@ -1722,9 +1736,29 @@ impl eframe::App for SdroxideApp {
                     &wide,
                     &self.state,
                     self.ui_settings.waterfall_palette,
+                    self.view.wide_strip_height,
+                    Some((self.view.view_lo_hz, self.view.view_hi_hz)),
                     &mut cmds,
                 );
-                ui.add_space(2.0);
+                // The strip's own height handle, the same grip as between the
+                // waterfall and the operating panel: drag down to grow it.
+                let width = ui.available_width();
+                let hresp = crate::chrome::split_handle(
+                    ui,
+                    egui::vec2(width, 7.0),
+                    Some(crate::theme::PANEL()),
+                );
+                if hresp.dragged() {
+                    self.view.wide_strip_height = crate::widgets::wide_spectrum::clamp_strip_height(
+                        self.view.wide_strip_height + hresp.drag_delta().y,
+                    );
+                }
+                // Once, on release: the server keeps the height (see
+                // `ClientScreen::wide_strip_height`), and a write per frame of
+                // the drag would be sixty of them.
+                if hresp.drag_stopped() {
+                    self.save_screen_to_profile_silent();
+                }
             }
             let frame = self.frame.take();
             // As on the digital path: no fresh frames, no scroll.
@@ -1745,7 +1779,9 @@ impl eframe::App for SdroxideApp {
                 self.state.rx[0].mode,
                 phone,
             ) == crate::app::panels::radio_classic::RadioClassicPlace::Docked;
-            let panel_mode = cw_mode || rc_docked;
+            // Public SDRs takes it too, when the operator docked it there.
+            let psdr_docked = self.public_sdrs_docked_now(phone);
+            let panel_mode = cw_mode || rc_docked || psdr_docked;
             // As on the digital path above: no layers, no panadapter. In a mode
             // with nothing under it that leaves the pane empty, which is what
             // switching both off asks for.
@@ -1816,6 +1852,8 @@ impl eframe::App for SdroxideApp {
                         self.radio_classic.frame = frame.clone();
                         self.radio_classic_docked(ui, &mut cmds, panel_h);
                         self.radio_classic.frame = None;
+                    } else if psdr_docked {
+                        self.public_sdrs_docked(ui);
                     } else {
                         self.draw_operating_panel(ui, &mut cmds, Mode::Cw, panel_h);
                     }
@@ -1905,6 +1943,7 @@ impl eframe::App for SdroxideApp {
         sync!(self.show_memories, TW_MEMORIES);
         sync!(self.show_extras, TW_EXTRAS);
         sync!(self.show_aircraft, TW_AIRCRAFT);
+        sync!(self.show_meshtastic, TW_MESHTASTIC);
         sync!(self.show_radio_classic, TW_RADIO_CLASSIC);
         sync!(self.show_rds, TW_RDS);
         sync!(self.show_drm, TW_DRM);
@@ -2063,6 +2102,11 @@ impl eframe::App for SdroxideApp {
         } else {
             self.ui_settings.tool_windows_open &= !TW_AIRCRAFT;
         }
+        if self.show_meshtastic {
+            self.ui_settings.tool_windows_open |= TW_MESHTASTIC;
+        } else {
+            self.ui_settings.tool_windows_open &= !TW_MESHTASTIC;
+        }
         if self.show_rds {
             self.ui_settings.tool_windows_open |= TW_RDS;
         } else {
@@ -2136,6 +2180,8 @@ impl eframe::App for SdroxideApp {
         self.aircraft_watch_tick(&ctx);
         self.programs_sync_tick(&ctx);
         self.aircraft_window(&ctx, &mut cmds);
+        self.wxsat_window(&ctx, &mut cmds);
+        self.meshtastic_window(&ctx, &mut cmds);
         self.help.ui(&ctx);
         // Last, so it lands on top of everything else that opened this frame.
         self.oob_tx_window(&ctx);
@@ -2251,6 +2297,27 @@ impl eframe::App for SdroxideApp {
         // page is drawn through `&self`.
         self.wavelog_tick(&mut cmds);
 
+        // The QRZ card: whether it is on for the next frame, and the callsigns
+        // this frame's hovers asked it for. These go out whatever `auto_lookup`
+        // says — that switch is about filling the log form, this one is the
+        // card's own. And on 11 m it is off whatever the switch says: QRZ has
+        // nothing for a CB call (see [`crate::callsign_card::on_for_dial`]).
+        crate::callsign_card::set_active(
+            &ctx,
+            crate::callsign_card::on_for_dial(
+                self.net_cfg_edit.qrz_card_active(),
+                self.state.vfo_a_hz,
+            ),
+        );
+        // The one card over the waterfall, then the link in a card that leads
+        // to the account page.
+        crate::callsign_card::show_floating(&ctx);
+        if crate::callsign_card::take_open_account(&ctx) {
+            self.open_settings_tab("uploads");
+        }
+        for call in crate::callsign_card::take_requests(&ctx) {
+            self.pending_lookups.push(call);
+        }
         // Flush queued lookups / uploads accumulated during window rendering.
         for call in std::mem::take(&mut self.pending_lookups) {
             cmds.push(Command::LookupCallsign { call });
@@ -2633,6 +2700,48 @@ impl SdroxideApp {
                         Some(sdroxide_types::sat_bands(&freqs, t.doppler_rx_hz))
                     })
                     .unwrap_or_default();
+            // A CAT rig under a satellite lock is tuned to the dial plus the
+            // receive correction, and the engine lays its audio out there (the
+            // window and the frames). The dial and its passband are drawn there
+            // too, so the panadapter follows the radio's VFO A as the readout
+            // does, and anything tuned on it is moved back onto the published
+            // dial.
+            //
+            // While the rig transmits (keyed from here or from its microphone)
+            // the over is on the uplink, and the engine frames it there: the
+            // panadapter moves with it — its centre, the dial and the view —
+            // and comes back to the downlink at the same span when it ends.
+            let sat = self
+                .sat_track
+                .as_ref()
+                .filter(|t| t.corrections_active)
+                .filter(|_| self.caps.as_ref().is_some_and(|c| c.audio_mode));
+            let on_air = self.state.tx.ptt || self.state.tx.tune || self.state.tx.rig_keyed;
+            let sat_tx_up = sat
+                .filter(|_| on_air)
+                .and_then(|t| t.uplink_hz.map(|u| u + t.doppler_tx_hz));
+            let sat_shift = match (sat, sat_tx_up) {
+                (_, Some(up)) => up - self.state.active_freq_hz(),
+                (Some(t), None) => t.doppler_rx_hz,
+                (None, None) => 0.0,
+            };
+            let center_rx = self.state.center_hz;
+            match (sat_tx_up, self.sat_tx_view_span) {
+                (Some(up), span) => {
+                    let span = span.unwrap_or_else(|| self.view.span());
+                    self.sat_tx_view_span = Some(span);
+                    self.state.center_hz = up;
+                    self.view.fit(up, span);
+                }
+                (None, Some(span)) => {
+                    self.sat_tx_view_span = None;
+                    self.view.fit(center_rx, span);
+                }
+                (None, None) => {}
+            }
+            let cmds_before = cmds.len();
+            self.state.vfo_a_hz += sat_shift;
+            self.state.vfo_b_hz += sat_shift;
             spectrum_view::show_ext(
                 &mut spec_ui,
                 &mut self.view,
@@ -2662,6 +2771,18 @@ impl SdroxideApp {
                 self.ui_settings.memory_waterfall_lanes,
                 cmds,
             );
+            if sat_tx_up.is_some() {
+                self.state.center_hz = center_rx;
+            }
+            if sat_shift != 0.0 {
+                self.state.vfo_a_hz -= sat_shift;
+                self.state.vfo_b_hz -= sat_shift;
+                for c in &mut cmds[cmds_before..] {
+                    if let Command::SetVfo { hz, .. } = c {
+                        *hz -= sat_shift;
+                    }
+                }
+            }
             // The ATS Mini tunes by stepping its own band cycle, so the dial can
             // be a beat ahead of the radio. It hands us audio only, so the
             // waterfall is where the eye already is: say it here, centred,
@@ -2800,6 +2921,7 @@ impl SdroxideApp {
         ctx: &egui::Context,
         now: f64,
     ) {
+        let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
         use sdroxide_types::DetachableModule as M;
         let spec = detached_spec(module);
         let seed = self.ui_settings.detached_state(module).window;
@@ -3802,6 +3924,7 @@ impl SdroxideApp {
     }
 
     pub(crate) fn drain_events(&mut self, ctx: &egui::Context, now: f64) {
+        let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
         // The settings row's explicit "save to profile" / "back to profile",
         // for the same reason as the answers below: the dialog is drawn from
         // `&self`, so what it asks for is left here and done where the app can
@@ -3901,6 +4024,7 @@ impl SdroxideApp {
                     self.dial_hold.apply(&mut s, now);
                     let prev_vfo = self.state.active_freq_hz();
                     let prev_rate = self.state.sample_rate;
+                    let prev_decimation = self.state.decimation;
                     let prev_mode = self.state.rx[0].mode;
                     let prev_band = self.state.band;
                     self.state = s;
@@ -3934,7 +4058,13 @@ impl SdroxideApp {
                     {
                         self.clear_digi_band_rx();
                     }
-                    self.recenter_if_tuned_away(prev_vfo, prev_rate, band_changed);
+                    self.recenter_if_tuned_away(
+                        prev_vfo,
+                        prev_rate,
+                        prev_decimation,
+                        band_changed,
+                        now,
+                    );
                     // The announcer diffs *this* — the engine's own snapshot —
                     // rather than `self.state` per frame, because the UI
                     // mutates that optimistically before the engine confirms
@@ -4024,6 +4154,10 @@ impl SdroxideApp {
                         settings.apply_to(&mut self.ui_settings);
                         self.view.center_on_vfo = settings.center_on_vfo;
                         self.view.fft_size = settings.fft_size;
+                        self.view.wide_strip_height =
+                            crate::widgets::wide_spectrum::clamp_strip_height(
+                                settings.wide_strip_height,
+                            );
                         self.client_settings_stored = Some(settings);
                     }
                     // `has_stored == false` is a name-only offer: the profile
@@ -4084,6 +4218,19 @@ impl SdroxideApp {
                 // engine — and this is what the settings row shows.
                 RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
                     self.dyndns_last = Some((at_unix, ok, text));
+                }
+                // A band plan's file, sent to every screen: this one saves it
+                // only if it is the one that asked.
+                RadioEvent::BandPlanExport { file, json } => {
+                    let asked = self.band_plan_export_wanted.borrow().as_deref() == Some(&file);
+                    if asked {
+                        *self.band_plan_export_wanted.borrow_mut() = None;
+                        crate::download::save_as(
+                            &format!("{file}.json"),
+                            json.as_bytes(),
+                            crate::download::Mime::Text,
+                        );
+                    }
                 }
                 RadioEvent::LoginTest(r) => {
                     self.login_tests_pending.remove(&r.target);
@@ -4448,6 +4595,13 @@ impl SdroxideApp {
                     }
                 }
                 RadioEvent::TxRefused(why, hz) => self.on_tx_refused(why, hz),
+                RadioEvent::ModeRefused(mode, band) => {
+                    self.radio_notice = Some(tr!(
+                        "topbar-mode-not-on-band",
+                        mode = mode.label(),
+                        band = super::tx_bands::tx_band_label(band)
+                    ));
+                }
                 RadioEvent::AudioLevel(l) => {
                     self.audio_level = Some((crate::time::now_unix_f64(), *l))
                 }
@@ -4462,6 +4616,13 @@ impl SdroxideApp {
                     self.hfdl_status = Some(st);
                 }
                 RadioEvent::SondeStatus(st) => self.sonde_status = Some(st),
+                RadioEvent::WxsatStatus(mut st) => {
+                    self.wxsat_picture.apply(&st);
+                    st.new_lines = Vec::new();
+                    self.wxsat_status = Some(st);
+                }
+                RadioEvent::MeshtasticStatus(st) => self.meshtastic_status = Some(st),
+                RadioEvent::VorStatus(st) => self.vor_status = Some(st),
                 RadioEvent::SstvStatus(s) => {
                     // Adopt a *newly* detected RX mode for the next transmit, but
                     // don't re-apply a steady detection every frame — that would
@@ -4603,9 +4764,21 @@ impl SdroxideApp {
                     // previous plan, and this bundle arrives on every
                     // station-config edit — a password change must not cost an
                     // allocation that is never freed.
-                    if sdroxide_types::band_plan() != &c.band_plan {
-                        sdroxide_types::set_band_plan(c.band_plan.clone());
+                    // This radio's own copy, not the process's: the engine announces
+                    // the plan *this radio* runs — the station's, or one of its
+                    // own — and another tab may be on another. The plan's name
+                    // rides with it, and the same plan may come under a new name,
+                    // which the equality alone does not see.
+                    let stale = self.band_plan_cur.is_none_or(|cur| {
+                        cur != &c.band_plan || cur.meta() != c.band_plan.meta()
+                    });
+                    if stale {
+                        self.band_plan_cur = Some(sdroxide_types::leak_band_plan(c.band_plan.clone()));
                     }
+                    // The library and the choice are the station's, announced
+                    // with every bundle: the list this client chooses from.
+                    self.band_plans = c.band_plans.clone();
+                    self.band_plan_name = c.band_plan_name.clone();
                     // The operator's own additions to the modes' frequency
                     // tables, on the same terms and for the same reason: the
                     // station owns the list, and this client draws the picker
@@ -4635,7 +4808,12 @@ impl SdroxideApp {
                 RadioEvent::MailMessage(m) => self.mail.on_message(m),
                 RadioEvent::MailSaved(mid) => self.mail.on_saved(mid),
                 RadioEvent::MailDeleted { folder, mid } => self.mail.on_deleted(folder, &mid),
-                RadioEvent::CallsignResult(info) => self.apply_callsign(info),
+                RadioEvent::CallsignResult(info) => {
+                    // The QRZ card keeps its own copy (photo included) and a
+                    // result it asked for is not news for the net log.
+                    let asked = crate::callsign_card::store(ctx, &info);
+                    self.apply_callsign(info, !asked);
+                }
                 RadioEvent::Upload(r) => self.on_upload_result(r),
                 RadioEvent::Confirmations(recs) => self.apply_confirmations(recs),
                 // Folded here rather than queued for the map's own pass: these
@@ -4850,11 +5028,6 @@ impl SdroxideApp {
             self.cb_tx_edit = true;
             sdroxide_types::set_cb_tx_allowed(true);
             cmds.push(Command::SetCbTxAllowed(true));
-            // The 11M-CB tick follows the permission, as everywhere else.
-            if let Some(cfg) = self.radio_cfg.as_mut() {
-                cfg.set_tx_band(Band::M11, true);
-                self.ctrl.set_radio_config(cfg.clone());
-            }
             self.cb_tx_confirm_open = false;
         } else if cancel {
             self.cb_tx_confirm_open = false;
@@ -4974,6 +5147,7 @@ impl SdroxideApp {
         let mut screen = sdroxide_types::ClientScreen::from_settings(&self.ui_settings);
         screen.center_on_vfo = self.view.center_on_vfo;
         screen.fft_size = self.view.fft_size;
+        screen.wide_strip_height = self.view.wide_strip_height;
         if self.client_settings_stored == Some(screen) {
             return;
         }
@@ -4994,6 +5168,7 @@ impl SdroxideApp {
         // the client fills them here and puts them back on the way in.
         screen.center_on_vfo = self.view.center_on_vfo;
         screen.fft_size = self.view.fft_size;
+        screen.wide_strip_height = self.view.wide_strip_height;
         self.ctrl.send_client_settings(profile.clone(), screen);
         self.client_settings_stored = Some(screen);
         self.client_settings_status = Some(match &profile {
@@ -5009,6 +5184,7 @@ impl SdroxideApp {
         let mut screen = sdroxide_types::ClientScreen::from_settings(&self.ui_settings);
         screen.center_on_vfo = self.view.center_on_vfo;
         screen.fft_size = self.view.fft_size;
+        screen.wide_strip_height = self.view.wide_strip_height;
         self.ctrl.send_client_settings(profile, screen.clone());
         self.client_settings_stored = Some(screen);
     }
@@ -5215,6 +5391,8 @@ impl SdroxideApp {
                 stored.apply_to(&mut self.ui_settings);
                 self.view.center_on_vfo = stored.center_on_vfo;
                 self.view.fft_size = stored.fft_size;
+                self.view.wide_strip_height =
+                    crate::widgets::wide_spectrum::clamp_strip_height(stored.wide_strip_height);
                 crate::app::persist::persist_ui_settings(&self.ui_settings);
                 self.client_settings_status = Some(tr!("frame-look-back-to-profile"));
             }
@@ -6761,3 +6939,4 @@ mod detached_geometry_tests {
     }
 }
 pub const TW_SESSION_QSOS: u64 = 1 << 51;
+pub const TW_MESHTASTIC: u64 = 1 << 52;

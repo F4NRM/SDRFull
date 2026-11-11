@@ -205,6 +205,7 @@ impl WefaxUi {
     /// The buffer is row-major (top row first, each row left to right), so one
     /// reverse turns both axes at once: the rows end up bottom-to-top and each
     /// row's pixels right-to-left, which together are the half-turn.
+    #[cfg(test)]
     pub fn rotate_live(&mut self) {
         if self.live_w == 0 || self.live_h == 0 {
             return;

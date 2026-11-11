@@ -450,6 +450,7 @@ pub(in crate::app) fn broadcast_stations_settings(
     import: &mut Option<Result<String, String>>,
     fetching: bool,
     status: Option<&Result<String, String>>,
+    _peer: Option<&str>,
 ) {
     let (season, cached) = sdroxide_config::broadcast_schedule_status();
     super::note(
@@ -550,20 +551,27 @@ pub(in crate::app) fn broadcast_stations_settings(
             // is the part that breaks — and an operator who has the file already
             // should not be stopped by that. The file is read, checked and cached
             // exactly as a download is, so what happens next is the same code.
-            // HFCC has no button: its names live in a package of three files, and
-            // a schedule of codes is worse than none.
+            // HFCC takes the whole package (schedule plus its two tables, one zip):
+            // a schedule of codes without the tables is worse than none, and the
+            // reader refuses it.
             if matches!(
                 source,
-                sdroxide_types::ScheduleSource::Eibi | sdroxide_types::ScheduleSource::Aoki
+                sdroxide_types::ScheduleSource::Eibi
+                    | sdroxide_types::ScheduleSource::Aoki
+                    | sdroxide_types::ScheduleSource::Hfcc
             ) && ui
                 .add_enabled(!fetching, egui::Button::new(tr!("settings-net-from-file")))
                 .on_hover_text(match source {
                     sdroxide_types::ScheduleSource::Aoki => {
                         tr!("settings-net-aoki-file-hint")
                     }
+                    sdroxide_types::ScheduleSource::Hfcc => {
+                        tr!("settings-net-hfcc-file-hint")
+                    }
                     _ => tr!("settings-net-eibi-file-hint"),
                 })
                 .clicked()
+                && !cfg!(test)
                 && let Some(path) = rfd::FileDialog::new()
                     .add_filter(tr!("settings-net-filter-aoki"), &["zip", "txt"])
                     .add_filter(tr!("settings-net-filter-eibi"), &["csv"])
@@ -614,14 +622,8 @@ pub(in crate::app) fn broadcast_stations_settings(
             )
             .clicked()
         {
-            if let Some(path) = rfd::FileDialog::new()
-                .add_filter(tr!("settings-net-filter-station-lists"), &["csv", "txt", "json"])
-                .pick_file()
-            {
-                *import = Some(match sdroxide_config::import_broadcast_stations(&path) {
-                    Ok(n) => Ok(tr!("settings-net-stations-imported", n = n)),
-                    Err(e) => Err(e),
-                });
+            if let Some(result) = import_schedule_dialog() {
+                *import = Some(result);
                 *reload = true;
             }
         }
@@ -635,22 +637,211 @@ pub(in crate::app) fn broadcast_stations_settings(
     }
 }
 
+/// Pick a file and import it: a published schedule (EiBi, Aoki, HFCC) is filed like
+/// a download, anything else is the operator's own list. `None` = cancelled.
+/// Shared by the Settings button and the Programmes panel's, so the two cannot
+/// disagree about what a file is.
+#[cfg(not(target_arch = "wasm32"))]
+pub(in crate::app) fn import_schedule_dialog() -> Option<Result<String, String>> {
+    // A test must never open a native dialog (see `download::save_as`).
+    if cfg!(test) {
+        return None;
+    }
+    let path = rfd::FileDialog::new()
+        .add_filter(tr!("settings-net-filter-station-lists"), &["csv", "txt", "json", "zip"])
+        .pick_file()?;
+    Some(match sdroxide_config::import_any_file(&path) {
+        Ok(sdroxide_config::ImportedFile::Schedule(got)) => Ok(tr!(
+            "settings-net-schedule-imported",
+            source = got.source.label(),
+            season = got.season,
+            n = got.stations
+        )),
+        Ok(sdroxide_config::ImportedFile::List(n)) => {
+            Ok(tr!("settings-net-stations-imported", n = n))
+        }
+        Err(e) => Err(e),
+    })
+}
+
+/// The import button, for any panel: draws it, runs the pick, and returns the
+/// outcome when there is one. In the browser the file goes to the server (which
+/// files it where every client reads it); `peer` is the station.
+pub(in crate::app) fn import_button(
+    ui: &mut egui::Ui,
+    peer: Option<&str>,
+) -> Option<Result<String, String>> {
+    #[cfg(target_arch = "wasm32")]
+    #[allow(unused_mut)]
+    let mut done = poll_schedule_import(peer);
+    #[cfg(not(target_arch = "wasm32"))]
+    let mut done: Option<Result<String, String>> = {
+        let _ = peer;
+        None
+    };
+    let enabled = cfg!(not(target_arch = "wasm32")) || peer.is_some();
+    if ui
+        .add_enabled(enabled, egui::Button::new(tr!("schedule-import")))
+        .on_hover_text(tr!("settings-net-import-list-hint"))
+        .clicked()
+    {
+        #[cfg(target_arch = "wasm32")]
+        start_schedule_import();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            done = import_schedule_dialog();
+        }
+    }
+    done
+}
+
 /// The browser client reads the schedule compiled into the wasm bundle, so there
 /// is nothing to download and no file to overlay.
 #[cfg(target_arch = "wasm32")]
 pub(in crate::app) fn broadcast_stations_settings(
     ui: &mut egui::Ui,
-    _reload: &mut bool,
+    reload: &mut bool,
     _refetch: &mut bool,
     _refetch_source: &mut Option<sdroxide_types::ScheduleSource>,
-    _import: &mut Option<Result<String, String>>,
+    import: &mut Option<Result<String, String>>,
     _fetching: bool,
     _status: Option<&Result<String, String>>,
+    peer: Option<&str>,
 ) {
+    // Collect a finished file pick and deliver a finished import.
+    if let Some(res) = poll_schedule_import(peer) {
+        *import = Some(res);
+        *reload = true;
+    }
+
     super::note(
         ui,
         &tr!("settings-net-broadcast-stations-labelled-waterfall-come"),
     );
+
+    if ui
+        .add_enabled(peer.is_some(), egui::Button::new(tr!("settings-net-import-list")))
+        .clicked()
+    {
+        start_schedule_import();
+    }
+
+    if peer.is_none() {
+        ui.label(tr!("settings-net-broadcast-import-needs-station"));
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    static BC_IMPORT_INBOX: std::cell::RefCell<Option<crate::download::BytesInbox>> =
+        const { std::cell::RefCell::new(None) };
+    static BC_IMPORT_RESULT: std::cell::RefCell<Option<Result<String, String>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Open the browser's file picker for an import (one at a time).
+#[cfg(target_arch = "wasm32")]
+fn start_schedule_import() {
+    use std::sync::{Arc, Mutex};
+    if let Some(inbox) = BC_IMPORT_INBOX.with(|s| {
+        if s.borrow().is_some() {
+            None
+        } else {
+            let inbox = Arc::new(Mutex::new(None));
+            *s.borrow_mut() = Some(inbox.clone());
+            Some(inbox)
+        }
+    }) {
+        crate::download::load_bytes("broadcast", &["csv", "txt", "zip", "json"], inbox);
+    }
+}
+
+/// Collect a finished file pick (sending it to the station) and hand back a
+/// finished import, once.
+#[cfg(target_arch = "wasm32")]
+fn poll_schedule_import(peer: Option<&str>) -> Option<Result<String, String>> {
+    BC_IMPORT_INBOX.with(|slot| {
+        let inbox = slot.borrow().clone();
+        if let Some(inbox) = inbox {
+            let bytes = if let Ok(mut g) = inbox.lock() { g.take() } else { None };
+            if let Some(res) = bytes {
+                *slot.borrow_mut() = None;
+                match res {
+                    Ok(data) => {
+                        let peer = peer.map(str::to_string);
+                        wasm_bindgen_futures::spawn_local(async move {
+                            let result = post_broadcast_import(peer.as_deref(), &data).await;
+                            BC_IMPORT_RESULT.with(|r| *r.borrow_mut() = Some(result));
+                        });
+                    }
+                    Err(e) => {
+                        BC_IMPORT_RESULT.with(|r| *r.borrow_mut() = Some(Err(e)));
+                    }
+                }
+            }
+        }
+    });
+    BC_IMPORT_RESULT.with(|slot| slot.borrow_mut().take())
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn post_broadcast_import(peer: Option<&str>, data: &[u8]) -> Result<String, String> {
+    let url = peer
+        .and_then(|p| {
+            let base = crate::login::http_base(&crate::login::station_key(p))?;
+            Some(format!("{base}/broadcast-schedule/import"))
+        })
+        .ok_or_else(|| "no station".to_string())?;
+
+    use wasm_bindgen::JsCast;
+    let window = web_sys::window().ok_or_else(|| "no window".to_string())?;
+    let init = web_sys::RequestInit::new();
+    init.set_method("POST");
+    init.set_mode(web_sys::RequestMode::SameOrigin);
+    let headers = web_sys::Headers::new().map_err(|_| "headers".to_string())?;
+    headers.set("content-type", "application/octet-stream").map_err(|_| "headers".to_string())?;
+    headers.set("x-sdroxide", "1").map_err(|_| "headers".to_string())?;
+    init.set_headers(&headers);
+    let array = js_sys::Uint8Array::from(data);
+    init.set_body(&array.into());
+
+    let request = web_sys::Request::new_with_str_and_init(&url, &init).map_err(|_| "request".to_string())?;
+    let resp = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|_| "fetch".to_string())?
+        .dyn_into::<web_sys::Response>()
+        .map_err(|_| "response".to_string())?;
+
+    let text = wasm_bindgen_futures::JsFuture::from(resp.text().map_err(|_| "text".to_string())?)
+        .await
+        .map_err(|_| "text".to_string())?
+        .as_string()
+        .unwrap_or_default();
+    // ⛔ Never show the body as it comes: a station that does not know the route
+    // answers 200 with its own web page, and that page ended up in the panel.
+    // Only a JSON answer from the import route is believed.
+    let json: Option<serde_json::Value> = serde_json::from_str(&text).ok();
+    if resp.status() != 200 {
+        let why = json
+            .as_ref()
+            .and_then(|j| j.get("error"))
+            .and_then(|e| e.as_str())
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("HTTP {}", resp.status()));
+        return Err(why);
+    }
+    let json = json.ok_or_else(|| "the station did not answer the import".to_string())?;
+    let n = json.get("stations").and_then(|n| n.as_u64()).unwrap_or(0) as usize;
+    match json.get("kind").and_then(|k| k.as_str()) {
+        Some("schedule") => Ok(tr!(
+            "settings-net-schedule-imported",
+            source = json.get("source").and_then(|s| s.as_str()).unwrap_or(""),
+            season = json.get("season").and_then(|s| s.as_str()).unwrap_or(""),
+            n = n
+        )),
+        Some("list") => Ok(tr!("settings-net-stations-imported", n = n)),
+        _ => Err("the station did not answer the import".to_string()),
+    }
 }
 
 impl crate::app::SdroxideApp {

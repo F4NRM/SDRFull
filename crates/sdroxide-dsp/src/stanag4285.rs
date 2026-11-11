@@ -3224,7 +3224,7 @@ mod tests {
             }
             out
         };
-        let mut swapped: Vec<u8> = Vec::with_capacity(bits.len());
+        let swapped: Vec<u8>;
         {
             let mut at2 = 0usize;
             let mut d2: Vec<f32> = deint.clone();

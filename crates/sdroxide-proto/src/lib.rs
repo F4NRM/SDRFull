@@ -2224,8 +2224,204 @@ use sdroxide_types::{
 /// gains `scan` at its tail. The struct rides `RadioState` and
 /// `Command::SetSondeConfig` whole, so a v270 peer reads the extra byte as the
 /// start of the next field. `PROTO_VERSION` 270 → 271, `VERSION_BYTE` 0x5A → 0x5B.
-pub const PROTO_VERSION: u16 = 272;
-const VERSION_BYTE: u8 = 0x5C;
+///
+/// v272: **the VOR read-out.** `ServerMsg` gains `VorStatus(Box<VorStatus>)`
+/// last: the radial, the ident and the lock of the beacon the receiver is
+/// parked on ([`sdroxide_types::VorStatus`]), twice a second while the lane
+/// runs and once when it starts, stops or is refused. Cached by the server and
+/// replayed on connect. A v271 peer has no variant to decode it into.
+/// `PROTO_VERSION` 271 → 272, `VERSION_BYTE` 0x5B → 0x5C.
+/// v273: **the power per band.** [`sdroxide_types::RadioConfig`] gains
+/// `tx_band_power_w` at its tail: the watts the station makes on each band at
+/// full drive, as the operator states them, so a radio with no power sensor can
+/// show its transmit power in watts. `RadioConfig` rides
+/// `ServerMsg::RadioConfig` and `Command::SetRadioConfig` whole, so the appended
+/// field moves its layout. `#[serde(default)]`, so a `radio.json` written before
+/// this loads unchanged. `PROTO_VERSION` 272 → 273, `VERSION_BYTE` 0x5C → 0x5D.
+///
+/// v274: **QO-100, HFDL and radiosonde read-outs reach remote and web clients.**
+/// `ServerMsg` gains `Qo100Status`, `HfdlStatus` and `SondeStatus(Box<..>)`,
+/// appended last in that order. They carried the beacon lock, the HFDL decode
+/// log and the sonde tracks, which stayed on the station until now. Cached by
+/// the server and replayed on connect. A v273 peer has no variant to decode
+/// them into. `PROTO_VERSION` 273 → 274, `VERSION_BYTE` 0x5D → 0x5E.
+///
+/// v275: **a receive band list per radio.** `RadioConfig` gains
+/// `rx_band_enable` and `rx_bands_confirmed` at its tail, the mirror of the
+/// transmit list. `RadioConfig` rides `ServerMsg::RadioConfig` and
+/// `Command::SetRadioConfig` whole, so the appended fields move its layout.
+/// `#[serde(default)]`, so a `radio.json` written before this loads unchanged.
+/// `PROTO_VERSION` 274 → 275, `VERSION_BYTE` 0x5E → 0x5F.
+///
+/// v276: **a library of band plans on the station.** `Command` gains
+/// `ImportBandPlan`, `SelectBandPlan` and `DeleteBandPlan`, appended last.
+/// `StationConfig` gains `band_plans` (the plans in the station's folder) and
+/// `band_plan_name` (the one it runs) at its tail, and the band plan it carries
+/// gains a `meta` block (name, country, author) after its readme, so the
+/// bundle's layout moves. `RadioConfig` gains `band_plan_fp` at its tail, the
+/// plan its band lists were confirmed against, and rides `ServerMsg::RadioConfig`
+/// and `Command::SetRadioConfig` whole. All `#[serde(default)]` in the files, so
+/// a `radio.json` or `config.toml` written before this loads unchanged.
+/// `PROTO_VERSION` 275 → 276, `VERSION_BYTE` 0x5F → 0x60.
+///
+/// v277: **a band plan manager.** `Command` gains `SaveCurrentBandPlan`,
+/// `ExportBandPlan` and `RestoreShippedBandPlans`, and `ServerMsg` gains
+/// `BandPlanExport { file, json }`, all appended last: the manager can keep the
+/// plan that runs, hand a plan's file to the screen that asked for it, and put
+/// the shipped plans back. `PROTO_VERSION` 276 → 277, `VERSION_BYTE` 0x60 → 0x61.
+///
+/// v278: **a band plan per radio.** `Command` gains `SelectRadioBandPlan`,
+/// appended last, and `RadioConfig` gains `band_plan` (the plan this radio runs
+/// on its own, `None` following the station's) at its tail. `RadioConfig` rides
+/// `ServerMsg::RadioConfig` and `Command::SetRadioConfig` whole, so the appended
+/// field moves its layout. `#[serde(default)]`, so a `radio.json` written before
+/// this loads unchanged. `PROTO_VERSION` 277 → 278, `VERSION_BYTE` 0x61 → 0x62.
+///
+/// v279: **what the S-meter measures.** [`sdroxide_types::ClientScreen`] gains
+/// `smeter_view` (`MeterView`: auto, signal, power, SWR, ALC) at its tail, the
+/// choice the arrows on the meter make, kept with the profile like the face
+/// (`smeter_style`). `ClientScreen` rides `ClientMsg::SetClientSettings` and
+/// `ServerMsg::ClientSettings` whole, so the appended field moves its layout.
+/// `#[serde(default)]`, so a `config.toml` written before this loads unchanged.
+/// `PROTO_VERSION` 278 → 279, `VERSION_BYTE` 0x62 → 0x63.
+///
+/// v280: **11 m (CB) has its own refusal.** [`sdroxide_types::TxBlock`] gains
+/// `CbOff` at its tail: the band is ticked and confirmed in the transmit list,
+/// but "Allow transmit on 11 m (CB)" is off. `RadioEvent::TxRefused` /
+/// `ServerMsg::TxRefused` carry it, so the screen says so in the operator's
+/// language. Nothing else moves. `PROTO_VERSION` 279 → 280, `VERSION_BYTE`
+/// 0x63 → 0x64.
+///
+/// v281: **a refused mode is typed.** `ServerMsg` gains `ModeRefused { mode,
+/// band }` at its tail, carrying `RadioEvent::ModeRefused`, so the screen says
+/// "X is not used on Y" in the operator's language (it was an English notice
+/// that a remote screen never received). `PROTO_VERSION` 280 → 281,
+/// `VERSION_BYTE` 0x64 → 0x65.
+///
+/// v282: **the interface language is kept with the profile.**
+/// [`sdroxide_types::ClientScreen`] gains `language` (`UiLanguage`: a BCP 47
+/// tag, or empty for the system's) at its tail. The browser build carries only
+/// English and fetches the operator's language from the station, so the
+/// station has to know which one it is, and a browser with its storage cleared
+/// comes back in it. `ClientScreen` rides `ClientMsg::SetClientSettings` and
+/// `ServerMsg::ClientSettings` whole, so the appended field moves its layout.
+/// `#[serde(default)]`, so a profile written before this loads unchanged and
+/// names no language. `PROTO_VERSION` 281 → 282, `VERSION_BYTE` 0x65 → 0x66.
+///
+/// v283: the public-SDR map's receiver check.
+/// [`sdroxide_types::DeviceProbe`] gains `PublicSdrCheck { network, address }`
+/// and [`sdroxide_types::ProbeAnswer`] gains `PublicSdrCheck`, which carries
+/// the address back so several checks in flight each find their row. Both
+/// appended last; a v282 peer has no name for either.
+/// `PROTO_VERSION` 282 → 283, `VERSION_BYTE` 0x66 → 0x67.
+///
+/// v284: **the weather-satellite (NOAA APT) decoder.**
+/// [`sdroxide_types::RadioState`] gains `wxsat` ([`sdroxide_types::WxsatSettings`]:
+/// on, channel) at its tail, `Command` gains `SetWxsatConfig` last, and
+/// `ServerMsg` gains `WxsatStatus(Box<..>)` last, which carries the picture
+/// lines new since the previous one (the client builds the image). `RadioState`
+/// crosses the link whole, so the appended field moves its layout.
+/// `PROTO_VERSION` 283 → 284, `VERSION_BYTE` 0x67 → 0x68.
+///
+/// v285: **Meteor LRPT beside NOAA APT.** [`sdroxide_types::WxsatSettings`]
+/// gains `kind` ([`sdroxide_types::WxsatKind`]) at its tail and
+/// [`sdroxide_types::WxsatStatus`] gains `kind`, `frames_ok`, `carrier_hz` and
+/// `rows` (finished rows of picture, one per channel) at its tail. Both ride
+/// whole (`RadioState` and `ServerMsg::WxsatStatus`), so the appended fields move
+/// their layouts. `PROTO_VERSION` 284 → 285, `VERSION_BYTE` 0x68 → 0x69.
+///
+/// v286: **the QRZ card.** [`sdroxide_types::CallsignInfo`] gains `addr1`,
+/// `email`, `age`, `class`, `qsl_lotw`, `qsl_eqsl`, `qsl_paper` and `photo` (a
+/// small JPEG) at its tail, and [`sdroxide_types::NetworkConfig`] gains
+/// `qrz_card` (bool) at its tail. `CallsignInfo` rides
+/// `ServerMsg::CallsignResult` and `NetworkConfig` rides `SetNetworkConfig`,
+/// both whole, so the appended fields move their layouts. The age is worked out
+/// on the station; the date of birth never crosses the link. `#[serde(default)]`
+/// on every new field, so a stored `net.json` loads unchanged.
+/// `PROTO_VERSION` 285 → 286, `VERSION_BYTE` 0x69 → 0x6A.
+///
+/// v287: **the Meshtastic receiver.** [`sdroxide_types::RadioState`] gains
+/// `meshtastic` ([`sdroxide_types::MeshtasticSettings`]: on, region, preset,
+/// channel, keys and where the radio was before the lane tuned it) at its tail,
+/// `Command` gains `SetMeshtasticConfig` last, and `ServerMsg` gains
+/// `MeshtasticStatus(Box<..>)` last (level, counters, nodes, packet log).
+/// `RadioState` crosses the link whole, so the appended field moves its layout.
+/// `PROTO_VERSION` 286 → 287, `VERSION_BYTE` 0x6A → 0x6B.
+///
+/// v288: **Meshtastic transmit, and the 868 MHz band.** `Band` gains `Ism868`
+/// last (863–870 MHz, on the transmit list like the other bands; `Band`
+/// is postcard-encoded by declaration index and rides `RadioConfig`, the band
+/// stacks and the memories). [`sdroxide_types::MeshtasticSettings`] gains
+/// `node_id` at its tail, `Command` gains `SendMeshtastic` last, and
+/// [`sdroxide_types::MeshtasticStatus`] gains `tx_refused`, `tx_busy`,
+/// `tx_sent`, `tx_used_ms` and `tx_budget_ms` at its tail.
+/// `PROTO_VERSION` 287 → 288, `VERSION_BYTE` 0x6B → 0x6C.
+///
+/// v289: **SAT lock on a CAT rig's split.** `SatLockConfig` (carried by
+/// `Command::SetSatLock`) gains `ctcss_hz: Option<f64>` last, so a CAT rig can
+/// set the tone on VFO B, and `TxState` gains `rig_keyed: bool` last, the rig
+/// transmitting under its own control. Both cross the link inside postcard
+/// structs. `PROTO_VERSION` 288 → 289, `VERSION_BYTE` 0x6C → 0x6D.
+///
+/// v290: **the profile no longer carries the interface language.** PR #579 is
+/// reverted: [`sdroxide_types::ClientScreen`] loses `language` (added in v282),
+/// so the layout of `ClientScreen`, which rides `ClientMsg::SetClientSettings`
+/// and `ServerMsg::ClientSettings` whole, changes again.
+/// `PROTO_VERSION` 289 → 290, `VERSION_BYTE` 0x6D → 0x6E.
+///
+/// v291: **the QRZ card, second round.** [`sdroxide_types::CallsignInfo`] gains
+/// `photo_pending`, `native_text` and `note` at its tail (it rides
+/// `ServerMsg::CallsignResult` whole), and [`sdroxide_types::NetworkConfig`]
+/// gains `qrz_card_off` at its tail (it rides `SetNetworkConfig` whole): the
+/// card is now on by default and this is how it is switched off.
+/// `PROTO_VERSION` 290 → 291, `VERSION_BYTE` 0x6E → 0x6F.
+///
+/// v292: **channel lists keep their folders (issue #623).**
+/// [`sdroxide_types::Command`] gains `ImportMemoriesFiled`, appended: a channel
+/// list with the folder name of each channel, so a CSV exported with its
+/// folders imports into them. A v291 station does not know the variant.
+/// `PROTO_VERSION` 291 → 292, `VERSION_BYTE` 0x6F → 0x70.
+///
+/// v293: **weather fax: undo the auto-slant.** [`sdroxide_types::Command`]
+/// gains `WefaxRevertSlant`, appended, with no payload. A v292 station does
+/// not know the variant. `PROTO_VERSION` 292 → 293, `VERSION_BYTE` 0x70 → 0x71.
+///
+/// v294: **the QRZ card, third round.** [`sdroxide_types::CallsignInfo`] gains
+/// `limited` at its tail (it rides `ServerMsg::CallsignResult` whole): QRZ cut
+/// the record short for lack of an XML subscription. A v293 client ignores it.
+/// `PROTO_VERSION` 293 → 294, `VERSION_BYTE` 0x71 → 0x72.
+///
+/// v295: **connection-test failures in the operator's language.**
+/// [`sdroxide_types::ProbeAnswer`] gains `TestFailed(TestKind, ConnectFailure)`,
+/// appended: a failed TCP connect as data (why, host, port, the system's own
+/// words) instead of English text, so the interface words it itself. Only the
+/// TCI test sends it so far. A v294 client does not know the variant.
+///
+/// v296: **the SSTV date and time line (issue #650).**
+/// [`sdroxide_types::TextLayer`] gains `clock` at its tail — the composer layer
+/// prints the time the picture is composed at instead of its own text, so a
+/// picture says when it went out, in UTC or in the station's own zone. Layers
+/// ride `Composer` whole inside `ImagePresets`, `Command::ImageSetComposer` and
+/// the template commands, so the appended field moves every one of those
+/// layouts. `#[serde(default)]` on the layer keeps a stored
+/// `sstv_presets.json` loading unchanged.
+/// `PROTO_VERSION` 294 → 295, `VERSION_BYTE` 0x72 → 0x73.
+///
+/// v297: **the height of the full-band strip.** [`sdroxide_types::ClientScreen`]
+/// gains `wide_strip_height` (f32, points) at its tail: the strip above the
+/// panadapter can be dragged taller or shorter, and the height is kept on the
+/// server with the rest of the screen, not in the browser. `ClientScreen` rides
+/// `ServerMsg::ClientSettings` and `Command::SetClientSettings` whole, so this
+/// is the same appended-field break as v194.
+/// `PROTO_VERSION` 296 → 297, `VERSION_BYTE` 0x74 → 0x75.
+///
+/// v298: **scrolling the full-band strip.** `Command::SetWideWindow(Option<f64>)`
+/// is appended after `WefaxRevertSlant`: centre the strip's window on a
+/// frequency without tuning, or `None` to follow the dial again. A v297 station
+/// does not know the variant.
+/// `PROTO_VERSION` 297 → 298, `VERSION_BYTE` 0x75 → 0x76.
+pub const PROTO_VERSION: u16 = 299;
+const VERSION_BYTE: u8 = 0x77;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2807,6 +3003,32 @@ pub enum ServerMsg {
         ok: bool,
         text: String,
     },
+    /// The VOR beacon the receiver is parked on: radial, ident and how well
+    /// the two 30 Hz signals are heard, with why the lane is not running when
+    /// it is not. A whole snapshot, twice a second while it runs — see
+    /// [`sdroxide_types::VorStatus`]. Appended last.
+    VorStatus(Box<sdroxide_types::VorStatus>),
+    /// The QO-100 beacon tracker: lock, measured offset and the auto-apply
+    /// bookkeeping. A whole snapshot. Appended last.
+    Qo100Status(sdroxide_types::Qo100Status),
+    /// The HFDL decoder: level, counters and the rolling decode log, a whole
+    /// snapshot each time. Appended last.
+    HfdlStatus(sdroxide_types::HfdlStatus),
+    /// The radiosonde decoder: level and the sondes heard with their tracks,
+    /// a whole snapshot each time. Appended last.
+    SondeStatus(Box<sdroxide_types::SondeStatus>),
+    /// The file of a band plan, for the screen that asked to save it on its own
+    /// computer. Appended last.
+    BandPlanExport { file: String, json: String },
+    /// `RadioEvent::ModeRefused`: a mode the band the receiver is on does not
+    /// carry was asked for. Appended last (v281).
+    ModeRefused { mode: sdroxide_types::Mode, band: sdroxide_types::Band },
+    /// The weather-satellite decoder: its state and the picture lines new since
+    /// the previous message (the client builds the image). Appended last (v284).
+    WxsatStatus(Box<sdroxide_types::WxsatStatus>),
+    /// The Meshtastic receiver: level, counters, the nodes heard and the packet
+    /// log, a whole snapshot each time. Appended last (v287).
+    MeshtasticStatus(Box<sdroxide_types::MeshtasticStatus>),
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3268,6 +3490,7 @@ mod tests {
                                     fill2: Some([0, 0, 20]),
                                 }),
                                 hidden: false,
+                                clock: None,
                             }],
                         },
                     },
@@ -3339,12 +3562,26 @@ mod tests {
             ClientMsg::Command(Command::ImageSetComposer {
                 slot: 4,
                 composer: sdroxide_types::Composer {
-                    layers: vec![sdroxide_types::TextLayer {
-                        text: "PSE K".into(),
-                        x: 0.5,
-                        y: 0.8,
-                        ..sdroxide_types::TextLayer::default()
-                    }],
+                    layers: vec![
+                        sdroxide_types::TextLayer {
+                            text: "PSE K".into(),
+                            x: 0.5,
+                            y: 0.8,
+                            ..sdroxide_types::TextLayer::default()
+                        },
+                        // A clock layer: an option field and an empty text, which
+                        // is the shape a misplaced field would corrupt worst.
+                        sdroxide_types::TextLayer {
+                            clock: Some(sdroxide_types::Clock {
+                                part: sdroxide_types::ClockPart::Time,
+                                zone: sdroxide_types::ClockZone::Local,
+                            }),
+                            x: 0.5,
+                            y: 0.94,
+                            px: 20,
+                            ..sdroxide_types::TextLayer::default()
+                        },
+                    ],
                 },
             }),
             // ...and an empty one, which is what "this preset uses the banner"
@@ -3506,7 +3743,49 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (269, 0x59));
+        // v296: the SSTV clock layer (`TextLayer::clock`) appended at the tail
+        // of a `Composer` layer, which rides the picture preset messages.
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
+        // v297: the strip height at the tail of `ClientScreen`, and it comes
+        // back as sent.
+        let screen = sdroxide_types::ClientScreen {
+            wide_strip_height: 180.0,
+            ..sdroxide_types::ClientScreen::default()
+        };
+        let reply = ServerMsg::ClientSettings(ClientSettingsReply {
+            profile: Some("op".into()),
+            settings: screen,
+            has_stored: true,
+        });
+        match decode::<ServerMsg>(&encode(&reply).unwrap()).unwrap() {
+            ServerMsg::ClientSettings(r) => assert_eq!(r.settings.wide_strip_height, 180.0),
+            _ => panic!("ClientSettings did not round-trip"),
+        }
+        // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
+        // before it keep their positions.
+        let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
+        match decode::<ServerMsg>(&encode(&cb).unwrap()).unwrap() {
+            ServerMsg::TxRefused(w, hz) => {
+                assert_eq!((w, hz), (sdroxide_types::TxBlock::CbOff, 27_185_000.0))
+            }
+            _ => panic!("TxRefused(CbOff) did not round-trip"),
+        }
+        let (band_off, cb_off) = (encode(&refused).unwrap(), encode(&cb).unwrap());
+        assert_eq!(cb_off[2], band_off[2] + 1, "CbOff follows BandOff in TxBlock");
+    }
+
+    /// v281: a refused mode rides after the band plan export, whole.
+    #[test]
+    fn a_refused_mode_is_appended_after_the_band_plan_export() {
+        use sdroxide_types::{Band, Mode};
+        let export = ServerMsg::BandPlanExport { file: "a".into(), json: "{}".into() };
+        let refused = ServerMsg::ModeRefused { mode: Mode::Wfm, band: Band::M11 };
+        let (a, b) = (encode(&export).unwrap()[1], encode(&refused).unwrap()[1]);
+        assert_eq!(b, a + 1, "ModeRefused must directly follow BandPlanExport");
+        match decode::<ServerMsg>(&encode(&refused).unwrap()).unwrap() {
+            ServerMsg::ModeRefused { mode, band } => assert_eq!((mode, band), (Mode::Wfm, Band::M11)),
+            other => panic!("did not round-trip: {other:?}"),
+        }
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3537,7 +3816,85 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (269, 0x59));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
+    }
+
+    /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
+    #[test]
+    fn a_qrz_card_round_trips_in_a_callsign_result() {
+        let mut info = sdroxide_types::CallsignInfo::for_call("f4abc");
+        info.name = Some("Jean Dupont".into());
+        info.addr1 = Some("12 rue des Lilas".into());
+        info.age = Some(58);
+        info.class = Some("Novice".into());
+        info.qsl_lotw = true;
+        info.photo = Some(vec![0xFF, 0xD8, 0xFF, 0xD9]);
+        info.photo_pending = true;
+        info.native_text = Some("山东省淄博市".into());
+        info.note = Some("subscription needed".into());
+        info.limited = true;
+        let bytes = encode(&ServerMsg::CallsignResult(info.clone())).unwrap();
+        match decode::<ServerMsg>(&bytes).unwrap() {
+            ServerMsg::CallsignResult(back) => assert_eq!(back, info),
+            other => panic!("the card did not round-trip: {other:?}"),
+        }
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
+    }
+
+    /// The VOR read-out rides the wire whole, locked or not, and the message is
+    /// the last variant, so a slip in the discriminant would show here.
+    #[test]
+    fn a_vor_status_round_trips() {
+        for st in [
+            sdroxide_types::VorStatus {
+                running: true,
+                freq_hz: 114_100_000.0,
+                radial_deg: 138.5,
+                var_depth: 0.3,
+                ref_depth: 0.17,
+                deviation_hz: 480.0,
+                locked: true,
+                ident: Some("BBG".into()),
+                ..Default::default()
+            },
+            sdroxide_types::VorStatus {
+                unavailable: Some(sdroxide_types::VorUnavailable::OutsideWindow),
+                ..Default::default()
+            },
+        ] {
+            let m = ServerMsg::VorStatus(Box::new(st));
+            let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
+            assert_eq!(back, m);
+        }
+    }
+
+    /// The QO-100, HFDL and radiosonde read-outs ride the wire whole, and the
+    /// three are the last variants, so a slip in a discriminant shows here.
+    #[test]
+    fn the_qo100_hfdl_and_sonde_statuses_round_trip() {
+        let q = ServerMsg::Qo100Status(sdroxide_types::Qo100Status {
+            running: true,
+            locked: true,
+            offset_hz: -1234.5,
+            blocks_tried: 12,
+            blocks_locked: 9,
+            ..Default::default()
+        });
+        let h = ServerMsg::HfdlStatus(sdroxide_types::HfdlStatus {
+            running: true,
+            level_dbfs: -71.5,
+            bursts: 40,
+            decodes: 3,
+            ..Default::default()
+        });
+        let s = ServerMsg::SondeStatus(Box::new(sdroxide_types::SondeStatus {
+            running: true,
+            ..Default::default()
+        }));
+        for m in [q, h, s] {
+            let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
+            assert_eq!(back, m);
+        }
     }
 
     /// What an aircraft says about its own flight crosses the wire with the
@@ -3598,17 +3955,26 @@ mod tests {
         // mode, the taps, the rate and the hold: 8 bytes) at its own tail
         // (PROTO_VERSION 264 → 265). `HpsdrConfig` sits inside `RadioConfig`,
         // so this moves what follows it: that is what the bump is for.
+        //
+        // 904 since the receive band list (PROTO_VERSION 274 → 275), the plan
+        // fingerprint its confirmation is made against (275 → 276) and the radio's
+        // own band plan (277 → 278) were appended at its tail. The pin had not
+        // been moved since 265; this is the conscious edit those bumps owed it.
         assert_eq!(
             (radio.len(), fnv1a(&radio)),
-            (897, 1_396_573_632_080_966_650),
+            (904, 13_554_492_482_937_614_926),
             "RadioConfig's wire layout shifted — append fields, never insert them"
         );
         // 316 since the two Dynamic DNS fields were appended at the end
         // (PROTO_VERSION 260 → 261). Appended, so an older peer reads the
         // struct it knows and the two new bytes are simply not there.
+        //
+        // 318 since the QRZ card's two switches (`qrz_card`, `qrz_card_off`:
+        // a bool each) were appended after them. Same rule: the pin had not
+        // followed, this is the conscious edit those fields owed it.
         assert_eq!(
             (net.len(), fnv1a(&net)),
-            (316, 9_696_214_884_124_040_590),
+            (318, 13_712_061_205_942_838_718),
             "NetworkConfig's wire layout shifted — append fields, never insert them"
         );
     }
@@ -3856,6 +4222,13 @@ mod tests {
                 sdroxide_types::BandDriveTrim { band: sdroxide_types::Band::M160, db: -4.5 },
                 sdroxide_types::BandDriveTrim { band: sdroxide_types::Band::M6, db: 2.0 },
             ],
+            // The last field in the struct: a `Vec` of rows, a band and a
+            // float each. Two rows far apart in `Band`'s order, so a read a
+            // byte out of step cannot land on the right pair by luck.
+            tx_band_power_w: vec![
+                sdroxide_types::BandPower { band: sdroxide_types::Band::M20, watts: 100.0 },
+                sdroxide_types::BandPower { band: sdroxide_types::Band::Gen, watts: 4.5 },
+            ],
             converter_offset_hz: 125_000_000.0,
             // The transmit converter is an enum with a payload on one variant
             // only — the shape a self-describing format forgives and postcard
@@ -3963,6 +4336,15 @@ mod tests {
                     ps_frozen: false,
                 },
             },
+            // The last two fields in the struct: an `Option<Vec<Band>>` and a
+            // flag. Bands far apart in `Band`'s order, so a read a byte out of
+            // step cannot land on the right list by luck.
+            rx_band_enable: Some(vec![
+                sdroxide_types::Band::M160,
+                sdroxide_types::Band::M2,
+                sdroxide_types::Band::Gen,
+            ]),
+            rx_bands_confirmed: true,
             ..RadioConfig::default()
         };
 
@@ -4044,6 +4426,138 @@ mod tests {
         assert_ne!(back.rx[1].cw_peak, sdroxide_types::CwPeak::default());
     }
 
+    /// The weather-satellite lane's settings cross the wire both ways, and its
+    /// picture lines ride the last `ServerMsg` variant.
+    #[test]
+    fn roundtrip_wxsat_config_and_status() {
+        let cfg = sdroxide_types::WxsatSettings {
+            enabled: true,
+            frequency_hz: 137_900_000.0,
+            kind: sdroxide_types::WxsatKind::Lrpt,
+        };
+        let m = ClientMsg::Command(Command::SetWxsatConfig(cfg));
+        let back: ClientMsg = decode(&encode(&m).unwrap()).unwrap();
+        assert_eq!(back, m);
+        let mut state = sdroxide_types::RadioState::default();
+        state.wxsat = cfg;
+        let back: sdroxide_types::RadioState = decode(&encode(&state).unwrap()).unwrap();
+        assert_eq!(back.wxsat, cfg);
+        let st = ServerMsg::WxsatStatus(Box::new(sdroxide_types::WxsatStatus {
+            running: true,
+            locked: true,
+            pass: 3,
+            total_lines: 5,
+            first_line: 4,
+            new_lines: vec![vec![9; sdroxide_types::WXSAT_LINE_PIXELS]],
+            kind: sdroxide_types::WxsatKind::Lrpt,
+            frames_ok: 41,
+            carrier_hz: -812.5,
+            rows: vec![sdroxide_types::WxsatRow {
+                apid: 65,
+                row: 7,
+                lines: vec![3; sdroxide_types::WXSAT_LRPT_WIDTH * sdroxide_types::WXSAT_LRPT_ROW_LINES],
+            }],
+            ..Default::default()
+        }));
+        let back: ServerMsg = decode(&encode(&st).unwrap()).unwrap();
+        assert_eq!(back, st);
+    }
+
+    /// The Meshtastic receiver's settings cross the wire both ways, with the
+    /// restore point they carry, and its status rides the last `ServerMsg`
+    /// variant. Set away from the defaults so a field that decoded into its
+    /// default would fail here.
+    #[test]
+    fn roundtrip_meshtastic_config_and_status() {
+        let cfg = sdroxide_types::MeshtasticSettings {
+            enabled: true,
+            region: "US".into(),
+            preset: "MediumFast".into(),
+            frequency_hz: 913_125_000.0,
+            keys: "club=simple2".into(),
+            restore: Some(sdroxide_types::MeshtasticRestore {
+                dial_hz: 14_074_000.0,
+                mode: sdroxide_types::Mode::Usb,
+            }),
+            node_id: 0x1234_ABCD,
+        };
+        // The transmit side: the command, the new band, the status tail.
+        let send = ClientMsg::Command(Command::SendMeshtastic(sdroxide_types::MeshtasticSend {
+            text: "73 de F4NRM".into(),
+            to: 0xFFFF_FFFF,
+        }));
+        let back: ClientMsg = decode(&encode(&send).unwrap()).unwrap();
+        assert_eq!(back, send);
+        let band = ClientMsg::Command(Command::SetBand(sdroxide_types::Band::Ism868));
+        let back: ClientMsg = decode(&encode(&band).unwrap()).unwrap();
+        assert_eq!(back, band);
+        let m = ClientMsg::Command(Command::SetMeshtasticConfig(cfg.clone()));
+        let back: ClientMsg = decode(&encode(&m).unwrap()).unwrap();
+        assert_eq!(back, m);
+        let mut state = sdroxide_types::RadioState::default();
+        state.meshtastic = cfg.clone();
+        let back: sdroxide_types::RadioState = decode(&encode(&state).unwrap()).unwrap();
+        assert_eq!(back.meshtastic, cfg);
+        assert_ne!(back.meshtastic, sdroxide_types::MeshtasticSettings::default());
+
+        let st = ServerMsg::MeshtasticStatus(Box::new(sdroxide_types::MeshtasticStatus {
+            running: true,
+            in_window: true,
+            refused: Some(sdroxide_types::RxBlock::BandOff(sdroxide_types::Band::Gen)),
+            level_dbfs: -61.5,
+            preambles: 7,
+            frames: 5,
+            crc_bad: 2,
+            nodes: vec![sdroxide_types::MeshNode {
+                id: 0xDEAD_BEEF,
+                long_name: "Seb".into(),
+                short_name: "SEB".into(),
+                last_heard: 1_700_000_000,
+                snr_db: -7.5,
+                packets: 3,
+                hops: Some(1),
+                lat_deg: Some(48.8584),
+                battery_pct: Some(87),
+                ..Default::default()
+            }],
+            log: vec![sdroxide_types::MeshEntry {
+                time: 1_700_000_000,
+                from: 0xDEAD_BEEF,
+                to: 0xFFFF_FFFF,
+                port: 1,
+                channel: "LongFast".into(),
+                text: Some("73 de F4NRM".into()),
+                ..Default::default()
+            }],
+            tx_refused: Some(sdroxide_types::MeshTxRefusal::DutyCycle(1234)),
+            tx_busy: true,
+            tx_sent: 3,
+            tx_used_ms: 21_500,
+            tx_budget_ms: Some(36_000),
+        }));
+        let back: ServerMsg = decode(&encode(&st).unwrap()).unwrap();
+        assert_eq!(back, st);
+        // Every refusal crosses the link.
+        for why in [
+            sdroxide_types::MeshTxRefusal::Band(sdroxide_types::TxBlock::BandOff(
+                sdroxide_types::Band::Ism868,
+            )),
+            sdroxide_types::MeshTxRefusal::TooLong,
+            sdroxide_types::MeshTxRefusal::OffChannel,
+            sdroxide_types::MeshTxRefusal::NoTransmitter,
+            sdroxide_types::MeshTxRefusal::BadText,
+            sdroxide_types::MeshTxRefusal::Busy,
+            sdroxide_types::MeshTxRefusal::Rails,
+        ] {
+            let m = ServerMsg::MeshtasticStatus(Box::new(sdroxide_types::MeshtasticStatus {
+                tx_refused: Some(why),
+                ..Default::default()
+            }));
+            let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
+            assert_eq!(back, m);
+        }
+    }
+
     /// The radiosonde lane's settings cross the wire both ways: the command,
     /// and the state field that tells a remote client whether it runs and on
     /// which channel. Set away from the default so a field that decoded into
@@ -4061,6 +4575,134 @@ mod tests {
         let ServerMsg::State(back) = back else { panic!("not a state") };
         assert_eq!(back.sonde, cfg);
         assert_ne!(back.sonde, sdroxide_types::SondeSettings::default());
+    }
+
+    /// A channel list that names folders crosses the wire (issue #623).
+    #[test]
+    fn roundtrip_import_memories_filed() {
+        let m = sdroxide_types::MemoryChannel {
+            id: 0,
+            name: "7.194".into(),
+            freq_hz: 7_194_000.0,
+            mode: sdroxide_types::Mode::Usb,
+            filter_lo: 300.0,
+            filter_hi: 2700.0,
+            folder: None,
+            rtty: None,
+            repeater: None,
+            antenna: None,
+            color: None,
+        };
+        let c = Command::ImportMemoriesFiled(vec![
+            (m.clone(), Some("TestfolderBrown".into())),
+            (m, None),
+        ]);
+        let msg = ClientMsg::Command(c);
+        assert_eq!(decode::<ClientMsg>(&encode(&msg).unwrap()).unwrap(), msg);
+    }
+
+    /// v293: the revert of the weather fax auto-slant was appended to
+    /// `Command` right after `ImportMemoriesFiled`, so the ones before it keep
+    /// their positions. Variants appended since sit after it; this test pins
+    /// its position, not that it is still the last one, and reads the version
+    /// byte from the crate so a later bump does not stale it.
+    #[test]
+    fn the_wefax_revert_slant_is_appended_last() {
+        let last = encode(&ClientMsg::Command(Command::WefaxRevertSlant)).unwrap();
+        let before = encode(&ClientMsg::Command(Command::ImportMemoriesFiled(vec![]))).unwrap();
+        assert_eq!(last[0], VERSION_BYTE);
+        // `before` is the version, the message and variant tags, then the empty
+        // list's length byte; `last` is the same tags with the variant one on.
+        // The variant number is a varint: its low byte is one more, the rest
+        // is the same.
+        let (n, m) = (last.len(), before.len());
+        assert_eq!(n, m - 1, "a bare variant has no payload");
+        assert_eq!(last[2], before[2] + 1, "must directly follow ImportMemoriesFiled");
+        assert_eq!(last[3..], before[3..m - 1]);
+        assert_eq!(decode::<ClientMsg>(&last).unwrap(), ClientMsg::Command(Command::WefaxRevertSlant));
+    }
+
+    /// v298: the strip scroll is a new `Command` variant after the ones before
+    /// it, and carries its frequency through.
+    #[test]
+    fn the_wide_window_command_is_appended_and_round_trips() {
+        let last = encode(&ClientMsg::Command(Command::SetWideWindow(None))).unwrap();
+        let before = encode(&ClientMsg::Command(Command::WefaxRevertSlant)).unwrap();
+        assert_eq!(last[0], VERSION_BYTE);
+        assert_eq!(last[2], before[2] + 1, "must directly follow WefaxRevertSlant");
+        for c in [Command::SetWideWindow(None), Command::SetWideWindow(Some(7_674_000.0))] {
+            let m = ClientMsg::Command(c);
+            assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
+        }
+    }
+
+    /// The band plan library crosses the wire: the three commands, the list the
+    /// station announces and the name of the plan it runs, and the fingerprint a
+    /// radio keeps beside its confirmed band lists. Filled rather than left at
+    /// the defaults, so a field that decoded into its default would fail here.
+    #[test]
+    fn roundtrip_band_plan_library() {
+        for c in [
+            Command::ImportBandPlan { name: "mine".into(), json: "{\"region1\":{}}".into() },
+            Command::SelectBandPlan { name: Some("mine".into()) },
+            Command::SelectBandPlan { name: None },
+            Command::DeleteBandPlan { name: "mine".into() },
+            Command::SaveCurrentBandPlan { name: "my copy".into() },
+            Command::ExportBandPlan { name: "mine".into() },
+            Command::RestoreShippedBandPlans,
+            Command::SelectRadioBandPlan { name: Some("mine".into()) },
+            Command::SelectRadioBandPlan { name: None },
+        ] {
+            let m = ClientMsg::Command(c);
+            assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
+        }
+        // The file of a plan, for the screen that asked to save it.
+        let m = ServerMsg::BandPlanExport { file: "mine".into(), json: "{\"region1\":{}}".into() };
+        assert_eq!(decode::<ServerMsg>(&encode(&m).unwrap()).unwrap(), m);
+        let plan = sdroxide_types::BandPlan::iaru_defaults().with_meta(sdroxide_types::PlanMeta {
+            name: "Narrow".into(),
+            country: "Nowhere".into(),
+            author: "Me".into(),
+        });
+        let station = StationConfig {
+            band_plan: plan.clone(),
+            band_plans: vec![sdroxide_types::PlanInfo {
+                file: "narrow".into(),
+                name: "Narrow".into(),
+                country: "Nowhere".into(),
+                author: "Me".into(),
+                bytes: 4096,
+                modified: 1_790_000_000,
+                shipped: true,
+            }],
+            band_plan_name: Some("narrow".into()),
+            ..Default::default()
+        };
+        let m = ServerMsg::StationConfig(Box::new(station.clone()));
+        let ServerMsg::StationConfig(back) = decode::<ServerMsg>(&encode(&m).unwrap()).unwrap()
+        else {
+            panic!("not a station config")
+        };
+        assert_eq!(back.band_plans, station.band_plans);
+        assert_eq!(back.band_plan_name.as_deref(), Some("narrow"));
+        assert_eq!(back.band_plan.meta().author, "Me", "the plan's name rides along");
+        assert_eq!(back.band_plan, plan);
+
+        let cfg = sdroxide_types::RadioConfig {
+            tx_bands_confirmed: true,
+            rx_bands_confirmed: true,
+            band_plan_fp: plan.fingerprint(),
+            band_plan: Some("narrow".into()),
+            ..Default::default()
+        };
+        let m = ServerMsg::RadioConfig(Box::new(cfg.clone()));
+        let ServerMsg::RadioConfig(back) = decode::<ServerMsg>(&encode(&m).unwrap()).unwrap()
+        else {
+            panic!("not a radio config")
+        };
+        assert_eq!(back.band_plan_fp, plan.fingerprint());
+        assert_eq!(back.band_plan.as_deref(), Some("narrow"), "the radio's own plan rides along");
+        assert_eq!(*back, cfg);
     }
 
     /// The per-mode transmit-audio level, over the wire in both directions
@@ -4205,6 +4847,15 @@ mod tests {
             }]),
             ProbeAnswer::Test(TestKind::Pluto, Ok("AD9364, 70 MHz – 6 GHz".into())),
             ProbeAnswer::Test(TestKind::Tci, Err("connection refused".into())),
+            ProbeAnswer::TestFailed(
+                TestKind::Tci,
+                sdroxide_types::ConnectFailure {
+                    why: sdroxide_types::ConnectWhy::Refused,
+                    host: "192.168.1.9".into(),
+                    port: 50001,
+                    detail: "Connection refused (os error 10061)".into(),
+                },
+            ),
             ProbeAnswer::Unsupported,
         ];
         for a in answers {
@@ -4268,5 +4919,32 @@ mod tests {
     fn rejects_wrong_version_byte() {
         assert!(matches!(decode::<ClientMsg>(&[0x7f, 0, 0]), Err(ProtoError::Version(0x7f))));
         assert!(matches!(decode::<ClientMsg>(&[]), Err(ProtoError::Empty)));
+    }
+
+    /// v289: the satellite lock's CTCSS tone rides the end of `SatLockConfig`,
+    /// and the rig's own keying the end of `TxState`; the version is pinned.
+    #[test]
+    fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
+        let cfg = sdroxide_types::SatLockConfig {
+            norad_id: 25544,
+            ctcss_hz: Some(67.0),
+            ..Default::default()
+        };
+        let msg = ClientMsg::Command(Command::SetSatLock(Some(Box::new(cfg.clone()))));
+        match decode::<ClientMsg>(&encode(&msg).unwrap()).unwrap() {
+            ClientMsg::Command(Command::SetSatLock(Some(back))) => assert_eq!(*back, cfg),
+            _ => panic!("SetSatLock did not round-trip"),
+        }
+        // No tone encodes as one byte less than a tone: the field is the tail.
+        let none = sdroxide_types::SatLockConfig { ctcss_hz: None, ..cfg.clone() };
+        let (a, b) = (
+            encode(&ClientMsg::Command(Command::SetSatLock(Some(Box::new(none))))).unwrap(),
+            encode(&msg).unwrap(),
+        );
+        assert!(b.len() > a.len());
+        let tx = sdroxide_types::TxState { rig_keyed: true, ..Default::default() };
+        let back: sdroxide_types::TxState = postcard::from_bytes(&postcard::to_allocvec(&tx).unwrap()).unwrap();
+        assert!(back.rig_keyed);
     }
 }

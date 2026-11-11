@@ -462,6 +462,7 @@ settings-radio-n = радио { $n }
 settings-on-station = На станции { $station }
 settings-add-radio-on-station = Добавить радио на { $station } — станция обслуживает его сразу
 settings-panadapter-receiver-for = Приёмник панорамы для { $radio }
+settings-panadapter-kiwi-zoom-note = Если приёмником служит KiwiSDR, его водопад открывается с увеличением примерно на 2 МГц вокруг частоты. Измените это в настройках этого радио, пункт «Полоса вида диапазона».
 settings-hang-up-stays-on = Положить трубку. Радио остаётся на { $station }.
 settings-close-on-station = Закрыть { $radio } на { $station }? Его конфигурация остаётся на той машине; вкладка здесь закрывается вместе с ней, и вместе с ней — у всех остальных.
 settings-close-it-on = Закрыть на { $station }
@@ -572,8 +573,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = ПЕРЕЧИТАТЬ ПЛАН ДИАПАЗОНОВ
-settings-general-re-read-bandplan-json-machine = Перечитать bandplan.json на машине, к которой подключено радио, и применить — границы диапазонов, подсегменты и окна скиммеров — без перезапуска.
-settings-general-running-station-s-own-band = Работа по собственному плану диапазонов станции.
 settings-general-running-built-iaru-tables = Работа по встроенным таблицам IARU.
 settings-general-settings-file = Файл настроек
 settings-general-settings-are-machine-radio-attached = Настройки находятся на машине, к которой подключено радио. Экспортируйте их там.
@@ -636,7 +635,6 @@ settings-net-checking = проверка…
 
 settings-amp-connected-to = Подключено к { $model }
 settings-controls-last-midi = Последнее сообщение: { $message }  значение { $value }
-settings-general-band-plan-file = Каждая граница диапазона и подсегмент берутся из { $path }; файл записывается из встроенных таблиц IARU при первом запуске и дальше принадлежит вам для редактирования — сузьте диапазон до своей лицензии, и sdroxide откажется передавать за его пределами. Частоты в МГц; удалите файл, чтобы получить свежую копию значений по умолчанию. Это региональное распределение, а не ваша лицензия: ваши собственные условия могут быть уже, а национальные планы внутри региона различаются.
 settings-general-exported = Экспортировано: { $note } — выберите, куда сохранить.
 settings-general-export-failed = Ошибка экспорта: { $error }
 settings-general-import-failed = Ошибка импорта: { $error }
@@ -659,7 +657,6 @@ settings-add-radio-here-station-you = Добавить радио — здесь
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Каждая граница диапазона и подсегмент берутся из bandplan.json на машине, к которой подключено радио. Это региональное распределение, а не ваша лицензия: ваши собственные условия могут быть уже, а национальные планы внутри региона различаются.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -3194,7 +3191,6 @@ sat-downlink-mhz = НИСХОДЯЩАЯ (МГц)
 sat-uplink-mhz = ВОСХОДЯЩАЯ (МГц)
 sat-mode = РЕЖИМ
 sat-tune = НАСТРОИТЬ
-sat-set-dial-mode-link-no = Установить шкалу и режим на эту связь — без захвата и поправок
 sat-locked = {" "}ЗАХВАЧЕН{" "}
 sat-lock = {" "}ЗАХВАТ{" "}
 sat-track-satellite-doppler-correction-rx = Сопровождать этот спутник: поправка доплера на RX и TX, восходящая линия по транспондеру, и трёхмерный вид следует за ним
@@ -3517,7 +3513,6 @@ qo100-write-converter-lnb-offset-puts = Записать смещение кон
 qo100-write-converter-lnb-offset-puts-2 = Записать смещение конвертера/LNB, которое ставит оценку трекера на 10489,750 МГц, и переоткрыть приёмник — то же кратковременное прерывание, что делает Настройки ▸ Радио ▸ Применить
 qo100-waiting-second-crc-valid-frame = Ожидание второго кадра с верным CRC, прежде чем предложить это записать — один захват может быть случайным совпадением
 qo100-write-corrected-converter-lnb-offset = Записать исправленное смещение конвертера/LNB и переоткрыть приёмник — кратковременное прерывание, то же, что делает Настройки ▸ Радио ▸ Применить
-qo100-decoder-runs-receiving-station-readout = декодер работает на принимающей станции — его показания удалённым клиентам не отправляются
 qo100-starting = запуск…
 qo100-searching-first-window-fills-after = поиск — первое окно заполняется примерно через 24 с, затем повторяется
 
@@ -3900,21 +3895,25 @@ fsq-add = Добавить
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + ВКЛАДКА
-publicsdr-open-receiver-new-radio-own = Открыть этот приёмник как новое радио, на собственной вкладке
-publicsdr-point-radio-receiver-replacing-whatever = Направить *это* радио на приёмник, заменив интерфейс, на котором оно сейчас, — спрашивается ещё раз, потому что это настройка целого радио
 publicsdr-not-stated = не указано
-publicsdr-replace = ЗАМЕНИТЬ
-publicsdr-point-radio-you-are-receiver = Направить радио, на котором вы сидите, на этот приёмник
-publicsdr-tab-instead = + ВКЛАДКА ВМЕСТО ЭТОГО
-publicsdr-open-receiver-another-radio-leave = Открыть приёмник как другое радио и не трогать это
-publicsdr-cancel = ОТМЕНА
 publicsdr-public-sdrs = ПУБЛИЧНЫЕ SDR
 publicsdr-available = ДОСТУПНО
 publicsdr-hide-receivers-are-full-ones = Скрыть приёмники, которые заняты, и те, чей оператор не открыл никаких каналов для приложений, кроме браузера
 publicsdr-band = В ДИАПАЗОНЕ
 publicsdr-only-receivers-cover-current-dial = Только приёмники, которые покрывают текущую частоту шкалы
 publicsdr-low-bw = НИЗКАЯ ПОЛОСА
+publicsdr-map-cities = ГОРОДА
+publicsdr-map-cities-tip = Города на этой карте: показать или скрыть.
+publicsdr-view-list = СПИСОК
+publicsdr-view-map = КАРТА
+publicsdr-view-map-tip = Те же приёмники на карте мира. Щелчок по точке выбирает все приёмники под ней.
+publicsdr-map-pick = Щёлкните по точке, чтобы выбрать приёмники под ней.
+publicsdr-map-names = ИМЕНА
+publicsdr-map-names-tip = Показывать названия приёмников на карте. Выкл.: подписаны только выбранные.
+publicsdr-check-online = В СЕТИ
+publicsdr-check-silent = МОЛЧИТ
+publicsdr-check-waiting = ПРОВЕРКА…
+publicsdr-check-no-answer = Нет ответа в течение 20 секунд.
 publicsdr-take-spyserver-low-bandwidth-shape = Брать SpyServer в его форме низкой полосы: узкое окно I/Q, которое следует за шкалой, плюс собственный вид диапазона сервера, вместо мегабит широкополосного I/Q. На KiwiSDR это ничего не меняет — у него только одна форма.
 publicsdr-refresh = ⟳ ОБНОВИТЬ
 publicsdr-fetch-both-directories-again = Загрузить оба каталога заново
@@ -3924,9 +3923,6 @@ publicsdr-fetching-receiver-lists = Загрузка списков приёмн
 publicsdr-machine-radio-attached-does-not = Машина, к которой подключено это радио, не отвечает на вопросы об устройствах, поэтому она тоже не может загрузить списки.
 publicsdr-no-match = совпадений нет
 publicsdr-nothing-matches-try-turning-filter = ничто не совпадает — попробуйте снова включить один из фильтров
-publicsdr-radio = это радио
-publicsdr-radio-s-configuration-has-not = Конфигурация этого радио ещё не пришла с машины, к которой оно подключено, поэтому направлять на приёмник нечего — возьмите его через + ВКЛАДКА.
-publicsdr-position-not-published-so-nothing = {" "}Его позиция не опубликована, поэтому ничего из того, что оно слышит, не будет сообщено.
 
 ## hd (src/app/hd.rs)
 
@@ -4736,14 +4732,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = приёмников: { $entries } · { $per_net } · загружено { $age } назад
 publicsdr-showing-search-narrow = показано { $shown } из { $n } — поиском сузьте список
 publicsdr-match = совпадений: { $n }
-publicsdr-replace-taking-receiver-points-same =
-    Заменить { $this } на { $entry }?
-
-    { $this2 } is on { $iface }. Taking this receiver points the same tab at { $address } instead, renames it “{ $entry2 }”, and holds the dial to the { $range_label } the receiver publishes — nothing here transmits.
-
-    The { $iface2 } settings stay where they are, and so do the ranges stated for them: switching the interface back in Settings → Radio brings the radio back as it was.
-publicsdr-receptions-will-reported = {" "}Приёмы будут сообщаться из { $value }.
-publicsdr-pointing-radio = Направляю это радио на { $entry }…{ $site }
+publicsdr-map-status = на карте: { $shown } · без координат: { $unplaced }
 publicsdr-opening-another-radio = Открываю { $entry } как другое радио…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5051,7 +5040,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (сеть)
 cat-family-flrig = flrig (сеть)
-publicsdr-its-interface = его интерфейс
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Выкл.
@@ -5377,8 +5365,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Оба
 
-panels-sensitivity = Чувствительность
-
 navtex-hunting = поиск
 
 navtex-hunting-hint =
@@ -5390,11 +5376,8 @@ navtex-hunting-hint =
 
     Помните также, что NAVTEX работает по расписанию, а не как диалог: береговая станция передаёт десять минут каждые четыре часа, так что тишина — это нормально в большую часть времени. Нужно слушать тогда, когда ваша станция в эфире. А 518 кГц оживает только ночью — тихий дневной диапазон не означает, что декодер сломан.
 
-navtex-sensitivity-hint =
-    Чувствительность — насколько легко декодер захватывает сигнал и удерживает его.
-navtex-auto-hint = Возврат к опорным порогам (0). Подсвечено, пока активно.
 
-navtex-tune-dial-usb-below-channel = Настройте шкалу сюда (USB, на 1.710 кГц ниже канала).
+navtex-tune-dial-usb-below-channel = Настройте шкалу сюда (USB, на 1.700 кГц ниже канала).
 
 settings-audio-your-audio = Ваш звук
 
@@ -7665,7 +7648,6 @@ net-wavelog-no-station-location = нет места станции для ска
 
 publicsdr-could-not-connect = не удалось подключиться в этом сеансе
 
-publicsdr-use-chip = USE
 
 weather-title = СВОДКИ ПОГОДЫ
 
@@ -9077,7 +9059,6 @@ publicsdr-mine = МОИ
 
 publicsdr-mine-hint = Только отмеченные вами приёмники
 
-publicsdr-mine-empty = Пока ничего не отмечено — ☆ в строке оставит этот приёмник здесь.
 
 publicsdr-star-receiver = Сохранить этот приёмник в МОИ
 
@@ -9208,16 +9189,513 @@ sonde-export-csv-hover = Сохранить полёт этого зонда к�
 
 sonde-export-none = Для этого зонда пока нет сохранённых позиций.
 
-sonde-col-temp = Ð¢ÐµÐ¼Ð¿.
+sonde-col-temp = Темп.
 
-sonde-col-humidity = Ð’Ð»Ð°Ð¶Ð½.
+sonde-col-humidity = Влажн.
 
-sonde-col-pressure = Ð”Ð°Ð²Ð».
+sonde-col-pressure = Давл.
 
 settings-net-broadcast-import-needs-station = Подключитесь к станции для импорта.
 
 
+sonde-online-why-signin = Станция требует сначала войти в систему.
 
+sonde-online-why-busy = Станция уже опрашивает SondeHub так часто, как разрешено. Повторите через минуту.
+
+sonde-online-why-upstream = Станция не смогла связаться с SondeHub.
+
+sonde-online-why-unreadable = Ответ не был списком зондов.
+
+sonde-online-why-no-station = Нет станции для запроса, а эта страница сама не может связаться с SondeHub.
+
+sonde-online-why-http = Ответ: HTTP { $n }.
+settings-general-band-plan = План диапазонов
+
+settings-general-band-plan-built-in = Встроенный IARU
+
+
+
+
+sonde-card-source = Источник
+
+sonde-card-source-radio = Это радио
+
+sonde-card-source-hub = SondeHub (принята другой станцией)
+
+sonde-card-model = Модель
+
+sonde-card-maker = Производитель
+
+sonde-card-variant = Вариант
+
+sonde-card-position = Позиция
+
+sonde-card-from-you = От вас
+
+sonde-card-heading = Курс
+
+sonde-card-satellites = Спутники
+
+sonde-card-snr = Отношение сигнал/шум
+
+sonde-card-station = Принята станцией
+
+sonde-card-station-position = Положение станции
+
+sonde-card-antenna = Антенна
+
+sonde-card-software = Программа
+
+sonde-card-frames = Принято кадров
+
+sonde-card-open = Открыть на { $site }
+
+sonde-card-close = Закрыть
+
+aircraft-mode-vor-hover = Читать маяк VOR, на который настроено радио: радиал и позывной Морзе
+
+vor-audio-front = Этот приёмник отдаёт демодулированный звук; для чтения VOR нужен необработанный поток I/Q.
+
+vor-outside-window = Настроенный канал выходит за полосу, которую отдаёт приёмник. Центрируйте приёмник на нём.
+
+vor-not-in-band = Настройтесь на маяк VOR (108,00–117,95 МГц), чтобы прочитать его радиал.
+
+vor-locked = ЗАХВАТ
+
+vor-no-lock = НЕТ ЗАХВАТА
+
+vor-no-lock-hover = Переменный сигнал 30 Гц или опорный 9960 Гц отсутствует или слишком слаб. Курсовой радиомаяк ILS в этом диапазоне никогда не захватывается.
+
+vor-ident-heard = Принят позывной: { $ident }
+
+vor-ident-waiting = Ожидание позывного (передаётся примерно каждые 10 с)…
+
+vor-charted = На карте: { $ident } — { $name }
+
+vor-var-depth = АМ 30 Гц: { $pct } % от несущей
+
+vor-ref-depth = ЧМ 9960 Гц: { $pct } % от несущей, девиация ±{ $dev } Гц
+
+vor-caveat = Радиал — пеленг приёмника от маяка относительно магнитного севера самого маяка. Не для навигации.
+
+vor-nearby = Ближайшие к вашей станции VOR
+
+vor-no-grid = Укажите свой локатор в настройках цифровых режимов, чтобы увидеть ближайшие VOR.
+
+vor-tune-hover = Настроить этот VOR в АМ
+
+tx-bands-power-hint = Максимальная мощность на этом диапазоне при Drive на максимуме, в ваттах. Оставьте —, если не знаете.
+
+tx-bands-power-note = Необязательно. Радио без измерителя мощности использует эти значения, чтобы показывать мощность передачи в ваттах на S-метре; без них показывается уровень Drive в процентах.
+
+band-plan-title = План диапазонов этого радио
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = Ставьте RX в положение ДА только для диапазонов, которые это радио должно слушать. Радио никогда не настраивается на диапазон с НЕТ и вообще не настраивается, пока список RX не подтверждён. TX и RX независимы: диапазон может быть TX НЕТ и RX ДА.
+
+rx-bands-title = Диапазоны приёма
+
+rx-bands-check-again = ПРОВЕРИТЬ RX
+
+rx-bands-check-again-hint = Снимает подтверждение, чтобы заново проверить список приёма. Изменение любого диапазона делает это само.
+
+rx-bands-confirmed = ✓ Диапазоны приёма подтверждены для этого радио
+
+rx-bands-ack = Я сверил эти диапазоны приёма со своим радио
+
+rx-bands-confirm = Подтвердить эти диапазоны приёма
+
+rx-bands-confirm-hint = Сначала поставьте галочку: подтверждение выполняется один раз для каждого радио.
+
+rx-bands-notice = Список диапазонов приёма не подтверждён: радио не будет настраиваться, пока вы один раз не проверите и не подтвердите диапазоны приёма.
+
+rx-bands-out-of-range = Заявленный диапазон этого радио не достигает этого диапазона частот.
+
+rx-bands-band-off = Приём на этом диапазоне выключен в плане диапазонов этого радио (Настройки) либо список приёма ещё не подтверждён.
+
+settings-general-re-read-band-plan-file = Заново читает файл выбранного плана на машине, к которой подключено радио, и применяет его — границы диапазонов, поддиапазоны и окна скиммеров — без перезапуска.
+
+settings-general-running-band-plan = Используется план диапазонов «{ $name }».
+
+settings-general-band-plan-choose-hint = Выберите план диапазонов из библиотеки станции. По умолчанию — встроенные таблицы IARU. При смене плана списки диапазонов TX и RX нужно проверить и подтвердить заново.
+
+settings-general-band-plan-import = ИМПОРТ ПЛАНА
+
+settings-general-band-plan-import-hint = Добавляет файл плана диапазонов в библиотеку станции. Простой список диапазонов (имя, тип, начало и конец в герцах) сначала преобразуется. Он проверяется и только добавляется — выберите его в списке, чтобы использовать.
+
+settings-general-band-plan-reset = НАЗАД К ВСТРОЕННОМУ IARU
+
+settings-general-band-plan-reset-hint = Снова использовать встроенные таблицы IARU. Списки диапазонов TX и RX придётся проверить и подтвердить заново.
+
+settings-general-band-plan-folder = Планы — это файлы в { $path } на машине, к которой подключено радио; их можно добавлять и удалять. Сузьте диапазон до вашей лицензии, и sdroxide откажется передавать за его пределами. Частоты в МГц. Это региональное распределение, а не ваша лицензия: ваши условия могут быть уже, а национальные планы различаются внутри региона.
+
+settings-general-band-plan-station-folder = Планы хранятся на машине, к которой подключено радио. Сузьте диапазон до вашей лицензии, и sdroxide откажется передавать за его пределами. Это региональное распределение, а не ваша лицензия: ваши условия могут быть уже, а национальные планы различаются внутри региона.
+
+settings-general-band-plan-manager = Менеджер планов диапазонов
+
+settings-general-band-plan-run = ИСПОЛЬЗОВАТЬ
+
+settings-general-band-plan-run-hint = Использовать этот план. Списки диапазонов TX и RX придётся проверить и подтвердить заново.
+
+settings-general-band-plan-download = СКАЧАТЬ
+
+settings-general-band-plan-download-hint = Сохранить файл этого плана на этом компьютере.
+
+settings-general-band-plan-delete = УДАЛИТЬ
+
+settings-general-band-plan-delete-confirm = НАЖМИТЕ ЕЩЁ РАЗ, ЧТОБЫ УДАЛИТЬ
+
+settings-general-band-plan-delete-hint = Удаляет этот план из библиотеки станции. Используемый план удалить нельзя.
+
+settings-general-band-plan-running-tag = ИСПОЛЬЗУЕТСЯ
+
+settings-general-band-plan-shipped-tag = в комплекте
+
+settings-general-band-plan-save-current = СОХРАНИТЬ ТЕКУЩИЙ ПЛАН КАК
+
+settings-general-band-plan-save-current-hint = Сохраняет используемый план в библиотеке под этим именем. План с таким же именем заменяется, а старый файл сохраняется один раз как .bak.
+
+settings-general-band-plan-name-hint = имя
+
+settings-general-band-plan-restore = ВОССТАНОВИТЬ ПЛАНЫ ИЗ КОМПЛЕКТА
+
+settings-general-band-plan-restore-hint = Возвращает планы, поставляемые с программой, удалённые или изменённые. Изменённый план заменяется, а его копия сохраняется один раз как .bak.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = В библиотеке нет планов.
+
+settings-general-band-plan-radio = Это радио
+
+settings-general-band-plan-radio-follow = Как у станции
+
+settings-general-band-plan-radio-hint = Использовать план только на этом радио. План станции и другие радио не затрагиваются. Списки диапазонов TX и RX этого радио придётся проверить и подтвердить заново.
+
+settings-general-band-plan-run-radio = ТОЛЬКО ЭТО РАДИО
+
+settings-general-band-plan-radio-tag = это радио
+
+meter-view-auto = Авто
+
+meter-view-rx = Сигнал (RX)
+
+meter-view-power = Мощность
+
+meter-view-swr = КСВ
+
+meter-view-alc = АРУ передачи (ALC)
+
+smeter-arrow-prev-hover = Предыдущее показание: { $view }
+
+smeter-arrow-next-hover = Следующее показание: { $view }
+
+smeter-arrow-prev-face = Предыдущий циферблат
+
+smeter-arrow-next-face = Следующий циферблат
+
+sonde-card-source-both = Радио + SondeHub (слышат оба)
+
+sonde-card-stale = Состояние
+
+sonde-card-stale-value = Нет в списке: последняя известная позиция
+
+sonde-card-detach = Открепить
+
+sonde-card-attach = Прикрепить
+tx-bands-outside-note = Вне перечисленных здесь диапазонов передача невозможна. Приём вне диапазонов (ADS-B, DAB, AIS...) отдельной строки не требует.
+
+tx-off-cb = ПЕРЕДАЧА ЗАПРЕЩЕНА на 11 м (CB) — диапазон есть в списке передачи, но «Разрешить передачу на 11 м (CB)» выключено. Включите это в Настройки → Общие.
+
+settings-cb-allow-tx-needs-band = Сначала установите 11M-CB на ДА в списке TX этого радио (Настройки → Радио), затем разрешите здесь.
+
+settings-cb-allow-tx-order-note = Две блокировки, в таком порядке: 1) 11M-CB на ДА в списке диапазонов TX радио, подтверждённом; 2) этот флажок. Для передачи на 11 м нужны обе. Если убрать 11M-CB из списка, флажок тоже снимается.
+
+settings-ui-publicsdr-under-waterfall = Закреплён под водопадом
+
+settings-ui-publicsdr-place-hint = Где открывается Public SDRs: под водопадом в голосовых режимах, где там ничего нет, или в окне. Цифровые режимы, CW и телефоны в любом случае используют окно.
+
+publicsdr-dock-hint = Закрепить этот список под водопадом (голосовые режимы без панели)
+
+publicsdr-undock-hint = Вернуть этот список в отдельное окно
+
+publicsdr-close-hint = Закрыть Public SDRs
+
+settings-net-hfcc-file-hint = Взять расписание HFCC из сохранённого вами пакета: zip, который публикует HFCC (например, b26allx2.zip), с расписанием и двумя таблицами.
+
+schedule-import = Импорт…
+wxsat-title = МЕТЕОСПУТНИКИ
+
+extras-wxsat-hint = МЕТЕОСПУТНИКИ — снимок, который спутник NOAA (APT) или Meteor (LRPT) передаёт на 137 МГц, рисуется по мере приёма, в отделяемом окне
+
+wxsat-decode = Декодировать
+
+wxsat-channel = Спутник
+
+wxsat-tune = Настроить сюда
+
+wxsat-tune-hint = Включает декодер и переводит частоту на этот канал, чтобы сигнал попал в окно выборки.
+
+wxsat-clear = Очистить
+
+wxsat-save = Сохранить PNG
+
+wxsat-flip = Перевернуть
+
+wxsat-flip-hint = Переворачивает снимок: спутник, летящий на юг, рисуется вверх ногами.
+
+wxsat-state-off = Декодер выключен
+
+wxsat-level = Уровень { $db } dBFS
+
+wxsat-locked = Синхронизация строк захвачена
+
+wxsat-searching = Поиск синхронизации строк
+
+wxsat-lines = строк: { $n }
+
+wxsat-outside-window = Канал вне окна выборки или слишком близко к его краю для всего сигнала. Нажмите «Настроить сюда» или возьмите более широкое окно.
+
+wxsat-waiting = Снимка пока нет. Включите декодер, когда спутник над горизонтом; пролёт длится около десяти минут.
+
+wxsat-signal = Сигнал
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Канал { $n }
+
+wxsat-rows = рядов: { $n }
+
+wxsat-frame-locked = Синхронизация кадров захвачена
+
+wxsat-frames = хороших кадров: { $n }
+
+wxsat-waiting-lrpt = Снимка пока нет. LRPT у Meteor цифровой: снимок начинается через несколько секунд после приёма спутника, ряд за рядом, и каждый канал — отдельный снимок.
+
+wxsat-searching-frame = Поиск синхронизации кадров
+
+qrzcard-loading = Запрос к QRZ…
+
+qrzcard-not-found = На QRZ не найден.
+
+qrzcard-years = { $n } лет
+
+qrzcard-class = Класс: { $class }
+
+qrzcard-qsl-paper = бумажная
+
+qrzcard-qsl-via = через { $mgr }
+
+qrzcard-switch = Показывать карточку QRZ при наведении на позывной
+
+qrzcard-switch-hint = Фото, имя, возраст, адрес, локатор и QSL с QRZ.com — в водопаде, декодерах и списках спотов. Для фото, e-mail и даты рождения нужна подписка QRZ XML.
+
+qrzcard-needs-login = Выберите QRZ в качестве поставщика и введите логин и пароль QRZ, чтобы включить карточку.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Приём
+
+meshtastic-region = Регион
+
+meshtastic-preset = Пресет
+
+meshtastic-channel = Канал
+
+meshtastic-tune = Слушать здесь
+
+meshtastic-tune-hint = Включает приёмник и переводит радио на этот канал. Список диапазонов приёма в меню «Радио» решает, можно ли здесь слушать. При выключении или выходе радио возвращается туда, где было.
+
+meshtastic-keys = Ключи
+
+meshtastic-keys-hint = Имя=ключ через запятую (hex:…, base64:…, simple1..10). Ключ по умолчанию пробуется всегда.
+
+meshtastic-state-off = Приёмник выключен.
+
+meshtastic-level = Уровень { $db } dBFS
+
+meshtastic-counts = { $pre } преамбул · { $ok } кадров · { $bad } с ошибкой CRC
+
+meshtastic-refused-band = ПРИЁМ ЗАПРЕЩЁН — { $freq } МГц ({ $band }) не является подтверждённым диапазоном приёма. Отметьте и подтвердите его в меню «Радио», диапазоны приёма.
+
+meshtastic-refused-unconfirmed = ПРИЁМ ЗАПРЕЩЁН — диапазоны приёма этого радио ещё не подтверждены. Проверьте и подтвердите их в меню «Радио», диапазоны приёма.
+
+meshtastic-out-of-window = Канал вне окна выборки, которое захватывает радио: настройтесь ближе или увеличьте частоту дискретизации.
+
+meshtastic-none-yet = Пока ничего не слышно.
+
+meshtastic-nodes = Узлы ({ $n })
+
+meshtastic-log = Пакеты ({ $n })
+
+meshtastic-col-id = Узел
+
+meshtastic-col-name = Имя
+
+meshtastic-col-heard = Услышан
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Хопы
+
+meshtastic-col-position = Позиция
+
+meshtastic-col-battery = Батарея
+
+meshtastic-encrypted = зашифровано (нет ключа)
+
+meshtastic-via-mqtt = через MQTT
+
+meshtastic-bench-hint = Открывает окно Meshtastic: трафик LoRa-сети одного канала.
+
+extras-meshtastic-hint = Meshtastic: трафик LoRa-сети одного канала, услышанные узлы и пакеты.
+
+meshtastic-message = Сообщение
+
+meshtastic-message-hint = Текст для всех на канале (не более 200 байт)
+
+meshtastic-send = Отправить…
+
+meshtastic-send-hint = Передаёт этот текст на канале после вашего подтверждения. Список диапазонов передачи в Настройках, Радио решает, можно ли здесь передавать; радио должно быть на канале (Слушать здесь).
+
+meshtastic-confirm = Передать сейчас на { $freq } МГц ({ $air } с в эфире)? Услышат все в зоне досягаемости, и вы отвечаете за это по своей лицензии и правилам этого диапазона.
+
+meshtastic-confirm-yes = Передать
+
+meshtastic-confirm-no = Отмена
+
+meshtastic-transmitting = ПЕРЕДАЧА…
+
+meshtastic-tx-airtime = Время в эфире за этот час: { $used } с из { $budget } с
+
+meshtastic-tx-airtime-free = Время в эфире за этот час: { $used } с (для этого региона лимит не задан)
+
+meshtastic-tx-sent = отправлено: { $n }
+
+meshtastic-tx-band-off = ПЕРЕДАЧА ЗАПРЕЩЕНА — { $freq } МГц ({ $band }) не является подтверждённым диапазоном передачи. Отметьте и подтвердите его в Настройки → Радио → Диапазоны передачи.
+
+meshtastic-tx-unconfirmed = ПЕРЕДАЧА ЗАПРЕЩЕНА — диапазоны передачи этого радио ещё не подтверждены. Проверьте и подтвердите их в Настройки → Радио → Диапазоны передачи.
+
+meshtastic-tx-duty = Достигнут лимит рабочего цикла для этого региона: подождите { $s } с до следующего сообщения.
+
+meshtastic-tx-too-long = Это сообщение само по себе дольше всего часового бюджета времени в эфире для этого региона.
+
+meshtastic-tx-off-channel = Радио не на канале: сначала нажмите «Слушать здесь», чтобы частота стояла на нём.
+
+meshtastic-tx-no-transmitter = Это радио не может передавать сырой I/Q (трансивер, принимающий звук, или устройство только для приёма).
+
+meshtastic-tx-bad-text = Текст пуст или слишком длинный (не более 200 байт).
+
+meshtastic-tx-busy = Передача уже идёт.
+
+meshtastic-tx-rails = Передатчик отказался включиться на передачу: причина указана в сообщении о передаче.
+rx-bands-swl-note = Для этого радио включён режим SWL: блокировки приёма нет. Можно настраиваться на любой диапазон.
+
+rx-bands-always-open = Диапазоны для прослушивания (и режим SWL) всегда открыты для приёма.
+
+sat-tune-link-both-vfos = Устанавливает частоту, второй VFO и режим для этой линии: нисходящую на этом VFO, восходящую на другом; захват этого спутника переходит на неё
+
+sat-move-lock = {" "}ПЕРЕНЕСТИ ЗАХВАТ{" "}
+
+sat-locked-other-link-move-lock = Захват этого спутника на другой линии: перенести захват на эту — её восходящую частоту, тон и доплер
+
+sat-rig-rx = RX РАДИО
+
+sat-rig-tx = TX РАДИО
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Захват спутника: VFO A — нисходящая линия, VFO B — восходящая, пока захват не снят
+
+qrzcard-photo-loading = Загрузка фото…
+
+qrzcard-no-photo = Карточка без фото
+
+sonde-card-listen-hover = Нажмите, чтобы настроить радио на этот канал: частота переключится на него, а декодер будет слушать только его.
+
+sonde-card-decoding = Декодируется этим радио
+
+sonde-card-waiting = Слушаю этот канал, пока ничего не декодировано
+
+sonde-card-click-to-listen = Нажмите на частоту, чтобы слушать
+
+sonde-type-all = Все типы
+
+sonde-type-hover = Искать один тип зонда: выбор запускает сканирование, которое двигает окно по диапазону, пока не будет услышан этот тип. Показывается и рисуется только он.
+
+meshtastic-preset-auto = Авто
+
+meshtastic-preset-auto-hint = Слушает все пресеты одновременно (от ShortTurbo до LongSlow). Выбирать не нужно, если неизвестно, какой использует сеть.
+
+meshtastic-freq-hint = Частота канала с точностью до килогерца. Для сети, которая не использует слоты региона. Применяется, когда вы отпускаете.
+
+meshtastic-close-hint = Закрыть панель Meshtastic. Приёмник продолжает работать, пока вы его не выключите.
+
+meshtastic-float-hint = Вынести панель в плавающее окно поверх водопада.
+
+meshtastic-dock-hint = Вернуть панель под водопад.
+
+meshtastic-tune-mode-hint = Радио также переводится в широкую ЧМ, чтобы динамик и запись получали сигнал канала; при выходе режим возвращается.
+
+wefax-revert-auto-slant = Отменить наклон
+
+wefax-revert-auto-slant-hint = Отменяет автоматическую коррекцию наклона для этой карты: подстройка тактовой частоты возвращается к значению, заданному здесь, и автокоррекция остаётся выключенной до следующей карты. Уже принятые строки не меняются.
+
+qrzcard-no-account = Учётная запись QRZ.com не задана -
+
+qrzcard-account-link = посмотреть состояние учётной записи
+
+navtex-other-frequencies = ЧАСТОТЫ NAVTEX И БЕРЕГОВЫХ СТАНЦИЙ
+
+navtex-other-frequencies-hint = Все частоты опубликованного списка NAVTEX по регионам. Выбор настраивает шкалу для верхней боковой полосы. Записи с пометкой CW — метеосводки азбукой Морзе, которые этот декодер не читает.
+
+navtex-freq-cw = режим CW
+
+navtex-freq-international = международная, на английском
+
+navtex-freq-national = национальная, на местном языке
+
+publicsdr-near-kiwi = БЛИЖАЙШИЙ KIWI
+
+publicsdr-near-kiwi-tip = Только { $n } ближайших к вашему локатору приёмников KiwiSDR со свободным каналом, сначала самый близкий. Используйте один из них как обзор диапазона для CAT-радио.
+
+publicsdr-near-kiwi-no-grid = Для БЛИЖАЙШЕГО KIWI нужен ваш локатор: укажите его в настройках станции, чтобы упорядочить приёмники по расстоянию.
+
+sstv-add-clock = ＋ Дата/время
+
+sstv-add-clock-hint = Добавить строку с датой и временем отправки изображения — по UTC или по вашему времени
+
+sstv-clock-date-time = Дата и время
+
+sstv-clock-time = Время
+
+sstv-clock-date = Дата
+
+sstv-clock-freeze-hint = Превращает эту строку в обычный текст с показанным временем
+
+sstv-clock-hint = Печатает дату и время момента отправки изображения, а не времени его создания.
+
+sstv-clock-local = Местное время
+
+sstv-clock-local-hint = Печатать местное время станции вместо UTC — с учётом летнего времени
+
+test-tci-connect-refused = подключение к { $address }: { $detail } — на этом порту никто не предоставляет TCI. TCI даёт SDR-программа — ExpertSDR3, Thetis, — а не сама радиостанция, поэтому она должна быть запущена с включённым TCI в настройках. В автономном аппарате вроде MB1 это копия, работающая внутри радиостанции
+
+test-tci-connect-timed-out = подключение к { $address }: { $detail } — нет ответа по этому адресу. Проверьте хост и не мешает ли брандмауэр. Если SDR-программа, предоставляющая TCI (ExpertSDR3, Thetis), не запущена с включённым TCI, закрытый порт в Windows может выглядеть именно так
+
+test-connect-failed = подключение к { $address }: { $detail }
+
+settings-ui-graphics = Графический драйвер
+
+settings-ui-graphics-auto = Автоматически
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Вступает в силу при следующем запуске. «Автоматически» использует DirectX 12, а на старых драйверах AMD, рисующих водопад плоскими горизонтальными полосами, — OpenGL. Попробуйте OpenGL, если водопад показывает только горизонтальные линии.
 
 settings-controls-desktop-mic = Настольный или внешний микрофон
 settings-controls-desktop-mic-note = PTT от микрофона или ножного переключателя, подключенного к линиям рукопожатия последовательного (или USB-serial) порта.
@@ -9230,7 +9708,6 @@ settings-controls-active-low = Низкий
 settings-controls-debounce = Антидребезг (мс)
 serial-ptt-output-rts = RTS
 serial-ptt-output-dtr = DTR
-
 settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
 settings-controls-choose-serial-port = Choose serial port
 settings-controls-serial-port-chosen = Serial port chosen.

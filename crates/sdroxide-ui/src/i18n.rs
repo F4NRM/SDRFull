@@ -186,26 +186,6 @@ fn locale_tag(locale: &str) -> Option<LanguageIdentifier> {
     locale.split(['.', '@']).next()?.replace('_', "-").parse().ok()
 }
 
-/// The name of the language "follow the system" comes to: the first of the
-/// system's languages a translation is carried for, matched on the language
-/// alone when the region differs (a Mexican system gets `es`), and English
-/// when none is.
-pub(crate) fn system_language_name() -> &'static str {
-    static NAME: LazyLock<String> = LazyLock::new(|| {
-        let list = languages();
-        let found = system_languages().into_iter().find_map(|want| {
-            let tags =
-                || list.iter().filter_map(|l| Some((l, l.tag.parse::<LanguageIdentifier>().ok()?)));
-            tags()
-                .find(|(_, id)| *id == want)
-                .or_else(|| tags().find(|(_, id)| id.language == want.language))
-                .map(|(l, _)| l.name.clone())
-        });
-        found.unwrap_or_else(|| list[0].name.clone())
-    });
-    &NAME
-}
-
 /// One language the interface can be drawn in, as the language picker lists it.
 pub(crate) struct Language {
     /// What is stored in the settings when it is picked.

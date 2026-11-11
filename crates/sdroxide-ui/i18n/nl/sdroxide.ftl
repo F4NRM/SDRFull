@@ -456,6 +456,7 @@ settings-radio-n = radio { $n }
 settings-on-station = Op { $station }
 settings-add-radio-on-station = Een radio toevoegen op { $station } — het station serveert hem meteen
 settings-panadapter-receiver-for = Panadapter-ontvanger voor { $radio }
+settings-panadapter-kiwi-zoom-note = Met een KiwiSDR als ontvanger opent het waterval ingezoomd op ongeveer 2 MHz rond de frequentie. Wijzig dit in de instellingen van die radio onder Span bandweergave.
 settings-hang-up-stays-on = Ophangen. De radio blijft op { $station }.
 settings-close-on-station = { $radio } sluiten op { $station }? De configuratie blijft op die machine; het tabblad hier sluit mee, en dat van alle anderen ook.
 settings-close-it-on = Sluit hem op { $station }
@@ -566,8 +567,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Ga in stappen van 6 dB omhoog. Te veel clipt — de audio wordt op volle schaal begrensd in plaats van rond te laten slaan, dus overdrijven klinkt hard in plaats van luid. Opnamen worden hiervoor gemaakt en worden er niet door beïnvloed.
 settings-general-reload-band-plan = BANDPLAN OPNIEUW LADEN
-settings-general-re-read-bandplan-json-machine = Lees bandplan.json opnieuw op de machine waaraan de radio hangt en pas het toe — bandgrenzen, subsegmenten en skimmervensters — zonder herstart.
-settings-general-running-station-s-own-band = Draait op het eigen bandplan van het station.
 settings-general-running-built-iaru-tables = Draait op de ingebouwde IARU-tabellen.
 settings-general-settings-file = Instellingenbestand
 settings-general-settings-are-machine-radio-attached = De instellingen staan op de machine waaraan de radio hangt. Exporteer ze daar.
@@ -630,7 +629,6 @@ settings-net-checking = controleren…
 
 settings-amp-connected-to = Verbonden met de { $model }
 settings-controls-last-midi = Laatste bericht: { $message }  waarde { $value }
-settings-general-band-plan-file = Elke bandgrens en elk subsegment komt uit { $path }, de eerste keer geschreven uit de ingebouwde IARU-tabellen en daarna van jou om te bewerken — beperk een band tot je vergunning en sdroxide weigert erbuiten te zenden. Frequenties zijn in MHz; verwijder het bestand voor een verse kopie van de standaardwaarden. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen smaller zijn, en nationale plannen verschillen binnen een regio.
 settings-general-exported = { $note } geëxporteerd — kies waar je het opslaat.
 settings-general-export-failed = Exporteren mislukt: { $error }
 settings-general-import-failed = Importeren mislukt: { $error }
@@ -653,7 +651,6 @@ settings-add-radio-here-station-you = Voeg een radio toe — hier, of op een sta
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Elke bandgrens en elk subsegment komt uit bandplan.json op de machine waaraan de radio hangt. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen smaller zijn, en nationale plannen verschillen binnen een regio.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -3184,7 +3181,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = MODUS
 sat-tune = TUNE
-sat-set-dial-mode-link-no = Stel afstemming en modus in op deze link — geen vergrendeling, geen correctie
 sat-locked = {" "}VERGRENDELD{" "}
 sat-lock = {" "}VERGRENDELEN{" "}
 sat-track-satellite-doppler-correction-rx = Volg deze satelliet: dopplercorrectie op RX en TX, transponder-gekoppelde uplink, en de 3D-weergave volgt hem
@@ -3507,7 +3503,6 @@ qo100-write-converter-lnb-offset-puts = Schrijf de converter-/LNB-offset die het
 qo100-write-converter-lnb-offset-puts-2 = Schrijf de converter-/LNB-offset die de schatting van de tracker op 10489,750 MHz zet, en heropen de ontvanger — dezelfde korte onderbreking als Instellingen ▸ Radio ▸ Toepassen veroorzaakt
 qo100-waiting-second-crc-valid-frame = Wachten op een tweede frame met geldige CRC voordat dit wordt aangeboden — één vergrendeling alleen kan toeval zijn
 qo100-write-corrected-converter-lnb-offset = Schrijf de gecorrigeerde converter-/LNB-offset en heropen de ontvanger — een korte onderbreking, dezelfde als Instellingen ▸ Radio ▸ Toepassen veroorzaakt
-qo100-decoder-runs-receiving-station-readout = de decoder draait op het ontvangende station — de weergave wordt niet naar externe clients gestuurd
 qo100-starting = starten…
 qo100-searching-first-window-fills-after = zoeken — het eerste venster vult zich na ongeveer 24 s en herhaalt dan
 
@@ -3890,33 +3885,34 @@ fsq-add = Toevoegen
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + TAB
-publicsdr-open-receiver-new-radio-own = Open deze ontvanger als nieuwe radio, in een eigen tabblad
-publicsdr-point-radio-receiver-replacing-whatever = Richt *deze* radio op de ontvanger, ter vervanging van de interface waarop hij nu staat — er wordt eerst nogmaals om bevestiging gevraagd, omdat dat het instellen van een hele radio is
 publicsdr-not-stated = niet opgegeven
-publicsdr-replace = VERVANGEN
-publicsdr-point-radio-you-are-receiver = Richt de radio waarop je zit op deze ontvanger
-publicsdr-tab-instead = + TAB IN PLAATS DAARVAN
-publicsdr-open-receiver-another-radio-leave = Open de ontvanger als een andere radio en laat deze met rust
-publicsdr-cancel = ANNULEREN
 publicsdr-public-sdrs = PUBLIEKE SDR'S
 publicsdr-available = BESCHIKBAAR
 publicsdr-hide-receivers-are-full-ones = Verberg ontvangers die vol zijn, en die waarvan de beheerder geen kanalen heeft geopend voor andere apps dan een browser
 publicsdr-band = IN BAND
 publicsdr-only-receivers-cover-current-dial = Alleen ontvangers die de huidige afstemfrequentie dekken
 publicsdr-low-bw = LAGE BW
-publicsdr-take-spyserver-low-bandwidth-shape = Neem een SpyServer in zijn lage-bandbreedtevorm: een smal I/Q-venster dat de afstemming volgt plus het eigen bandoverzicht van de server, in plaats van megabits aan breedband-I/Q. Geen effect op een KiwiSDR, die maar één vorm heeft.
-publicsdr-refresh = ⟳ VERVERSEN
-publicsdr-fetch-both-directories-again = Haal beide mappen opnieuw op
+publicsdr-map-cities = STEDEN
+publicsdr-map-cities-tip = Steden op deze kaart, aan of uit.
+publicsdr-view-list = LIJST
+publicsdr-view-map = KAART
+publicsdr-view-map-tip = Dezelfde ontvangers op een wereldkaart. Klik op een punt om alle ontvangers eronder te kiezen.
+publicsdr-map-pick = Klik op een punt om de ontvangers eronder te kiezen.
+publicsdr-map-names = NAMEN
+publicsdr-map-names-tip = Toon de namen van de ontvangers op de kaart. Uit: alleen de gekozen ontvangers krijgen een naam.
+publicsdr-check-online = ONLINE
+publicsdr-check-silent = STIL
+publicsdr-check-waiting = CONTROLE…
+publicsdr-check-no-answer = Geen antwoord binnen 20 seconden.
+publicsdr-take-spyserver-low-bandwidth-shape = Een SpyServer in zijn vorm met lage bandbreedte nemen: een smal I/Q-venster dat de dial volgt plus de eigen bandweergave van de server, in plaats van megabits aan breedband-I/Q. Geen effect op een KiwiSDR, die maar de ene vorm heeft.
+publicsdr-refresh = ⟳ VERNIEUWEN
+publicsdr-fetch-both-directories-again = Beide mappen opnieuw ophalen
 publicsdr-name-place-antenna-band = naam, plaats, antenne, band
 publicsdr-clear-search = Wis de zoekopdracht
 publicsdr-fetching-receiver-lists = De ontvangerlijsten worden opgehaald…
 publicsdr-machine-radio-attached-does-not = De machine waaraan deze radio hangt beantwoordt geen apparaatvragen, dus hij kan de lijsten ook niet ophalen.
 publicsdr-no-match = geen overeenkomst
-publicsdr-nothing-matches-try-turning-filter = niets komt overeen — probeer een filterchip weer aan te zetten
-publicsdr-radio = deze radio
-publicsdr-radio-s-configuration-has-not = De configuratie van deze radio is nog niet aangekomen van de machine waarop hij staat, dus er is niets om op de ontvanger te richten — neem hem in plaats daarvan met + TAB.
-publicsdr-position-not-published-so-nothing = {" "}Zijn positie is niet gepubliceerd, dus niets wat hij hoort wordt gerapporteerd.
+publicsdr-nothing-matches-try-turning-filter = niets past — probeer een filter weer aan te zetten
 
 ## hd (src/app/hd.rs)
 
@@ -4723,14 +4719,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } ontvangers · { $per_net } · opgehaald { $age } geleden
 publicsdr-showing-search-narrow = toont { $shown } van { $n } — zoek om te verfijnen
 publicsdr-match = { $n } treffer
-publicsdr-replace-taking-receiver-points-same =
-    { $this } vervangen door { $entry }?
-
-    { $this2 } staat op { $iface }. Als je deze ontvanger neemt, wijst hetzelfde tabblad voortaan naar { $address }, wordt het hernoemd naar “{ $entry2 }” en blijft de afstemming beperkt tot het { $range_label } dat de ontvanger publiceert — hier wordt niets verzonden.
-
-    De instellingen van { $iface2 } blijven zoals ze zijn, net als de bereiken die ervoor zijn opgegeven: als je in Instellingen → Radio weer naar de interface terugschakelt, is de radio weer zoals hij was.
-publicsdr-receptions-will-reported = {" "}Ontvangsten worden gemeld vanaf { $value }.
-publicsdr-pointing-radio = Deze radio richten op { $entry }…{ $site }
+publicsdr-map-status = { $shown } op de kaart · { $unplaced } zonder positie
 publicsdr-opening-another-radio = { $entry } openen als een andere radio…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5046,7 +5035,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (netwerk)
 cat-family-flrig = flrig (netwerk)
-publicsdr-its-interface = zijn interface
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Uit
@@ -5372,8 +5360,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Beide
 
-panels-sensitivity = Gevoeligheid
-
 navtex-hunting = zoeken
 
 navtex-hunting-hint =
@@ -5385,19 +5371,8 @@ navtex-hunting-hint =
     
     Bedenk ook dat NAVTEX een dienstregeling is, geen gesprek: een kuststation zendt elke vier uur tien minuten lang, dus stilte is meestal normaal. Je moet luisteren als jouw station aan de beurt is. En 518 kHz komt pas 's nachts tot leven — een stille dagband is geen kapotte decoder.
 
-navtex-sensitivity-hint =
-    Gevoeligheid — hoe snel de decoder een signaal vastpakt en vasthoudt.
-    
-    Auto gebruikt de referentiedrempels (0), het gedrag zoals geleverd.
-    
-    + accepteert een zwakker of ruiziger signaal; − wacht op een schoner signaal voordat sync wordt gemeld, wat voorkomt dat ruis als tekens wordt gelezen.
-    
-    Geen volume: NAVTEX is FSK, dus de grijstinten komen van de tonen, niet van de signaalsterkte.
 
-
-navtex-auto-hint = Keert terug naar de referentiedrempels (0). Gemarkeerd zolang actief.
-
-navtex-tune-dial-usb-below-channel = Stem de dial hier af (USB, 1.710 kHz onder het kanaal).
+navtex-tune-dial-usb-below-channel = Stem de dial hier af (USB, 1.700 kHz onder het kanaal).
 
 settings-audio-your-audio = Jouw audio
 
@@ -7662,7 +7637,6 @@ net-wavelog-no-station-location = geen stationslocatie om van te downloaden — 
 
 publicsdr-could-not-connect = kon niet verbinden in deze sessie
 
-publicsdr-use-chip = GEBRUIK
 
 weather-title = WEERRAPPORTEN
 
@@ -9070,7 +9044,6 @@ publicsdr-mine = MIJN
 
 publicsdr-mine-hint = Alleen de ontvangers die je hebt gemarkeerd
 
-publicsdr-mine-empty = Nog niets gemarkeerd — het ☆ op een rij bewaart die ontvanger hier.
 
 publicsdr-star-receiver = Deze ontvanger in MIJN bewaren
 
@@ -9210,7 +9183,504 @@ sonde-col-pressure = Druk
 settings-net-broadcast-import-needs-station = Verbind met een station om te importeren.
 
 
+sonde-online-why-signin = Het station vraagt eerst om aanmelden.
 
+sonde-online-why-busy = Het station vraagt SondeHub al zo vaak als is toegestaan. Probeer het over een minuut opnieuw.
+
+sonde-online-why-upstream = Het station kon SondeHub niet bereiken.
+
+sonde-online-why-unreadable = Het antwoord was geen lijst met sondes.
+
+sonde-online-why-no-station = Geen station om te vragen, en deze pagina kan SondeHub zelf niet bereiken.
+
+sonde-online-why-http = Antwoord: HTTP { $n }.
+settings-general-band-plan = Bandplan
+
+settings-general-band-plan-built-in = Ingebouwd (IARU)
+
+
+
+
+sonde-card-source = Bron
+
+sonde-card-source-radio = Deze radio
+
+sonde-card-source-hub = SondeHub (door een ander station gehoord)
+
+sonde-card-model = Model
+
+sonde-card-maker = Fabrikant
+
+sonde-card-variant = Variant
+
+sonde-card-position = Positie
+
+sonde-card-from-you = Vanaf u
+
+sonde-card-heading = Koers
+
+sonde-card-satellites = Satellieten
+
+sonde-card-snr = Signaal-ruisverhouding
+
+sonde-card-station = Gehoord door
+
+sonde-card-station-position = Positie van het station
+
+sonde-card-antenna = Antenne
+
+sonde-card-software = Software
+
+sonde-card-frames = Ontvangen frames
+
+sonde-card-open = Openen op { $site }
+
+sonde-card-close = Sluiten
+
+aircraft-mode-vor-hover = Lees het VOR-baken waarop de radio is afgestemd: radiaal en Morse-roepletters
+
+vor-audio-front = Deze ontvanger levert gedemoduleerde audio; de VOR-uitlezing heeft de ruwe I/Q-stroom nodig.
+
+vor-outside-window = Het afgestemde kanaal ligt buiten de bandbreedte die de ontvanger levert. Centreer de ontvanger erop.
+
+vor-not-in-band = Stem af op een VOR-baken (108,00–117,95 MHz) om de radiaal te lezen.
+
+vor-locked = VERGRENDELD
+
+vor-no-lock = GEEN LOCK
+
+vor-no-lock-hover = Het variabele 30 Hz-signaal of de 9960 Hz-referentie ontbreekt of is te zwak. Een ILS-localizer op deze band vergrendelt nooit.
+
+vor-ident-heard = Roepletters gehoord: { $ident }
+
+vor-ident-waiting = Luisteren naar de roepletters (ongeveer elke 10 s)…
+
+vor-charted = Op de kaart: { $ident } — { $name }
+
+vor-var-depth = 30 Hz AM: { $pct } % van de draaggolf
+
+vor-ref-depth = 9960 Hz FM: { $pct } % van de draaggolf, zwaai ±{ $dev } Hz
+
+vor-caveat = De radiaal is de peiling van de ontvanger vanaf het baken, in het magnetisch noorden van het baken zelf. Niet om mee te navigeren.
+
+vor-nearby = VOR's het dichtst bij uw station
+
+vor-no-grid = Vul uw locator in bij de instellingen voor digitale modi om de dichtstbijzijnde VOR's te tonen.
+
+vor-tune-hover = Dit VOR afstemmen in AM
+
+tx-bands-power-hint = Het maximale vermogen op deze band met Drive op het maximum, in watt. Laat op — staan als u het niet weet.
+
+tx-bands-power-note = Optioneel. Een radio zonder vermogensmeter gebruikt deze waarden om het zendvermogen in watt op de S-meter te tonen; zonder toont hij de Drive-instelling in procenten.
+
+band-plan-title = Bandplan van deze radio
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = Zet RX alleen op JA voor de banden waarop deze radio moet luisteren. De radio stemt nooit af op een band met NEE en helemaal niet zolang de RX-lijst niet is bevestigd. TX en RX staan los van elkaar: een band kan TX NEE en RX JA zijn.
+
+rx-bands-title = Ontvangstbanden
+
+rx-bands-check-again = RX CONTROLEREN
+
+rx-bands-check-again-hint = Trekt de bevestiging in om de ontvangstlijst opnieuw te controleren. Een band wijzigen doet dit al vanzelf.
+
+rx-bands-confirmed = ✓ Ontvangstbanden bevestigd voor deze radio
+
+rx-bands-ack = Ik heb deze ontvangstbanden met mijn radio vergeleken
+
+rx-bands-confirm = Deze ontvangstbanden bevestigen
+
+rx-bands-confirm-hint = Vink eerst het vakje aan: u bevestigt één keer per radio.
+
+rx-bands-notice = Lijst met ontvangstbanden niet bevestigd: de radio stemt niet af totdat u de ontvangstbanden één keer hebt gecontroleerd en bevestigd.
+
+rx-bands-out-of-range = Het opgegeven bereik van deze radio haalt deze band niet.
+
+rx-bands-band-off = Ontvangst staat uit op deze band in het bandplan van deze radio (Instellingen), of de ontvangstlijst is nog niet bevestigd.
+
+settings-general-re-read-band-plan-file = Leest het bestand van het gekozen plan opnieuw op de machine waar de radio aan hangt en past het toe — bandgrenzen, subsegmenten en skimmervensters — zonder opnieuw te starten.
+
+settings-general-running-band-plan = Actief bandplan: “{ $name }”.
+
+settings-general-band-plan-choose-hint = Kies een bandplan uit de bibliotheek van het station. De ingebouwde IARU-tabellen zijn de standaard. Een ander plan betekent dat de TX- en RX-bandlijsten opnieuw gecontroleerd en bevestigd moeten worden.
+
+settings-general-band-plan-import = BANDPLAN IMPORTEREN
+
+settings-general-band-plan-import-hint = Voegt een bandplanbestand toe aan de bibliotheek van het station. Een eenvoudige lijst van banden (naam, type, begin en einde in hertz) wordt eerst omgezet. Het wordt gecontroleerd en alleen toegevoegd — kies het in de lijst om het te gebruiken.
+
+settings-general-band-plan-reset = TERUG NAAR INGEBOUWD IARU
+
+settings-general-band-plan-reset-hint = Gebruikt weer de ingebouwde IARU-tabellen. De TX- en RX-bandlijsten moeten dan opnieuw gecontroleerd en bevestigd worden.
+
+settings-general-band-plan-folder = De plannen zijn de bestanden in { $path } op de machine waar de radio aan hangt; je kunt er toevoegen en verwijderen. Beperk een band tot je vergunning en sdroxide weigert daarbuiten te zenden. Frequenties in MHz. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen strenger zijn, en nationale plannen verschillen binnen een regio.
+
+settings-general-band-plan-station-folder = De plannen worden bewaard op de machine waar de radio aan hangt. Beperk een band tot je vergunning en sdroxide weigert daarbuiten te zenden. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen strenger zijn, en nationale plannen verschillen binnen een regio.
+
+settings-general-band-plan-manager = Bandplanbeheer
+
+settings-general-band-plan-run = GEBRUIKEN
+
+settings-general-band-plan-run-hint = Dit plan gebruiken. De TX- en RX-bandlijsten moeten opnieuw gecontroleerd en bevestigd worden.
+
+settings-general-band-plan-download = DOWNLOADEN
+
+settings-general-band-plan-download-hint = Het bestand van dit plan op deze computer opslaan.
+
+settings-general-band-plan-delete = VERWIJDEREN
+
+settings-general-band-plan-delete-confirm = KLIK NOGMAALS OM TE VERWIJDEREN
+
+settings-general-band-plan-delete-hint = Verwijdert dit plan uit de bibliotheek van het station. Het actieve plan kan niet verwijderd worden.
+
+settings-general-band-plan-running-tag = ACTIEF
+
+settings-general-band-plan-shipped-tag = meegeleverd
+
+settings-general-band-plan-save-current = HUIDIG PLAN OPSLAAN ALS
+
+settings-general-band-plan-save-current-hint = Bewaart het actieve plan onder deze naam in de bibliotheek. Een plan met dezelfde naam wordt vervangen en het oude bestand blijft eenmalig als .bak bewaard.
+
+settings-general-band-plan-name-hint = naam
+
+settings-general-band-plan-restore = MEEGELEVERDE PLANNEN HERSTELLEN
+
+settings-general-band-plan-restore-hint = Zet de met het programma meegeleverde plannen terug, verwijderd of bewerkt. Een bewerkt plan wordt vervangen en eenmalig als .bak bewaard.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = Geen plannen in de bibliotheek.
+
+settings-general-band-plan-radio = Deze radio
+
+settings-general-band-plan-radio-follow = Volgt het station
+
+settings-general-band-plan-radio-hint = Een plan alleen op deze radio gebruiken. Het plan van het station en de andere radio's blijven ongemoeid. De TX- en RX-bandlijsten van deze radio moeten opnieuw gecontroleerd en bevestigd worden.
+
+settings-general-band-plan-run-radio = ALLEEN DEZE RADIO
+
+settings-general-band-plan-radio-tag = deze radio
+
+meter-view-auto = Auto
+
+meter-view-rx = Signaal (RX)
+
+meter-view-power = Vermogen
+
+meter-view-swr = SWR
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = Vorige meting: { $view }
+
+smeter-arrow-next-hover = Volgende meting: { $view }
+
+smeter-arrow-prev-face = Vorige meter
+
+smeter-arrow-next-face = Volgende meter
+
+sonde-card-source-both = Radio + SondeHub (beide horen haar)
+
+sonde-card-stale = Status
+
+sonde-card-stale-value = Niet meer in de lijst: laatst bekende positie
+
+sonde-card-detach = Losmaken
+
+sonde-card-attach = Vastmaken
+tx-bands-outside-note = Buiten de hier genoemde banden kan niet worden gezonden. Ontvangst buiten de banden (ADS-B, DAB, AIS...) heeft geen rij nodig.
+
+tx-off-cb = ZENDEN VERBODEN op 11 m (CB) — de band staat in uw zendlijst, maar "Zenden op 11 m (CB) toestaan" staat uit. Zet het aan bij Instellingen → Algemeen.
+
+settings-cb-allow-tx-needs-band = Zet eerst 11M-CB op JA in de TX-bandlijst van deze radio (Instellingen → Radio) en sta het daarna hier toe.
+
+settings-cb-allow-tx-order-note = Twee sloten, in deze volgorde: 1) 11M-CB staat op JA in de TX-bandlijst van de radio, bevestigd; 2) dit vakje. Beide zijn nodig om op 11 m te zenden. 11M-CB uit de lijst halen zet dit vakje ook uit.
+
+settings-ui-publicsdr-under-waterfall = Vastgezet onder de waterval
+
+settings-ui-publicsdr-place-hint = Waar Public SDRs opent: vastgezet onder de waterval in spraakmodi die daar niets hebben, of in een venster. Digitale modi, CW en telefoons gebruiken sowieso een venster.
+
+publicsdr-dock-hint = Zet deze lijst vast onder de waterval (spraakmodi zonder paneel daar)
+
+publicsdr-undock-hint = Zet deze lijst terug in een eigen venster
+
+publicsdr-close-hint = Public SDRs sluiten
+
+settings-net-hfcc-file-hint = Neem de HFCC-zenderlijst uit een pakket dat u zelf hebt opgeslagen: de zip die HFCC publiceert (bijvoorbeeld b26allx2.zip), met de zenderlijst en de twee tabellen.
+
+schedule-import = Import…
+wxsat-title = WEERSATELLIETEN
+
+extras-wxsat-hint = WEERSATELLIETEN — het beeld dat een NOAA- (APT) of Meteor-satelliet (LRPT) op 137 MHz uitzendt, getekend terwijl het binnenkomt, in een losmaakbaar venster
+
+wxsat-decode = Decoderen
+
+wxsat-channel = Satelliet
+
+wxsat-tune = Hier afstemmen
+
+wxsat-tune-hint = Zet de decoder aan en brengt de frequentie naar dit kanaal, zodat het signaal binnen het samplevenster valt.
+
+wxsat-clear = Wissen
+
+wxsat-save = Opslaan als PNG
+
+wxsat-flip = Omdraaien
+
+wxsat-flip-hint = Draait het beeld om: een satelliet die naar het zuiden vliegt wordt ondersteboven getekend.
+
+wxsat-state-off = Decoder uit
+
+wxsat-level = Niveau { $db } dBFS
+
+wxsat-locked = Lijnsync vergrendeld
+
+wxsat-searching = Zoeken naar de lijnsync
+
+wxsat-lines = { $n } lijnen
+
+wxsat-outside-window = Het kanaal ligt buiten het samplevenster, of te dicht bij de rand voor het hele signaal. Gebruik Hier afstemmen, of een breder venster.
+
+wxsat-waiting = Nog geen beeld. Zet de decoder aan zodra een satelliet boven de horizon staat; een overkomst duurt ongeveer tien minuten.
+
+wxsat-signal = Signaal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Kanaal { $n }
+
+wxsat-rows = { $n } rijen
+
+wxsat-frame-locked = Framesync vergrendeld
+
+wxsat-frames = { $n } goede frames
+
+wxsat-waiting-lrpt = Nog geen beeld. Meteor LRPT is digitaal: het beeld begint een paar seconden nadat de satelliet is gehoord, rij voor rij, en elk kanaal is een apart beeld.
+
+wxsat-searching-frame = Zoeken naar de framesync
+
+qrzcard-loading = QRZ wordt geraadpleegd…
+
+qrzcard-not-found = Niet gevonden op QRZ.
+
+qrzcard-years = { $n } jaar
+
+qrzcard-class = Klasse: { $class }
+
+qrzcard-qsl-paper = papier
+
+qrzcard-qsl-via = via { $mgr }
+
+qrzcard-switch = QRZ-kaart tonen als de aanwijzer op een roepletter rust
+
+qrzcard-switch-hint = Foto, naam, leeftijd, adres, locator en QSL van QRZ.com, in de waterval, de decoders en de spotlijsten. Foto, e-mail en geboortedatum vereisen een QRZ XML-abonnement.
+
+qrzcard-needs-login = Kies QRZ als aanbieder en vul je QRZ-gebruikersnaam en wachtwoord in om de kaart te activeren.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Ontvangen
+
+meshtastic-region = Regio
+
+meshtastic-preset = Voorinstelling
+
+meshtastic-channel = Kanaal
+
+meshtastic-tune = Hier luisteren
+
+meshtastic-tune-hint = Schakelt de ontvanger in en brengt de radio naar dit kanaal. De lijst met ontvangstbanden in het Radio-menu bepaalt of de radio hier mag luisteren. Bij uitschakelen of afsluiten keert de radio terug naar waar hij was.
+
+meshtastic-keys = Sleutels
+
+meshtastic-keys-hint = Naam=sleutel, door komma's gescheiden (hex:…, base64:…, simple1..10). De standaardsleutel wordt altijd geprobeerd.
+
+meshtastic-state-off = Ontvanger uit.
+
+meshtastic-level = Niveau { $db } dBFS
+
+meshtastic-counts = { $pre } preambules · { $ok } frames · { $bad } foute CRC
+
+meshtastic-refused-band = ONTVANGST VERBODEN — { $freq } MHz ({ $band }) is geen gevalideerde ontvangstband. Vink aan en valideer in het Radio-menu, ontvangstbanden.
+
+meshtastic-refused-unconfirmed = ONTVANGST VERBODEN — de ontvangstbanden van deze radio zijn nog niet gevalideerd. Controleer en bevestig ze in het Radio-menu, ontvangstbanden.
+
+meshtastic-out-of-window = Het kanaal ligt buiten het samplevenster van de radio: stem dichterbij af of gebruik een hogere samplefrequentie.
+
+meshtastic-none-yet = Nog niets gehoord.
+
+meshtastic-nodes = Knooppunten ({ $n })
+
+meshtastic-log = Pakketten ({ $n })
+
+meshtastic-col-id = Knooppunt
+
+meshtastic-col-name = Naam
+
+meshtastic-col-heard = Gehoord
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Hops
+
+meshtastic-col-position = Positie
+
+meshtastic-col-battery = Accu
+
+meshtastic-encrypted = versleuteld (geen sleutel)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Opent het Meshtastic-venster: het LoRa-meshverkeer van één kanaal.
+
+extras-meshtastic-hint = Meshtastic: het LoRa-meshverkeer van één kanaal, de gehoorde knooppunten en de pakketten.
+
+meshtastic-message = Bericht
+
+meshtastic-message-hint = Tekst voor iedereen op het kanaal (maximaal 200 bytes)
+
+meshtastic-send = Verzenden…
+
+meshtastic-send-hint = Zendt deze tekst uit op het kanaal, na uw bevestiging. De lijst met zendbanden in Instellingen, Radio bepaalt of de radio hier mag zenden; de radio moet op het kanaal staan (Hier luisteren).
+
+meshtastic-confirm = Nu uitzenden op { $freq } MHz ({ $air } s zendtijd)? Iedereen binnen bereik hoort het, en u staat ervoor in volgens uw vergunning en de regels van deze band.
+
+meshtastic-confirm-yes = Zenden
+
+meshtastic-confirm-no = Annuleren
+
+meshtastic-transmitting = ZENDT…
+
+meshtastic-tx-airtime = Zendtijd dit uur: { $used } s van { $budget } s
+
+meshtastic-tx-airtime-free = Zendtijd dit uur: { $used } s (geen limiet ingesteld voor deze regio)
+
+meshtastic-tx-sent = { $n } verzonden
+
+meshtastic-tx-band-off = ZENDEN VERBODEN — { $freq } MHz ({ $band }) is geen gevalideerde zendband. Vink aan en valideer in Instellingen → Radio → Zendbanden.
+
+meshtastic-tx-unconfirmed = ZENDEN VERBODEN — de zendbanden van deze radio zijn nog niet gevalideerd. Controleer en bevestig ze in Instellingen → Radio → Zendbanden.
+
+meshtastic-tx-duty = Dutycycle voor deze regio bereikt: wacht { $s } s voor het volgende bericht.
+
+meshtastic-tx-too-long = Dit bericht alleen al is langer dan het hele zendtijdbudget van een uur voor deze regio.
+
+meshtastic-tx-off-channel = De radio staat niet op het kanaal: druk eerst op Hier luisteren, zodat de afstemming erop staat.
+
+meshtastic-tx-no-transmitter = Deze radio kan geen ruwe I/Q zenden (een rig die audio neemt, of een ontvanger zonder zender).
+
+meshtastic-tx-bad-text = De tekst is leeg of te lang (maximaal 200 bytes).
+
+meshtastic-tx-busy = Er is al een uitzending bezig.
+
+meshtastic-tx-rails = De zender weigerde te zenden: zie de zendmelding voor de reden.
+rx-bands-swl-note = De SWL-modus staat aan voor deze radio: er is geen ontvangstvergrendeling. Alle banden kunnen worden afgestemd.
+
+rx-bands-always-open = Luisterbanden (en de SWL-modus) staan altijd open voor ontvangst.
+
+sat-tune-link-both-vfos = Zet de afstemming, de andere VFO en de modus op deze verbinding — de downlink op deze VFO, de uplink op de andere; een vergrendeling op deze satelliet volgt mee
+
+sat-move-lock = {" "}VERPLAATS SLOT{" "}
+
+sat-locked-other-link-move-lock = Op deze satelliet vergrendeld via een andere verbinding: verplaats het slot naar deze — met uplink, toon en Doppler
+
+sat-rig-rx = RX ZENDER
+
+sat-rig-tx = TX ZENDER
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Vergrendeld op een satelliet: VFO A is de downlink en VFO B de uplink tot het slot eindigt
+
+qrzcard-photo-loading = Foto laden…
+
+qrzcard-no-photo = Kaart zonder foto
+
+sonde-card-listen-hover = Klik om de radio op dit kanaal af te stemmen: de afstemknop gaat erheen en de decoder luistert alleen daar.
+
+sonde-card-decoding = Gedecodeerd door deze radio
+
+sonde-card-waiting = Luistert op dit kanaal, nog niets gedecodeerd
+
+sonde-card-click-to-listen = Klik op de frequentie om te luisteren
+
+sonde-type-all = Alle typen
+
+sonde-type-hover = Zoek één type sonde: een keuze start de scan, die het venster over de band verschuift tot dat type te horen is. Alleen dat type wordt getoond en getekend.
+
+meshtastic-preset-auto = Auto
+
+meshtastic-preset-auto-hint = Luistert naar alle voorinstellingen tegelijk (van ShortTurbo tot LongSlow). Niets te kiezen als je niet weet welke het netwerk gebruikt.
+
+meshtastic-freq-hint = Kanaalfrequentie, tot op de kilohertz. Voor een netwerk dat de slots van de regio niet gebruikt. Wordt toegepast als je loslaat.
+
+meshtastic-close-hint = Sluit het Meshtastic-paneel. De ontvanger blijft werken tot je hem uitzet.
+
+meshtastic-float-hint = Haal het paneel los in een zwevend venster boven de waterval.
+
+meshtastic-dock-hint = Zet het paneel weer vast onder de waterval.
+
+meshtastic-tune-mode-hint = De radio gaat ook naar brede FM, zodat de luidspreker en de recorder het kanaalsignaal krijgen; bij het verlaten komt de modus terug.
+
+wefax-revert-auto-slant = Scheefstand herstellen
+
+wefax-revert-auto-slant-hint = Maakt de automatische scheefstandcorrectie van deze kaart ongedaan: de klokcorrectie gaat terug naar de hier ingestelde waarde en de automatische correctie blijft uit tot de volgende kaart. Reeds ontvangen regels veranderen niet.
+
+qrzcard-no-account = Geen QRZ.com-account ingesteld -
+
+qrzcard-account-link = bekijk de accountstatus
+
+navtex-other-frequencies = NAVTEX- EN KUSTSTATIONFREQUENTIES
+
+navtex-other-frequencies-hint = Alle frequenties van de gepubliceerde NAVTEX-lijst, per regio. Een keuze stemt de dial af voor de bovenzijband. De met CW gemarkeerde regels zijn weerberichten in morse, die deze decoder niet leest.
+
+navtex-freq-cw = CW-modus
+
+navtex-freq-international = internationaal, in het Engels
+
+navtex-freq-national = nationaal, in de landstaal
+
+publicsdr-near-kiwi = KIWI DICHTBIJ
+
+publicsdr-near-kiwi-tip = Alleen de { $n } KiwiSDR-ontvangers die het dichtst bij uw locator staan en een vrij kanaal hebben, de dichtstbijzijnde eerst. Te gebruiken als bandweergave voor een CAT-radio.
+
+publicsdr-near-kiwi-no-grid = KIWI DICHTBIJ heeft uw locator nodig: vul die in bij de stationsinstellingen om ontvangers op afstand te rangschikken.
+
+sstv-add-clock = ＋ Datum/tijd
+
+sstv-add-clock-hint = Een regel toevoegen die de datum en tijd van verzenden afdrukt — in UTC of in uw eigen tijd
+
+sstv-clock-date-time = Datum en tijd
+
+sstv-clock-time = Tijd
+
+sstv-clock-date = Datum
+
+sstv-clock-freeze-hint = Maakt van deze regel gewone tekst, vastgezet op de getoonde tijd
+
+sstv-clock-hint = Drukt de datum en tijd af van het moment waarop de foto wordt verzonden — niet die van het maken.
+
+sstv-clock-local = Lokale tijd
+
+sstv-clock-local-hint = De lokale tijd van het station afdrukken in plaats van UTC — zomertijd inbegrepen
+
+test-tci-connect-refused = verbinding met { $address }: { $detail } — niets biedt TCI aan op die poort. TCI komt van het SDR-programma — ExpertSDR3, Thetis — en niet van de radio zelf; het moet draaien met TCI ingeschakeld in de instellingen. Bij een zelfstandig toestel zoals een MB1 is dat de kopie die in de radio draait
+
+test-tci-connect-timed-out = verbinding met { $address }: { $detail } — geen antwoord op dat adres. Controleer de host en of een firewall niet in de weg zit. Als het SDR-programma dat TCI aanbiedt (ExpertSDR3, Thetis) niet draait met TCI ingeschakeld, kan een gesloten poort er onder Windows zo uitzien
+
+test-connect-failed = verbinding met { $address }: { $detail }
+
+settings-ui-graphics = Grafisch stuurprogramma
+
+settings-ui-graphics-auto = Automatisch
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Werkt vanaf de volgende start. Automatisch gebruikt DirectX 12, en OpenGL bij oude AMD-stuurprogramma's die de waterval als vlakke horizontale banden tekenen. Probeer OpenGL als uw waterval alleen horizontale lijnen toont.
 
 settings-controls-desktop-mic = Tafel- of extern microfoon
 settings-controls-desktop-mic-note = PTT van een microfoon of voetschakelaar op de handshake-lijnen van een seriële (of USB-seriële) poort.
@@ -9223,7 +9693,6 @@ settings-controls-active-low = Laag
 settings-controls-debounce = Ontdendering (ms)
 serial-ptt-output-rts = RTS
 serial-ptt-output-dtr = DTR
-
 settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
 settings-controls-choose-serial-port = Choose serial port
 settings-controls-serial-port-chosen = Serial port chosen.

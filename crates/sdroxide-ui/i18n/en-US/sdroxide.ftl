@@ -461,6 +461,7 @@ settings-radio-n = radio { $n }
 settings-on-station = On { $station }
 settings-add-radio-on-station = Add a radio on { $station } — the station serves it straight away
 settings-panadapter-receiver-for = Panadapter receiver for { $radio }
+settings-panadapter-kiwi-zoom-note = With a KiwiSDR as the receiver, its waterfall opens zoomed to about 2 MHz around the dial. Change it in that radio's settings, under Band view span.
 settings-hang-up-stays-on = Hang up. The radio stays on { $station }.
 settings-close-on-station = Close { $radio } on { $station }? Its configuration stays on that machine; the tab here closes with it, and so does everyone else's.
 settings-close-it-on = Close it on { $station }
@@ -571,8 +572,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = RELOAD BAND PLAN
-settings-general-re-read-bandplan-json-machine = Re-read bandplan.json on the machine the radio is attached to and apply it — band edges, sub-segments and skimmer windows — without restarting.
-settings-general-running-station-s-own-band = Running on the station's own band plan.
 settings-general-running-built-iaru-tables = Running on the built-in IARU tables.
 settings-general-settings-file = Settings file
 settings-general-settings-are-machine-radio-attached = The settings are on the machine the radio is attached to. Export them there.
@@ -635,7 +634,6 @@ settings-net-checking = checking…
 
 settings-amp-connected-to = Connected to the { $model }
 settings-controls-last-midi = Last message: { $message }  value { $value }
-settings-general-band-plan-file = Every band edge and sub-segment comes from { $path }, written from the built-in IARU tables the first time and yours to edit after that — narrow a band to your licence and sdroxide will refuse to transmit outside it. Frequencies are in MHz; delete the file for a fresh copy of the defaults. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.
 settings-general-exported = Exported { $note } — choose where to save it.
 settings-general-export-failed = Export failed: { $error }
 settings-general-import-failed = Import failed: { $error }
@@ -658,7 +656,6 @@ settings-add-radio-here-station-you = Add a radio — here, or on a station you 
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Every band edge and sub-segment comes from bandplan.json on the machine the radio is attached to. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -3186,7 +3183,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = MODE
 sat-tune = TUNE
-sat-set-dial-mode-link-no = Set the dial and mode to this link — no lock, no correction
 sat-locked = {" "}LOCKED{" "}
 sat-lock = {" "}LOCK ON{" "}
 sat-track-satellite-doppler-correction-rx = Track this satellite: Doppler correction on RX and TX, transponder-mapped uplink, and the 3D view follows it
@@ -3509,7 +3505,6 @@ qo100-write-converter-lnb-offset-puts = Write the converter/LNB offset that puts
 qo100-write-converter-lnb-offset-puts-2 = Write the converter/LNB offset that puts the tracker's estimate onto 10489.750 MHz, and reopen the receiver — the same brief interruption Settings ▸ Radio ▸ Apply makes
 qo100-waiting-second-crc-valid-frame = Waiting for a second CRC-valid frame before offering to write this — one lock alone could be a chance match
 qo100-write-corrected-converter-lnb-offset = Write the corrected converter/LNB offset and reopen the receiver — a brief interruption, the same one Settings ▸ Radio ▸ Apply makes
-qo100-decoder-runs-receiving-station-readout = decoder runs on the receiving station — its readout is not sent to remote clients
 qo100-starting = starting…
 qo100-searching-first-window-fills-after = searching — the first window fills after about 24 s, then repeats
 
@@ -3892,21 +3887,27 @@ fsq-add = Add
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + TAB
-publicsdr-open-receiver-new-radio-own = Open this receiver as a new radio, in its own tab
-publicsdr-point-radio-receiver-replacing-whatever = Point *this* radio at the receiver, replacing whatever interface it is on now — asked again first, because that is a whole radio's worth of setting up
 publicsdr-not-stated = not stated
-publicsdr-replace = REPLACE
-publicsdr-point-radio-you-are-receiver = Point the radio you are on at this receiver
-publicsdr-tab-instead = + TAB INSTEAD
-publicsdr-open-receiver-another-radio-leave = Open the receiver as another radio and leave this one alone
-publicsdr-cancel = CANCEL
+publicsdr-add-as-radio = ADD AS RADIO
+publicsdr-add-as-radio-tip = Add as radio, named from directory
 publicsdr-public-sdrs = PUBLIC SDRS
 publicsdr-available = AVAILABLE
 publicsdr-hide-receivers-are-full-ones = Hide receivers that are full, and the ones whose operator has not opened any channels to apps other than a browser
 publicsdr-band = IN BAND
 publicsdr-only-receivers-cover-current-dial = Only receivers that cover the current dial frequency
 publicsdr-low-bw = LOW BW
+publicsdr-map-cities = CITIES
+publicsdr-map-cities-tip = Cities on this map, on or off.
+publicsdr-view-list = LIST
+publicsdr-view-map = MAP
+publicsdr-view-map-tip = Receivers on world map; click dot to pick all under it
+publicsdr-map-pick = Click a dot to pick the receivers under it.
+publicsdr-map-names = NAMES
+publicsdr-map-names-tip = Names of all receivers; off: picked only
+publicsdr-check-online = ONLINE
+publicsdr-check-silent = SILENT
+publicsdr-check-waiting = CHECKING…
+publicsdr-check-no-answer = No answer within 20 seconds.
 publicsdr-take-spyserver-low-bandwidth-shape = Take a SpyServer in its low-bandwidth shape: a narrow I/Q window that follows the dial plus the server's own band view, instead of megabits of wideband I/Q. No effect on a KiwiSDR, which has only the one shape.
 publicsdr-refresh = ⟳ REFRESH
 publicsdr-fetch-both-directories-again = Fetch both directories again
@@ -3916,9 +3917,6 @@ publicsdr-fetching-receiver-lists = Fetching the receiver lists…
 publicsdr-machine-radio-attached-does-not = The machine this radio is attached to does not answer device questions, so it cannot fetch the lists either.
 publicsdr-no-match = no match
 publicsdr-nothing-matches-try-turning-filter = nothing matches — try turning a filter chip back on
-publicsdr-radio = this radio
-publicsdr-radio-s-configuration-has-not = This radio's configuration has not arrived from the machine it is on yet, so there is nothing to point at the receiver — take it with + TAB instead.
-publicsdr-position-not-published-so-nothing = {" "}Its position is not published, so nothing it hears will be reported.
 
 ## hd (src/app/hd.rs)
 
@@ -4725,14 +4723,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } receivers · { $per_net } · fetched { $age } ago
 publicsdr-showing-search-narrow = showing { $shown } of { $n } — search to narrow it
 publicsdr-match = { $n } match
-publicsdr-replace-taking-receiver-points-same =
-    Replace { $this } with { $entry }?
-
-    { $this2 } is on { $iface }. Taking this receiver points the same tab at { $address } instead, renames it “{ $entry2 }”, and holds the dial to the { $range_label } the receiver publishes — nothing here transmits.
-
-    The { $iface2 } settings stay where they are, and so do the ranges stated for them: switching the interface back in Settings → Radio brings the radio back as it was.
-publicsdr-receptions-will-reported = {" "}Receptions will be reported from { $value }.
-publicsdr-pointing-radio = Pointing this radio at { $entry }…{ $site }
+publicsdr-map-status = { $shown } on the map · { $unplaced } without a position
 publicsdr-opening-another-radio = Opening { $entry } as another radio…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5048,7 +5039,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (network)
 cat-family-flrig = flrig (network)
-publicsdr-its-interface = its interface
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Off
@@ -5374,8 +5364,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Both
 
-panels-sensitivity = Sensitivity
-
 navtex-hunting = hunting
 
 navtex-hunting-hint =
@@ -5387,12 +5375,8 @@ navtex-hunting-hint =
     
     Also remember NAVTEX is a timetable, not a conversation: a coast station sends for ten minutes every four hours, so silence is normal most of the time. You have to be listening when your station is due. And 518 kHz only comes alive at night — a quiet daytime band is not a broken decoder.
 
-navtex-sensitivity-hint =
-    Sensitivity — how readily the decoder locks onto and keeps a signal.
-    
-navtex-auto-hint = Returns to the reference thresholds (0). Highlighted while active.
 
-navtex-tune-dial-usb-below-channel = Tune the dial here (USB, 1.710 kHz below the channel).
+navtex-tune-dial-usb-below-channel = Tune the dial here (USB, 1.700 kHz below the channel).
 
 settings-audio-your-audio = Your audio
 
@@ -7657,7 +7641,6 @@ net-wavelog-no-station-location = no station location to download from — test 
 
 publicsdr-could-not-connect = could not connect this session
 
-publicsdr-use-chip = USE
 
 weather-title = WEATHER REPORTS
 
@@ -9071,7 +9054,6 @@ publicsdr-mine = MINE
 publicsdr-mine-hint = Only the receivers you starred
 
 # Shown when the MINE chip is on and no receiver is starred yet.
-publicsdr-mine-empty = Nothing starred yet — the ☆ on a row keeps that receiver here.
 
 # Hover text on the empty star in a public SDR row.
 publicsdr-star-receiver = Keep this receiver in MINE
@@ -9225,6 +9207,510 @@ sonde-col-pressure = Pressure
 settings-net-broadcast-import-needs-station = Connect to a station to import.
 
 
+sonde-online-why-signin = The station wants you signed in first.
+
+sonde-online-why-busy = The station is already asking SondeHub as often as it may. Try again in a minute.
+
+sonde-online-why-upstream = The station could not reach SondeHub.
+
+sonde-online-why-unreadable = The answer was not a list of sondes.
+
+sonde-online-why-no-station = No station to ask, and this page cannot reach SondeHub itself.
+
+sonde-online-why-http = Answer: HTTP { $n }.
+settings-general-band-plan = Band plan
+
+settings-general-band-plan-built-in = Built-in IARU
+
+
+
+
+sonde-card-source = Source
+
+sonde-card-source-radio = This radio
+
+sonde-card-source-hub = SondeHub (heard by another station)
+
+sonde-card-model = Model
+
+sonde-card-maker = Maker
+
+sonde-card-variant = Variant
+
+sonde-card-position = Position
+
+sonde-card-from-you = From you
+
+sonde-card-heading = Heading
+
+sonde-card-satellites = Satellites
+
+sonde-card-snr = Signal-to-noise
+
+sonde-card-station = Heard by
+
+sonde-card-station-position = Station position
+
+sonde-card-antenna = Antenna
+
+sonde-card-software = Software
+
+sonde-card-frames = Frames heard
+
+sonde-card-open = Open on { $site }
+
+sonde-card-close = Close
+
+aircraft-mode-vor-hover = Read the VOR beacon the radio is tuned to: its radial and its Morse ident
+
+vor-audio-front = This receiver hands over demodulated audio; the VOR read-out needs the raw I/Q stream.
+
+vor-outside-window = The tuned channel is outside the span the receiver delivers. Centre the receiver on it.
+
+vor-not-in-band = Tune a VOR beacon (108.00–117.95 MHz) to read its radial.
+
+vor-locked = LOCKED
+
+vor-no-lock = NO LOCK
+
+vor-no-lock-hover = The 30 Hz variable signal or the 9960 Hz reference is missing or too weak. An ILS localiser on this band never locks.
+
+vor-ident-heard = Ident heard: { $ident }
+
+vor-ident-waiting = Listening for the ident (sent every 10 s or so)…
+
+vor-charted = Charted: { $ident } — { $name }
+
+vor-var-depth = 30 Hz AM: { $pct } % of the carrier
+
+vor-ref-depth = 9960 Hz FM: { $pct } % of the carrier, ±{ $dev } Hz deviation
+
+vor-caveat = The radial is the bearing of the receiver from the beacon, in the beacon's own magnetic north. Not for navigation.
+
+vor-nearby = VORs nearest your station
+
+vor-no-grid = Enter your grid locator in the digital-mode settings to list the nearest VORs.
+
+vor-tune-hover = Tune this VOR in AM
+
+tx-bands-power-hint = The most power this band makes with Drive at its top, in watts. Leave at — if you do not know.
+
+tx-bands-power-note = Optional. A radio with no power meter uses these figures to show its transmit power in watts on the S-meter; with none, it shows the Drive setting as a percentage.
+
+band-plan-title = Band plan of this radio
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = Switch RX to YES only on the bands this radio should listen on. The radio never tunes to a band that is NO, and never tunes at all until the RX list is confirmed. TX and RX are separate: a band can be TX NO and RX YES.
+
+rx-bands-title = Receive bands
+
+rx-bands-check-again = CHECK RX AGAIN
+
+rx-bands-check-again-hint = Withdraw the confirmation and check the receive list again. Changing any band does this by itself.
+
+rx-bands-confirmed = ✓ Receive bands confirmed for this radio
+
+rx-bands-ack = I have checked these receive bands against my radio
+
+rx-bands-confirm = Confirm these receive bands
+
+rx-bands-confirm-hint = Tick the box first: you confirm once for each radio.
+
+rx-bands-notice = Receive band list not confirmed: the radio will not tune until you check and confirm the receive bands once.
+
+rx-bands-out-of-range = This radio's published range does not reach this band.
+
+rx-bands-band-off = Receive is off on this band in this radio's band plan (Settings), or the receive list is not confirmed yet.
+
+settings-general-re-read-band-plan-file = Read the chosen plan's file again on the machine the radio is attached to and apply it — band edges, sub-segments and skimmer windows — without restarting.
+
+settings-general-running-band-plan = Running on the band plan “{ $name }”.
+
+settings-general-band-plan-choose-hint = Choose a band plan from the station's library. The built-in IARU tables are the default. Running a different plan means the TX and RX band lists have to be checked and confirmed again.
+
+settings-general-band-plan-import = IMPORT BAND PLAN
+
+settings-general-band-plan-import-hint = Add a band plan file to the station's library. A plain list of bands (name, type, start and end in hertz) is converted first. It is checked and only added — choose it in the list to run it.
+
+settings-general-band-plan-reset = BACK TO BUILT-IN IARU
+
+settings-general-band-plan-reset-hint = Run the built-in IARU tables again. The TX and RX band lists then have to be checked and confirmed again.
+
+settings-general-band-plan-folder = The plans are the files in { $path } on the machine the radio is attached to, yours to add to and delete from. Narrow a band to your licence and sdroxide will refuse to transmit outside it. Frequencies are in MHz. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.
+
+settings-general-band-plan-station-folder = The plans are kept on the machine the radio is attached to. Narrow a band to your licence and sdroxide will refuse to transmit outside it. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.
+
+settings-general-band-plan-manager = Band plan manager
+
+settings-general-band-plan-run = RUN
+
+settings-general-band-plan-run-hint = Run this plan. The TX and RX band lists have to be checked and confirmed again.
+
+settings-general-band-plan-download = DOWNLOAD
+
+settings-general-band-plan-download-hint = Save this plan's file on this computer.
+
+settings-general-band-plan-delete = DELETE
+
+settings-general-band-plan-delete-confirm = CLICK AGAIN TO DELETE
+
+settings-general-band-plan-delete-hint = Delete this plan from the station's library. The plan that is running cannot be deleted.
+
+settings-general-band-plan-running-tag = RUNNING
+
+settings-general-band-plan-shipped-tag = shipped
+
+settings-general-band-plan-save-current = SAVE CURRENT PLAN AS
+
+settings-general-band-plan-save-current-hint = Keep the plan running now in the library under this name. A plan with the same name is replaced and its old file kept once as .bak.
+
+settings-general-band-plan-name-hint = name
+
+settings-general-band-plan-restore = RESTORE SHIPPED PLANS
+
+settings-general-band-plan-restore-hint = Put back the plans that came with the program, whether deleted or edited. An edited one is replaced and kept once as .bak.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = No plans in the library.
+
+settings-general-band-plan-radio = This radio
+
+settings-general-band-plan-radio-follow = Follows the station
+
+settings-general-band-plan-radio-hint = Run a plan on this radio only. The station's plan and the other radios are not touched. This radio's TX and RX band lists have to be checked and confirmed again.
+
+settings-general-band-plan-run-radio = THIS RADIO ONLY
+
+settings-general-band-plan-radio-tag = this radio
+
+meter-view-auto = Auto
+
+meter-view-rx = Signal (RX)
+
+meter-view-power = Power
+
+meter-view-swr = SWR
+
+meter-view-alc = ALC
+
+# $view is the name of the reading (meter-view-*). The arrows turn the readings
+# while transmitting and the face (needle, bar, trace) on receive.
+smeter-arrow-prev-hover = Previous reading: { $view }
+
+smeter-arrow-next-hover = Next reading: { $view }
+
+smeter-arrow-prev-face = Previous face
+
+smeter-arrow-next-face = Next face
+
+sonde-card-source-both = Radio + SondeHub (both hear it)
+
+sonde-card-stale = Status
+
+sonde-card-stale-value = Gone from the list: last known position
+
+sonde-card-detach = Detach
+
+sonde-card-attach = Attach
+tx-bands-outside-note = Outside the bands listed here nothing can be transmitted. Reception outside the bands (ADS-B, DAB, AIS...) needs no row.
+
+tx-off-cb = TRANSMIT FORBIDDEN on 11 m (CB) — the band is in your transmit list, but "Allow transmit on 11 m (CB)" is off. Tick it in Settings → General.
+
+settings-cb-allow-tx-needs-band = First set 11M-CB to YES in this radio's TX band list (Settings → Radio), then allow it here.
+
+settings-cb-allow-tx-order-note = Two locks, in this order: 1) 11M-CB is YES in the TX band list of the radio, confirmed; 2) this box. Both are needed to transmit on 11 m. Taking 11M-CB off the list also clears this box.
+
+settings-ui-publicsdr-under-waterfall = Docked under the waterfall
+
+settings-ui-publicsdr-place-hint = Where Public SDRs opens: docked under the waterfall in the voice modes that have nothing there, or in a window. Digital modes, CW and phones use a window anyway.
+
+publicsdr-dock-hint = Dock this list under the waterfall (voice modes with nothing there)
+
+publicsdr-undock-hint = Put this list back in a window of its own
+
+publicsdr-close-hint = Close Public SDRs
+
+settings-net-hfcc-file-hint = Take the HFCC schedule from a package you saved yourself: the zip HFCC publishes (for example b26allx2.zip), with its schedule and its two tables.
+
+schedule-import = Import…
+wxsat-title = WEATHER SATELLITES
+
+extras-wxsat-hint = WEATHER SATELLITES — the picture a NOAA (APT) or Meteor (LRPT) satellite sends on 137 MHz, drawn as it comes in, in a window you can detach
+
+wxsat-decode = Decode
+
+wxsat-channel = Satellite
+
+wxsat-tune = Tune here
+
+wxsat-tune-hint = Switch the decoder on and bring the dial to this channel, so that the signal is inside the sample window.
+
+wxsat-clear = Clear
+
+wxsat-save = Save PNG
+
+wxsat-flip = Flip
+
+wxsat-flip-hint = Turn the picture over: a satellite flying south is drawn upside down.
+
+wxsat-state-off = Decoder off
+
+wxsat-level = Level { $db } dBFS
+
+wxsat-locked = Line sync locked
+
+wxsat-searching = Looking for the line sync
+
+wxsat-lines = { $n } lines
+
+wxsat-outside-window = The channel is outside the sample window, or too close to its edge for the whole signal. Use Tune here, or a wider window.
+
+wxsat-waiting = No picture yet. Switch the decoder on when a satellite is above the horizon; a pass lasts about ten minutes.
+
+wxsat-signal = Signal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Channel { $n }
+
+wxsat-rows = { $n } rows
+
+wxsat-frame-locked = Frame sync locked
+
+wxsat-frames = { $n } good frames
+
+wxsat-waiting-lrpt = No picture yet. Meteor LRPT is digital: the picture starts a few seconds after the satellite is heard, row by row, and each channel is a separate picture.
+
+wxsat-searching-frame = Looking for the frame sync
+
+qrzcard-loading = Searching QRZ.com…
+
+qrzcard-not-found = Not found on QRZ.
+
+qrzcard-years = { $n } years old
+
+qrzcard-class = Class: { $class }
+
+qrzcard-qsl-paper = paper
+
+qrzcard-qsl-via = via { $mgr }
+
+qrzcard-switch = Show the QRZ card when the pointer rests on a callsign
+
+qrzcard-switch-hint = Photo, name, age, address, locator and QSL from QRZ.com, in the waterfall, the decoders and the spot lists. The photo, e-mail and date of birth need a QRZ XML subscription.
+
+qrzcard-needs-login = Choose QRZ as the provider and enter your QRZ username and password to enable the card.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Receive
+
+meshtastic-region = Region
+
+meshtastic-preset = Preset
+
+meshtastic-channel = Channel
+
+meshtastic-tune = Listen here
+
+meshtastic-tune-hint = Switch the receiver on and bring the radio to this channel. The receive band list in the Radio menu decides whether the radio may listen here. When you switch off, or quit, the radio returns to where it was.
+
+meshtastic-keys = Keys
+
+meshtastic-keys-hint = Name=key, comma separated (hex:…, base64:…, simple1..10). The default key is always tried.
+
+meshtastic-state-off = Receiver off.
+
+meshtastic-level = Level { $db } dBFS
+
+meshtastic-counts = { $pre } preambles · { $ok } frames · { $bad } bad CRC
+
+meshtastic-refused-band = RECEIVE FORBIDDEN — { $freq } MHz ({ $band }) is not a validated receive band. Tick and validate it in the Radio menu, receive bands.
+
+meshtastic-refused-unconfirmed = RECEIVE FORBIDDEN — the receive bands of this radio are not validated yet. Check them and confirm in the Radio menu, receive bands.
+
+meshtastic-out-of-window = The channel is outside the sample window the radio captures: tune nearer or use a wider sample rate.
+
+meshtastic-none-yet = Nothing heard yet.
+
+meshtastic-nodes = Nodes ({ $n })
+
+meshtastic-log = Packets ({ $n })
+
+meshtastic-col-id = Node
+
+meshtastic-col-name = Name
+
+meshtastic-col-heard = Heard
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Hops
+
+meshtastic-col-position = Position
+
+meshtastic-col-battery = Battery
+
+meshtastic-encrypted = encrypted (no key)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Open the Meshtastic window: the LoRa mesh traffic of one channel.
+
+extras-meshtastic-hint = Meshtastic: the LoRa mesh traffic of one channel, the nodes heard and the packets.
+
+meshtastic-message = Message
+
+meshtastic-message-hint = Text for everyone on the channel (200 bytes at most)
+
+meshtastic-send = Send…
+
+meshtastic-send-hint = Transmit this text on the channel, after you confirm. The transmit band list in Settings, Radio decides whether the radio may transmit here; the radio must be on the channel (Listen here).
+
+meshtastic-confirm = Transmit on { $freq } MHz now ({ $air } s of air time)? Everyone in range will hear it, and you answer for it under your licence and the rules of this band.
+
+meshtastic-confirm-yes = Transmit
+
+meshtastic-confirm-no = Cancel
+
+meshtastic-transmitting = TRANSMITTING…
+
+meshtastic-tx-airtime = Air time this hour: { $used } s of { $budget } s
+
+meshtastic-tx-airtime-free = Air time this hour: { $used } s (no limit set for this region)
+
+meshtastic-tx-sent = { $n } sent
+
+meshtastic-tx-band-off = TRANSMIT FORBIDDEN — { $freq } MHz ({ $band }) is not a validated transmit band. Tick and validate it in Settings → Radio → Transmit bands.
+
+meshtastic-tx-unconfirmed = TRANSMIT FORBIDDEN — the transmit bands of this radio are not validated yet. Check them and confirm in Settings → Radio → Transmit bands.
+
+meshtastic-tx-duty = Duty cycle reached for this region: wait { $s } s before the next message.
+
+meshtastic-tx-too-long = This message alone is longer than the whole hour's air-time budget for this region.
+
+meshtastic-tx-off-channel = The radio is not on the channel: press Listen here first, so the dial sits on it.
+
+meshtastic-tx-no-transmitter = This radio cannot send raw I/Q (a rig that takes audio, or a receive-only device).
+
+meshtastic-tx-bad-text = The text is empty or too long (200 bytes at most).
+
+meshtastic-tx-busy = A transmission is already in progress.
+
+meshtastic-tx-rails = The transmitter refused to key up: see the transmit message for the reason.
+rx-bands-swl-note = SWL mode is on for this radio: there is no receive lock. Every band can be tuned.
+
+rx-bands-always-open = Listening bands (and SWL mode) are always open for reception.
+
+sat-tune-link-both-vfos = Set the dial, the other VFO and the mode to this link — the downlink on this VFO, the uplink on the other; a lock on this satellite moves to it
+
+sat-move-lock = {" "}MOVE LOCK{" "}
+
+sat-locked-other-link-move-lock = Locked to this satellite on another link: move the lock to this one — its uplink, its tone and its Doppler
+
+sat-rig-rx = RIG RX
+
+sat-rig-tx = RIG TX
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Locked to a satellite: VFO A is the downlink and VFO B the uplink until the lock ends
+
+qrzcard-photo-loading = Loading photo…
+
+qrzcard-no-photo = Record without photo
+
+sonde-card-listen-hover = Click to tune the radio to this channel: the dial goes there and the decoder listens on it alone.
+
+sonde-card-decoding = Decoded by this radio
+
+sonde-card-waiting = Listening on this channel, nothing decoded yet
+
+sonde-card-click-to-listen = Click the frequency to listen
+
+sonde-type-all = All types
+
+sonde-type-hover = Look for one type of sonde: choosing one starts the scan, which moves the window across the band until that type is heard. Only that type is listed and drawn.
+
+meshtastic-preset-auto = Auto
+
+meshtastic-preset-auto-hint = Listen for every preset at once (from ShortTurbo to LongSlow). Nothing to choose when you do not know which one the network runs.
+
+meshtastic-freq-hint = Channel frequency, to the kilohertz. For a network that does not use the region's own slots. Applied when you let go.
+
+meshtastic-close-hint = Close the Meshtastic panel. The receiver keeps running until you switch it off.
+
+meshtastic-float-hint = Lift the panel out into a floating window over the waterfall.
+
+meshtastic-dock-hint = Dock the panel back under the waterfall.
+
+meshtastic-tune-mode-hint = The radio is also put in wide FM, so the loudspeaker and the recorder have the channel's signal; leaving puts the mode back.
+
+wefax-revert-auto-slant = Revert slant
+
+wefax-revert-auto-slant-hint = Undo the automatic slant correction on this chart: the clock trim goes back to the value set here and the automatic correction stays off until the next chart. Lines already received are not changed.
+
+qrzcard-no-account = No QRZ.com account registered -
+
+qrzcard-account-link = see the account status
+
+navtex-other-frequencies = NAVTEX AND COAST STATION FREQUENCIES
+
+navtex-other-frequencies-hint = Every frequency of the published NAVTEX list, by region. Picking one tunes the dial for upper sideband. The entries marked CW are Morse weather bulletins, which this decoder does not read.
+
+navtex-freq-cw = CW mode
+
+navtex-freq-international = international, in English
+
+navtex-freq-national = national, in the local language
+
+publicsdr-near-kiwi = NEAR KIWI
+
+publicsdr-near-kiwi-tip = Only the { $n } KiwiSDR receivers closest to your locator that have a free channel, nearest first. Use one as the band view of a CAT radio.
+
+publicsdr-near-kiwi-no-grid = NEAR KIWI needs your locator: set it in the station settings to rank receivers by distance.
+
+# Chip in the picture editor beside '+ Text' and '+ Strip': adds a line that prints the UTC date and time.
+sstv-add-clock = ＋ Date/time
+
+sstv-add-clock-hint = Add a line that prints the date and time the picture is sent — in UTC or in your own time
+
+sstv-clock-date-time = Date and time
+
+sstv-clock-time = Time
+
+sstv-clock-date = Date
+
+# Chip beside the clock format: turns the clock line into ordinary text showing the time it currently shows.
+sstv-clock-freeze-hint = Turn this line into ordinary text, fixed at the time it shows
+
+sstv-clock-hint = Prints the date and time of the moment the picture is sent — not the time it was made.
+
+# Checkbox beside the clock format in the picture editor: print the station's own time instead of UTC.
+sstv-clock-local = Local time
+
+sstv-clock-local-hint = Print the station's own time instead of UTC — daylight saving included
+
+test-tci-connect-refused = connect { $address }: { $detail } — nothing is serving TCI on that port. TCI comes from the SDR program — ExpertSDR3, Thetis — and not from the radio itself, so it has to be running with TCI switched on in its settings. On a standalone set such as an MB1 that is the copy running inside the radio
+
+test-tci-connect-timed-out = connect { $address }: { $detail } — no answer at that address. Check the host, and that a firewall is not in the way. If the SDR program that serves TCI (ExpertSDR3, Thetis) is not running with TCI switched on, a closed port can look like this on Windows
+
+test-connect-failed = connect { $address }: { $detail }
+
+settings-ui-graphics = Graphics driver
+
+settings-ui-graphics-auto = Automatic
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Takes effect at the next start. Automatic uses DirectX 12, and OpenGL on old AMD drivers that draw the waterfall as flat horizontal bands. Try OpenGL if your waterfall shows only horizontal lines.
+
 settings-controls-desktop-mic = Desktop or external microphone
 settings-controls-desktop-mic-note = PTT from a mic or foot switch wired to a serial (or USB-serial) port's handshake lines.
 settings-controls-output-line = Output line
@@ -9236,7 +9722,6 @@ settings-controls-active-low = Low
 settings-controls-debounce = Debounce (ms)
 serial-ptt-output-rts = RTS
 serial-ptt-output-dtr = DTR
-
 settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
 settings-controls-choose-serial-port = Choose serial port
 settings-controls-serial-port-chosen = Serial port chosen.

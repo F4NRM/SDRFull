@@ -458,6 +458,7 @@ settings-radio-n = 無線機 { $n }
 settings-on-station = { $station } 上
 settings-add-radio-on-station = { $station } に無線機を追加 — ステーションがすぐに提供します
 settings-panadapter-receiver-for = { $radio } のパナダプター受信機
+settings-panadapter-kiwi-zoom-note = 受信機にKiwiSDRを使うと、そのウォーターフォールはダイヤル周辺の約2 MHzに拡大されて開きます。変更するには、その無線機の設定の「バンド表示のスパン」で行います。
 settings-hang-up-stays-on = 切断します。無線機は { $station } に残ります。
 settings-close-on-station = { $station } 上の { $radio } を閉じますか？ その構成はそのマシンに残ります。ここのタブは閉じられ、他の人のタブも同様に閉じられます。
 settings-close-it-on = { $station } で閉じる
@@ -568,8 +569,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = バンドプランを再読み込み
-settings-general-re-read-bandplan-json-machine = 無線機が接続されているマシンの bandplan.json を読み直して適用します。バンド端、サブセグメント、スキマーの待ち受け範囲を、再起動せずに反映します。
-settings-general-running-station-s-own-band = ステーション独自のバンドプランで動作中です。
 settings-general-running-built-iaru-tables = 内蔵の IARU 表で動作中です。
 settings-general-settings-file = 設定ファイル
 settings-general-settings-are-machine-radio-attached = 設定は無線機が接続されているマシン上にあります。そこで書き出してください。
@@ -632,7 +631,6 @@ settings-net-checking = 確認中…
 
 settings-amp-connected-to = { $model } に接続されています
 settings-controls-last-midi = 最後のメッセージ: { $message }  値 { $value }
-settings-general-band-plan-file = すべてのバンド端とサブセグメントは { $path } から取得されます。初回は内蔵の IARU 表から書き出され、その後は編集できます。バンドを自分の免許の範囲に狭めると、sdroxide はその外への送信を拒否します。周波数は MHz 単位です。既定値の新しいコピーを得るには、このファイルを削除してください。これは地域の割り当てであり、あなたの免許ではありません。個々の条件はより狭い場合があり、同じ地域内でも国によって計画が異なります。
 settings-general-exported = { $note } を書き出しました。保存先を選んでください。
 settings-general-export-failed = 書き出しに失敗しました: { $error }
 settings-general-import-failed = 読み込みに失敗しました: { $error }
@@ -655,7 +653,6 @@ settings-add-radio-here-station-you = 無線機を追加 — ここ、または�
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = すべてのバンド端とサブセグメントは、無線機が接続されているマシンの bandplan.json から取得されます。これは地域の割り当てであり、あなたの免許ではありません。個々の条件はより狭い場合があり、同じ地域内でも国によって計画が異なります。
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -3162,7 +3159,6 @@ sat-downlink-mhz = ダウンリンク（MHz）
 sat-uplink-mhz = アップリンク（MHz）
 sat-mode = モード
 sat-tune = 同調
-sat-set-dial-mode-link-no = ダイヤルとモードをこのリンクに設定します。ロックも補正もしません
 sat-locked = {" "}ロック中{" "}
 sat-lock = {" "}ロック{" "}
 sat-track-satellite-doppler-correction-rx = この衛星を追跡します。RX と TX のドップラー補正、トランスポンダーにマップされたアップリンク、3D ビューもそれに従います
@@ -3485,7 +3481,6 @@ qo100-write-converter-lnb-offset-puts = クリックした場所のビーコン�
 qo100-write-converter-lnb-offset-puts-2 = トラッカーの推定値を 10489.750 MHz に置くコンバーター/LNB のオフセットを書き込み、受信機を開き直します。設定 ▸ 無線機 ▸ 適用で起きるのと同じ短い中断です
 qo100-waiting-second-crc-valid-frame = これを書き込むことを提案する前に、CRC が正しい 2 つ目のフレームを待っています。1 回のロックだけでは、偶然の一致かもしれないためです
 qo100-write-corrected-converter-lnb-offset = 補正されたコンバーター/LNB のオフセットを書き込み、受信機を開き直します。設定 ▸ 無線機 ▸ 適用で起きるのと同じ短い中断です
-qo100-decoder-runs-receiving-station-readout = デコーダーは受信しているステーションで動作します。その表示はリモートのクライアントには送られません
 qo100-starting = 開始中…
 qo100-searching-first-window-fills-after = 検索中 — 最初の窓は約 24 秒後に埋まり、その後繰り返します
 
@@ -3868,21 +3863,25 @@ fsq-add = 追加
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + タブ
-publicsdr-open-receiver-new-radio-own = この受信機を、独自のタブで新しい無線機として開きます
-publicsdr-point-radio-receiver-replacing-whatever = *この* 無線機を、現在どのインターフェースにあっても置き換えて、この受信機に向けます。無線機一台分の設定になるため、もう一度確認します
 publicsdr-not-stated = 記載なし
-publicsdr-replace = 置き換え
-publicsdr-point-radio-you-are-receiver = 今使っている無線機を、この受信機に向けます
-publicsdr-tab-instead = + タブで代わりに
-publicsdr-open-receiver-another-radio-leave = 受信機を別の無線機として開き、この無線機はそのままにします
-publicsdr-cancel = キャンセル
 publicsdr-public-sdrs = 公開 SDR
 publicsdr-available = 利用可能
 publicsdr-hide-receivers-are-full-ones = 満員の受信機と、運用者がブラウザ以外のアプリ向けのチャンネルを開いていない受信機を隠します
 publicsdr-band = 対象バンド
 publicsdr-only-receivers-cover-current-dial = 現在のダイヤル周波数をカバーする受信機だけを表示します
 publicsdr-low-bw = 低帯域
+publicsdr-map-cities = 都市
+publicsdr-map-cities-tip = この地図に都市を表示するかどうか。
+publicsdr-view-list = リスト
+publicsdr-view-map = 地図
+publicsdr-view-map-tip = 同じ受信機を世界地図に表示します。点をクリックすると、その下のすべての受信機を選択します。
+publicsdr-map-pick = 点をクリックすると、その下の受信機を選択します。
+publicsdr-map-names = 名前
+publicsdr-map-names-tip = 地図に受信機の名前を表示します。オフ：選択した受信機だけに名前を表示します。
+publicsdr-check-online = オンライン
+publicsdr-check-silent = 応答なし
+publicsdr-check-waiting = 確認中…
+publicsdr-check-no-answer = 20 秒以内に応答がありません。
 publicsdr-take-spyserver-low-bandwidth-shape = SpyServer を低帯域の形で受信します。ダイヤルに追従する狭い I/Q 窓と、サーバー自身のバンド表示を使い、広帯域の I/Q の数メガビットは使いません。KiwiSDR には影響しません。KiwiSDR の形はこの 1 つだけです。
 publicsdr-refresh = ⟳ 更新
 publicsdr-fetch-both-directories-again = 両方のディレクトリを再度取得します
@@ -3892,9 +3891,6 @@ publicsdr-fetching-receiver-lists = 受信機の一覧を取得中…
 publicsdr-machine-radio-attached-does-not = この無線機が接続されているマシンはデバイスへの問い合わせに応答しないため、一覧も取得できません。
 publicsdr-no-match = 一致なし
 publicsdr-nothing-matches-try-turning-filter = 一致するものがありません。フィルターのチップを一つ戻してみてください
-publicsdr-radio = この無線機
-publicsdr-radio-s-configuration-has-not = この無線機の構成が、接続しているマシンからまだ届いていないため、受信機に向けるものがありません。代わりに + タブで受け取ってください。
-publicsdr-position-not-published-so-nothing = {" "}その位置は公開されていないため、聞いたものは何も報告されません。
 
 ## hd (src/app/hd.rs)
 
@@ -4685,14 +4681,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = 受信機 { $entries } 件 · { $per_net } · 取得 { $age } 前
 publicsdr-showing-search-narrow = { $n } 件中 { $shown } 件を表示中 — 検索で絞り込めます
 publicsdr-match = { $n } 件一致
-publicsdr-replace-taking-receiver-points-same =
-    { $this } を { $entry } に置き換えますか？
-
-    { $this2 } is on { $iface }. Taking this receiver points the same tab at { $address } instead, renames it “{ $entry2 }”, and holds the dial to the { $range_label } the receiver publishes — nothing here transmits.
-
-    The { $iface2 } settings stay where they are, and so do the ranges stated for them: switching the interface back in Settings → Radio brings the radio back as it was.
-publicsdr-receptions-will-reported = {" "}受信は { $value } から報告されます。
-publicsdr-pointing-radio = この無線機を { $entry } に向けています…{ $site }
+publicsdr-map-status = 地図上 { $shown } · 位置なし { $unplaced }
 publicsdr-opening-another-radio = { $entry } を別の無線機として開いています…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -4996,7 +4985,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld（ネットワーク）
 cat-family-flrig = flrig（ネットワーク）
-publicsdr-its-interface = そのインターフェース
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = オフ
@@ -5322,8 +5310,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = 両方
 
-panels-sensitivity = 感度
-
 navtex-hunting = 探索中
 
 navtex-hunting-hint =
@@ -5335,11 +5321,8 @@ navtex-hunting-hint =
 
     また、NAVTEXは会話ではなく時刻表で運用されます。海岸局は4時間ごとに10分間送信するので、ほとんどの時間は無音で正常です。局の送信時刻に合わせて受信する必要があります。さらに518 kHzは夜間にしか開けません。昼間に静かなのはデコーダーの故障ではありません。
 
-navtex-sensitivity-hint =
-    感度 — デコーダーが信号にどれだけ捉えやすく、保持しやすいか。
-navtex-auto-hint = 基準しきい値（0）に戻します。有効な間は強調表示されます。
 
-navtex-tune-dial-usb-below-channel = ここにダイヤルを合わせます（USB、チャンネルより1.710 kHz下）。
+navtex-tune-dial-usb-below-channel = ここにダイヤルを合わせます（USB、チャンネルより1.700 kHz下）。
 
 settings-audio-your-audio = お使いのオーディオ
 
@@ -7604,7 +7587,6 @@ net-wavelog-no-station-location = ダウンロード元の局ロケーション�
 
 publicsdr-could-not-connect = このセッションでは接続できませんでした
 
-publicsdr-use-chip = 使用
 
 weather-title = 気象通報
 
@@ -9010,7 +8992,6 @@ publicsdr-mine = マイ
 
 publicsdr-mine-hint = スターを付けた受信機のみ
 
-publicsdr-mine-empty = まだ何も登録されていません — 行の☆でその受信機をここに残せます。
 
 publicsdr-star-receiver = この受信機をマイに保存
 
@@ -9141,16 +9122,513 @@ sonde-export-csv-hover = このゾンデの飛行を表計算用の CSV とし�
 
 sonde-export-none = このゾンデの位置はまだ保存されていません。
 
-sonde-col-temp = æ°—æ¸©
+sonde-col-temp = 気温
 
-sonde-col-humidity = æ¹¿åº¦
+sonde-col-humidity = 湿度
 
-sonde-col-pressure = æ°—åœ§
+sonde-col-pressure = 気圧
 
 settings-net-broadcast-import-needs-station = インポートするには局に接続してください。
 
 
+sonde-online-why-signin = ステーションが先にサインインを求めています。
 
+sonde-online-why-busy = ステーションは許される上限の頻度で SondeHub に問い合わせています。1 分後にもう一度お試しください。
+
+sonde-online-why-upstream = ステーションは SondeHub に接続できませんでした。
+
+sonde-online-why-unreadable = 応答がゾンデの一覧ではありませんでした。
+
+sonde-online-why-no-station = 問い合わせ先のステーションがなく、このページから直接 SondeHub には接続できません。
+
+sonde-online-why-http = 応答: HTTP { $n }。
+settings-general-band-plan = バンドプラン
+
+settings-general-band-plan-built-in = 内蔵IARU
+
+
+
+
+sonde-card-source = ソース
+
+sonde-card-source-radio = この無線機
+
+sonde-card-source-hub = SondeHub（他のステーションが受信）
+
+sonde-card-model = モデル
+
+sonde-card-maker = メーカー
+
+sonde-card-variant = バリエーション
+
+sonde-card-position = 位置
+
+sonde-card-from-you = 自局から
+
+sonde-card-heading = 進行方向
+
+sonde-card-satellites = 衛星数
+
+sonde-card-snr = 信号対雑音比
+
+sonde-card-station = 受信局
+
+sonde-card-station-position = 受信局の位置
+
+sonde-card-antenna = アンテナ
+
+sonde-card-software = ソフトウェア
+
+sonde-card-frames = 受信フレーム数
+
+sonde-card-open = { $site } で開く
+
+sonde-card-close = 閉じる
+
+aircraft-mode-vor-hover = ラジオが同調している VOR 局を読み取る：ラジアルとモールス識別
+
+vor-audio-front = この受信機は復調済みの音声を渡します。VOR の読み取りには生の I/Q ストリームが必要です。
+
+vor-outside-window = 同調したチャンネルは受信機が出す帯域の外にあります。受信機をそのチャンネルに合わせてください。
+
+vor-not-in-band = VOR 局（108.00～117.95 MHz）に同調するとラジアルを読み取れます。
+
+vor-locked = ロック
+
+vor-no-lock = ロックなし
+
+vor-no-lock-hover = 30 Hz の可変信号または 9960 Hz の基準信号がないか、弱すぎます。この帯域の ILS ローカライザーはロックしません。
+
+vor-ident-heard = 聞こえた識別: { $ident }
+
+vor-ident-waiting = 識別信号を待っています（約 10 秒ごとに送信）…
+
+vor-charted = 航空図: { $ident } — { $name }
+
+vor-var-depth = 30 Hz AM：搬送波の { $pct } %
+
+vor-ref-depth = 9960 Hz FM：搬送波の { $pct } %、偏移 ±{ $dev } Hz
+
+vor-caveat = ラジアルは局から見た受信機の方位で、局自身の磁北が基準です。航法には使えません。
+
+vor-nearby = あなたの局に近い VOR
+
+vor-no-grid = 最も近い VOR を表示するには、デジタルモード設定でロケーターを入力してください。
+
+vor-tune-hover = この VOR を AM で同調
+
+tx-bands-power-hint = Drive を最大にしたときのこのバンドの最大出力(W)。不明な場合は — のままにしてください。
+
+tx-bands-power-note = 任意。パワーメーターのない無線機は、この値を使って送信出力をSメーターにワットで表示します。未設定の場合は Drive の設定をパーセントで表示します。
+
+band-plan-title = この無線機のバンドプラン
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = この無線機で受信するバンドだけ RX を「はい」にしてください。「いいえ」のバンドには同調せず、RX リストを確認するまで一切同調しません。TX と RX は別々です。TX いいえ・RX はい という設定もできます。
+
+rx-bands-title = 受信バンド
+
+rx-bands-check-again = RX を再確認
+
+rx-bands-check-again-hint = 確認を取り消して受信リストを見直します。バンドを変更すると自動的に取り消されます。
+
+rx-bands-confirmed = ✓ この無線機の受信バンドを確認済み
+
+rx-bands-ack = これらの受信バンドを無線機と照らし合わせて確認しました
+
+rx-bands-confirm = これらの受信バンドを確認する
+
+rx-bands-confirm-hint = 先にチェックを入れてください。確認は無線機ごとに一度だけです。
+
+rx-bands-notice = 受信バンドのリストが未確認です。受信バンドを一度確認するまで、無線機は同調しません。
+
+rx-bands-out-of-range = この無線機の公表範囲はこのバンドに届きません。
+
+rx-bands-band-off = この無線機のバンドプランでは、このバンドの受信がオフです（設定）。または受信リストがまだ確認されていません。
+
+settings-general-re-read-band-plan-file = 選択中のプランのファイルを無線機が接続されているマシンで読み直し、再起動せずに適用します（バンド端、サブセグメント、スキマーのウィンドウ）。
+
+settings-general-running-band-plan = 使用中のバンドプラン：「{ $name }」
+
+settings-general-band-plan-choose-hint = 局のライブラリからバンドプランを選びます。既定は内蔵のIARUテーブルです。別のプランを使うと、TXとRXのバンドリストを再確認して承認し直す必要があります。
+
+settings-general-band-plan-import = プランをインポート
+
+settings-general-band-plan-import-hint = バンドプランのファイルを局のライブラリに追加します。バンドの単純なリスト（名前、種類、ヘルツ単位の開始と終了）は先に変換されます。検査され、追加されるだけです。使うにはリストから選んでください。
+
+settings-general-band-plan-reset = 内蔵IARUに戻す
+
+settings-general-band-plan-reset-hint = 内蔵のIARUテーブルに戻します。その後、TXとRXのバンドリストを再確認して承認し直す必要があります。
+
+settings-general-band-plan-folder = プランは、無線機が接続されているマシンの { $path } にあるファイルです。追加・削除できます。バンドをライセンスの範囲に狭めると、sdroxideはその外での送信を拒否します。周波数はMHz単位です。これは地域の割り当てであり、あなたのライセンスではありません。実際の条件はより狭い場合があり、国別のプランは地域内でも異なります。
+
+settings-general-band-plan-station-folder = プランは、無線機が接続されているマシンに保存されます。バンドをライセンスの範囲に狭めると、sdroxideはその外での送信を拒否します。これは地域の割り当てであり、あなたのライセンスではありません。実際の条件はより狭い場合があり、国別のプランは地域内でも異なります。
+
+settings-general-band-plan-manager = バンドプラン管理
+
+settings-general-band-plan-run = 使用
+
+settings-general-band-plan-run-hint = このプランを使います。TXとRXのバンドリストを再確認して承認し直す必要があります。
+
+settings-general-band-plan-download = ダウンロード
+
+settings-general-band-plan-download-hint = このプランのファイルをこのコンピューターに保存します。
+
+settings-general-band-plan-delete = 削除
+
+settings-general-band-plan-delete-confirm = もう一度クリックで削除
+
+settings-general-band-plan-delete-hint = このプランを局のライブラリから削除します。使用中のプランは削除できません。
+
+settings-general-band-plan-running-tag = 使用中
+
+settings-general-band-plan-shipped-tag = 同梱
+
+settings-general-band-plan-save-current = 現在のプランを名前を付けて保存
+
+settings-general-band-plan-save-current-hint = 使用中のプランをこの名前でライブラリに保存します。同名のプランは置き換えられ、古いファイルは .bak として1つだけ残ります。
+
+settings-general-band-plan-name-hint = 名前
+
+settings-general-band-plan-restore = 同梱のプランを復元
+
+settings-general-band-plan-restore-hint = プログラムに同梱のプランを、削除・編集済みでも元に戻します。編集済みのプランは置き換えられ、.bak として1つだけ残ります。
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = ライブラリにプランがありません。
+
+settings-general-band-plan-radio = この無線機
+
+settings-general-band-plan-radio-follow = 局に従う
+
+settings-general-band-plan-radio-hint = プランをこの無線機だけで使います。局のプランと他の無線機には影響しません。この無線機のTXとRXのバンドリストを再確認して承認し直す必要があります。
+
+settings-general-band-plan-run-radio = この無線機のみ
+
+settings-general-band-plan-radio-tag = この無線機
+
+meter-view-auto = 自動
+
+meter-view-rx = 信号 (RX)
+
+meter-view-power = 出力
+
+meter-view-swr = SWR
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = 前の表示: { $view }
+
+smeter-arrow-next-hover = 次の表示: { $view }
+
+smeter-arrow-prev-face = 前のメーター
+
+smeter-arrow-next-face = 次のメーター
+
+sonde-card-source-both = 無線 + SondeHub（両方で受信）
+
+sonde-card-stale = 状態
+
+sonde-card-stale-value = 一覧から消えました：最後に分かっている位置
+
+sonde-card-detach = 切り離す
+
+sonde-card-attach = 戻す
+tx-bands-outside-note = ここに載っているバンド以外では送信できません。バンド外の受信（ADS-B、DAB、AIS など）に行は不要です。
+
+tx-off-cb = 11 m (CB) では送信禁止 — このバンドは送信リストにありますが、「11 m (CB) での送信を許可」がオフです。設定 → 一般 でオンにしてください。
+
+settings-cb-allow-tx-needs-band = まずこの無線機の TX バンドリスト（設定 → 無線機）で 11M-CB を「はい」にし、そのあとここで許可してください。
+
+settings-cb-allow-tx-order-note = ロックは2つ、この順です：1) 無線機の TX バンドリストで 11M-CB が「はい」かつ確認済み、2) このチェックボックス。11 m で送信するには両方が必要です。11M-CB をリストから外すと、このチェックも外れます。
+
+settings-ui-publicsdr-under-waterfall = ウォーターフォールの下にドック
+
+settings-ui-publicsdr-place-hint = Public SDRs を開く場所：そこに何もない音声モードではウォーターフォールの下にドック、または別ウィンドウ。デジタルモード、CW、スマートフォンでは常にウィンドウになります。
+
+publicsdr-dock-hint = このリストをウォーターフォールの下にドックする（そこに何もない音声モード）
+
+publicsdr-undock-hint = このリストを独立したウィンドウに戻す
+
+publicsdr-close-hint = Public SDRs を閉じる
+
+settings-net-hfcc-file-hint = ご自身で保存したパッケージから HFCC の番組表を読み込みます。HFCC が公開している zip（例: b26allx2.zip）で、番組表と 2 つの表が入っています。
+
+schedule-import = 取り込み…
+wxsat-title = 気象衛星
+
+extras-wxsat-hint = 気象衛星 — NOAA（APT）または Meteor（LRPT）衛星が137 MHzで送る画像を、受信しながら描画します（別ウィンドウに切り離せます）
+
+wxsat-decode = デコード
+
+wxsat-channel = 衛星
+
+wxsat-tune = ここに同調
+
+wxsat-tune-hint = デコーダーをオンにし、ダイヤルをこのチャンネルに合わせて、信号がサンプルウィンドウ内に入るようにします。
+
+wxsat-clear = 消去
+
+wxsat-save = PNGで保存
+
+wxsat-flip = 反転
+
+wxsat-flip-hint = 画像を上下左右反転します。南へ飛ぶ衛星の画像は逆さまに描かれます。
+
+wxsat-state-off = デコーダーはオフ
+
+wxsat-level = レベル { $db } dBFS
+
+wxsat-locked = ライン同期ロック
+
+wxsat-searching = ライン同期を探しています
+
+wxsat-lines = { $n } ライン
+
+wxsat-outside-window = チャンネルがサンプルウィンドウの外か、信号全体には端に近すぎます。「ここに同調」を使うか、より広いウィンドウにしてください。
+
+wxsat-waiting = まだ画像がありません。衛星が地平線の上にあるときにデコーダーをオンにしてください。1回の通過は約10分です。
+
+wxsat-signal = 信号
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = チャンネル { $n }
+
+wxsat-rows = { $n } 行
+
+wxsat-frame-locked = フレーム同期ロック
+
+wxsat-frames = 良好なフレーム { $n }
+
+wxsat-waiting-lrpt = まだ画像がありません。Meteor の LRPT はデジタルです。衛星を受信して数秒後から1行ずつ画像が現れ、各チャンネルは別々の画像です。
+
+wxsat-searching-frame = フレーム同期を探しています
+
+qrzcard-loading = QRZ を検索中…
+
+qrzcard-not-found = QRZ に見つかりません。
+
+qrzcard-years = { $n } 歳
+
+qrzcard-class = クラス: { $class }
+
+qrzcard-qsl-paper = 紙
+
+qrzcard-qsl-via = { $mgr } 経由
+
+qrzcard-switch = コールサインにカーソルを置くと QRZ カードを表示
+
+qrzcard-switch-hint = QRZ.com の写真・氏名・年齢・住所・ロケーター・QSL を、ウォーターフォール、デコーダー、スポット一覧に表示します。写真、メール、生年月日には QRZ XML の購読が必要です。
+
+qrzcard-needs-login = カードを有効にするには、プロバイダーに QRZ を選び、QRZ のユーザー名とパスワードを入力してください。
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = 受信
+
+meshtastic-region = 地域
+
+meshtastic-preset = プリセット
+
+meshtastic-channel = チャンネル
+
+meshtastic-tune = ここで受信
+
+meshtastic-tune-hint = 受信機をオンにして、無線機をこのチャンネルに合わせます。ここで受信できるかどうかは、無線メニューの受信バンド一覧が決めます。オフにするか終了すると、無線機は元の状態に戻ります。
+
+meshtastic-keys = 鍵
+
+meshtastic-keys-hint = 名前=鍵をカンマ区切りで入力（hex:…、base64:…、simple1..10）。既定の鍵は常に試されます。
+
+meshtastic-state-off = 受信機はオフです。
+
+meshtastic-level = レベル { $db } dBFS
+
+meshtastic-counts = プリアンブル { $pre } · フレーム { $ok } · CRC不良 { $bad }
+
+meshtastic-refused-band = 受信禁止 — { $freq } MHz（{ $band }）は確認済みの受信バンドではありません。無線メニューの受信バンドでチェックして確認してください。
+
+meshtastic-refused-unconfirmed = 受信禁止 — この無線機の受信バンドはまだ確認されていません。無線メニューの受信バンドで確認してください。
+
+meshtastic-out-of-window = チャンネルが無線機の取り込むサンプル範囲の外です。近くに同調するか、サンプルレートを上げてください。
+
+meshtastic-none-yet = まだ何も受信していません。
+
+meshtastic-nodes = ノード（{ $n }）
+
+meshtastic-log = パケット（{ $n }）
+
+meshtastic-col-id = ノード
+
+meshtastic-col-name = 名前
+
+meshtastic-col-heard = 受信時刻
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = ホップ
+
+meshtastic-col-position = 位置
+
+meshtastic-col-battery = 電池
+
+meshtastic-encrypted = 暗号化（鍵なし）
+
+meshtastic-via-mqtt = MQTT経由
+
+meshtastic-bench-hint = Meshtasticウィンドウを開きます：1つのチャンネルのLoRaメッシュ通信。
+
+extras-meshtastic-hint = Meshtastic：1つのチャンネルのLoRaメッシュ通信、受信したノードとパケット。
+
+meshtastic-message = メッセージ
+
+meshtastic-message-hint = チャンネルの全員へ送る文章（最大200バイト）
+
+meshtastic-send = 送信…
+
+meshtastic-send-hint = 確認後、この文章をチャンネルで送信します。ここで送信できるかどうかは、設定の無線にある送信バンド一覧が決めます。無線機はチャンネルに合わせておく必要があります（ここで受信）。
+
+meshtastic-confirm = 今すぐ { $freq } MHz で送信しますか（送信時間 { $air } 秒）？範囲内の全員に聞こえます。免許とこのバンドの規則に基づき、責任は操作者にあります。
+
+meshtastic-confirm-yes = 送信する
+
+meshtastic-confirm-no = キャンセル
+
+meshtastic-transmitting = 送信中…
+
+meshtastic-tx-airtime = この1時間の送信時間：{ $used } 秒 / { $budget } 秒
+
+meshtastic-tx-airtime-free = この1時間の送信時間：{ $used } 秒（この地域には上限の設定なし）
+
+meshtastic-tx-sent = 送信済み { $n }
+
+meshtastic-tx-band-off = 送信禁止 — { $freq } MHz（{ $band }）は確認済みの送信バンドではありません。設定 → 無線 → 送信バンドでチェックして確認してください。
+
+meshtastic-tx-unconfirmed = 送信禁止 — この無線機の送信バンドはまだ確認されていません。設定 → 無線 → 送信バンドで確認してください。
+
+meshtastic-tx-duty = この地域のデューティサイクル上限に達しました。次のメッセージまで { $s } 秒お待ちください。
+
+meshtastic-tx-too-long = このメッセージだけで、この地域の1時間分の送信時間の上限を超えています。
+
+meshtastic-tx-off-channel = 無線機がチャンネルに合っていません。先に「ここで受信」を押して、ダイヤルを合わせてください。
+
+meshtastic-tx-no-transmitter = この無線機は生のI/Qを送信できません（音声を受け取る無線機、または受信専用の機器）。
+
+meshtastic-tx-bad-text = 文章が空か長すぎます（最大200バイト）。
+
+meshtastic-tx-busy = すでに送信中です。
+
+meshtastic-tx-rails = 送信機が送信状態になりませんでした。理由は送信メッセージをご覧ください。
+rx-bands-swl-note = この無線機は SWL モードです。受信ロックはありません。どのバンドにも同調できます。
+
+rx-bands-always-open = リスニング用バンド（および SWL モード）は常に受信できます。
+
+sat-tune-link-both-vfos = ダイヤル、もう一方のVFO、モードをこのリンクに設定します — ダウンリンクをこのVFOに、アップリンクをもう一方に。この衛星のロックも移動します
+
+sat-move-lock = {" "}ロック移動{" "}
+
+sat-locked-other-link-move-lock = この衛星は別のリンクでロック中です：ロックをこのリンクに移動します — アップリンク、トーン、ドップラーも含みます
+
+sat-rig-rx = 無線機RX
+
+sat-rig-tx = 無線機TX
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = 衛星にロック中：ロックが終わるまで、VFO Aはダウンリンク、VFO Bはアップリンクです
+
+qrzcard-photo-loading = 写真を読み込み中…
+
+qrzcard-no-photo = 写真なしの記録
+
+sonde-card-listen-hover = クリックすると無線機をこのチャンネルに合わせます。ダイヤルが移動し、デコーダーはこのチャンネルだけを受信します。
+
+sonde-card-decoding = この無線機でデコード中
+
+sonde-card-waiting = このチャンネルを受信中、まだデコードされていません
+
+sonde-card-click-to-listen = 周波数をクリックして受信
+
+sonde-type-all = すべてのタイプ
+
+sonde-type-hover = ゾンデの種類を指定して探します。選ぶとスキャンが始まり、その種類が受信できるまでウィンドウをバンド内で動かします。その種類だけが一覧と地図に表示されます。
+
+meshtastic-preset-auto = 自動
+
+meshtastic-preset-auto-hint = すべてのプリセットを同時に受信します（ShortTurbo から LongSlow まで）。ネットワークがどれを使っているか分からなくても選ぶ必要はありません。
+
+meshtastic-freq-hint = チャンネル周波数（kHz 単位）。地域のスロットを使わないネットワーク向けです。離したときに適用されます。
+
+meshtastic-close-hint = Meshtastic パネルを閉じます。受信機は、オフにするまで動き続けます。
+
+meshtastic-float-hint = パネルをウォーターフォールの上に浮かぶウィンドウとして切り離します。
+
+meshtastic-dock-hint = パネルをウォーターフォールの下に戻します。
+
+meshtastic-tune-mode-hint = 無線機はワイドFMにも切り替わり、スピーカーと録音にチャンネルの信号が届きます。終了するとモードは元に戻ります。
+
+wefax-revert-auto-slant = 傾き補正を戻す
+
+wefax-revert-auto-slant-hint = このチャートの自動傾き補正を取り消します。クロック調整はここで設定した値に戻り、次のチャートまで自動補正はオフのままです。すでに受信した行は変わりません。
+
+qrzcard-no-account = QRZ.com アカウントが未登録 -
+
+qrzcard-account-link = アカウントの状態を見る
+
+navtex-other-frequencies = NAVTEX・海岸局の周波数
+
+navtex-other-frequencies-hint = 公開されている NAVTEX 一覧の全周波数（地域別）。選ぶと上側波帯用にダイヤルを合わせます。CW と記された項目はモールスの気象通報で、このデコーダーでは読めません。
+
+navtex-freq-cw = CW モード
+
+navtex-freq-international = 国際（英語）
+
+navtex-freq-national = 国内（現地語）
+
+publicsdr-near-kiwi = 近くのKIWI
+
+publicsdr-near-kiwi-tip = ロケーターに最も近く、空きチャンネルのあるKiwiSDR受信機を近い順に{ $n }台だけ表示します。CAT無線機のバンド表示として使えます。
+
+publicsdr-near-kiwi-no-grid = 近くのKIWIにはロケーターが必要です。局の設定で入力すると、受信機を距離順に並べられます。
+
+sstv-add-clock = ＋ 日付/時刻
+
+sstv-add-clock-hint = 画像を送信した日時を印字する行を追加（UTC または現地時刻）
+
+sstv-clock-date-time = 日付と時刻
+
+sstv-clock-time = 時刻
+
+sstv-clock-date = 日付
+
+sstv-clock-freeze-hint = この行を、表示中の時刻で固定した通常のテキストに変える
+
+sstv-clock-hint = 画像を送信する瞬間の日時を印字します（作成した時刻ではありません）。
+
+sstv-clock-local = 現地時刻
+
+sstv-clock-local-hint = UTC の代わりに局の現地時刻を印字します（夏時間を含む）
+
+test-tci-connect-refused = { $address } への接続: { $detail } — そのポートで TCI を提供しているものがありません。TCI は無線機本体ではなく SDR プログラム（ExpertSDR3、Thetis）が提供するため、設定で TCI を有効にして起動している必要があります。MB1 のような単体機では、無線機の内部で動いているコピーが該当します
+
+test-tci-connect-timed-out = { $address } への接続: { $detail } — そのアドレスから応答がありません。ホストを確認し、ファイアウォールが妨げていないか確認してください。TCI を提供する SDR プログラム（ExpertSDR3、Thetis）が TCI を有効にして起動していない場合、閉じたポートは Windows ではこのように見えることがあります
+
+test-connect-failed = { $address } への接続: { $detail }
+
+settings-ui-graphics = グラフィックドライバー
+
+settings-ui-graphics-auto = 自動
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = 次回の起動から有効になります。自動では DirectX 12 を使い、ウォーターフォールが平らな横縞に描かれる古い AMD ドライバーでは OpenGL を使います。ウォーターフォールが横線だけになる場合は OpenGL をお試しください。
 
 settings-controls-desktop-mic = 卓上または外部マイク
 settings-controls-desktop-mic-note = シリアル（またはUSBシリアル）ポートのハンドシェイク線に接続されたマイクやフットスイッチからのPTT。
@@ -9163,7 +9641,6 @@ settings-controls-active-low = Low
 settings-controls-debounce = デバウンス (ms)
 serial-ptt-output-rts = RTS
 serial-ptt-output-dtr = DTR
-
 settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
 settings-controls-choose-serial-port = Choose serial port
 settings-controls-serial-port-chosen = Serial port chosen.

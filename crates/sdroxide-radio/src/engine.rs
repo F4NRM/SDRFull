@@ -34,7 +34,11 @@ use sdroxide_dsp::{
     make_demod, make_modulator,
 };
 use sdroxide_hfdl::HfdlController;
+use sdroxide_meshtastic::controller::{
+    MeshtasticController, lane_bw_hz, lane_name, lane_rate_for, preset_of,
+};
 use sdroxide_sonde::SondeBank;
+use sdroxide_wxsat::WxsatLane;
 use sdroxide_ism::{IsmAction, IsmController};
 use sdroxide_nrsc5::{HdDemod, Mode as HdMode};
 use sdroxide_qo100::Qo100Controller;
@@ -49,6 +53,7 @@ use sdroxide_types::{
     TxEqState, TxMeters, Vfo,
 };
 use sdroxide_vdl2::{Vdl2Action, Vdl2Controller};
+use sdroxide_vor::VorDecoder;
 
 use crate::recorder::{Recorder, RecorderFault, RecordingChannels};
 use crate::voice::VoiceKeyer;
@@ -590,6 +595,12 @@ pub struct EngineConfig {
     /// by default, and no command line option, setting or configuration file
     /// reaches it.
     pub tx_bands_open: bool,
+    /// Hold the operator's receive band list: a dial move onto a band that is
+    /// not ticked for reception, or onto any band while the list is not
+    /// confirmed, is refused and the radio stays where it was. **On in the
+    /// program** (`gui_main`, `server_main`); off by default, so the many tests
+    /// that tune freely do not each have to set a list up.
+    pub rx_bands_enforced: bool,
     /// Abort the over and latch out transmit when the rig reports an SWR at or
     /// above [`Self::swr_limit`]. Inert on rigs that do not measure SWR.
     pub swr_guard: bool,
@@ -657,6 +668,7 @@ impl Default for EngineConfig {
             tx_ham_only: true,
             cb_tx_allowed: false,
             tx_bands_open: false,
+            rx_bands_enforced: false,
             swr_guard: true,
             swr_limit: 2.5,
             reopen: None,
@@ -1711,6 +1723,27 @@ impl FeedLine<'_> {
 /// messages than arrived, and the newer ones are the ones still there — the
 /// alternative, sending the whole log, would repeat messages a consumer has
 /// already had.
+/// What the VOR lane is to do about the dial.
+#[derive(Clone, Copy, PartialEq)]
+enum VorPlan {
+    /// The dial is not on a navigation channel.
+    Off,
+    /// It is, and the lane cannot run here.
+    Blocked(sdroxide_types::VorUnavailable),
+    /// Run on this frequency.
+    Run(f64),
+}
+
+/// The rate the VOR down-converter aims for: the composite reaches 10.5 kHz, so
+/// this leaves room for the filter's skirt.
+const VOR_TARGET_RATE_HZ: f64 = 48_000.0;
+/// The lowest stream that holds a VOR channel with that skirt.
+const VOR_MIN_STREAM_HZ: f64 = 60_000.0;
+/// Half the channel the lane needs about the dial, Hz.
+const VOR_HALF_WIDTH_HZ: f64 = 12_000.0;
+/// A retune of more than this is another beacon, not a nudge of the same.
+const VOR_NEW_BEACON_HZ: f64 = 5_000.0;
+
 fn vdl2_take(len: usize, frames: u64, last: Option<u64>) -> (usize, u64) {
     let Some(last) = last else { return (0, frames) };
     let new = frames.saturating_sub(last) as usize;
@@ -2193,6 +2226,21 @@ struct TxChain {
 
 /// 10 ms of TX audio per iteration.
 const TX_AUDIO_BLOCK: usize = 480;
+
+/// One Meshtastic frame on its way out: the modulated I/Q at the modem's own
+/// sample rate, played through its own upconverter to the device's rate.
+struct MeshTxBurst {
+    iq: Vec<Complex32>,
+    pos: usize,
+    /// The modem's sample rate, Hz.
+    rate: f64,
+    /// How long the frame lasts, seconds.
+    airtime_s: f64,
+    /// Built on the first block, when the device's rate is known.
+    duc: Option<Duc>,
+    /// When the first block went out, for pacing to real time.
+    started: Option<Instant>,
+}
 
 /// How much decoded DAB audio may wait to be played before the oldest is
 /// dropped, in output-rate samples. Half a second is long enough to ride out a
@@ -2737,6 +2785,27 @@ fn wants_recording_tap(recorder: bool, udp_stream: bool, external: bool) -> bool
     (recorder || udp_stream) && !external
 }
 
+/// Whether the receive band list silences the audio: never. The list still holds
+/// the dial ([`Engine::rx_band_refusal`], with the notice that says why), but a
+/// radio restored on a refused band, or with an unconfirmed list, keeps playing:
+/// a silent speaker looks like broken hardware to the operator.
+fn rx_audio_cut(_refused: bool) -> bool {
+    false
+}
+
+/// `src`, or a block of silence of the same length when `off`. Kept for the
+/// receive stage; [`rx_audio_cut`] decides. The decoders read their own clean
+/// tap and are not touched. `scratch` holds
+/// the silence, and stays empty (no allocation) when `off` is false.
+fn silenced_copy<'a>(off: bool, src: &'a [f32], scratch: &'a mut Vec<f32>) -> &'a [f32] {
+    if !off {
+        return src;
+    }
+    scratch.clear();
+    scratch.resize(src.len(), 0.0);
+    &scratch[..]
+}
+
 /// Binaural (pseudo-stereo) audio: spread the receive passband across the two
 /// ears, so that pitch becomes direction and tuning a signal floats it from one
 /// ear to the other (issue #263). What it actually does to the audio is
@@ -2808,6 +2877,12 @@ const SAT_CALC_INTERVAL: Duration = Duration::from_millis(200);
 /// How often the [`RadioEvent::SatTrack`] stream goes out — readout rate, not
 /// correction rate.
 const SAT_EMIT_INTERVAL: Duration = Duration::from_millis(500);
+
+/// The satellite uplink on a CAT rig's VFO B follows the Doppler in steps of at
+/// least this much, at most once per `SAT_VFO_B_GAP`: tens of hertz on 2 m,
+/// where the uplink correction moves at most a few tens of hertz a second.
+const SAT_VFO_B_STEP_HZ: f64 = 50.0;
+const SAT_VFO_B_GAP: Duration = Duration::from_secs(2);
 /// The slow lane: pass prediction is a search, not a lookup, and stale-element
 /// recovery reads the TLE caches off disk. Neither belongs at 5 Hz.
 const SAT_SLOW_INTERVAL_S: f64 = 300.0;
@@ -3196,6 +3271,13 @@ struct Engine {
     /// the same reason as `drive_trim`: a key-down cannot go back to the store.
     tx_band_enable: Vec<Band>,
     tx_bands_confirmed: bool,
+    /// The receive band list, held for the same reason, and whether it is
+    /// enforced at all ([`EngineConfig::rx_bands_enforced`]).
+    rx_band_enable: Vec<Band>,
+    rx_bands_confirmed: bool,
+    rx_bands_enforced: bool,
+    /// The radio is in SWL mode (`RadioConfig::hide_tx`): no receive lock.
+    rx_swl: bool,
     /// [`EngineConfig::tx_bands_open`], for tests.
     tx_bands_open: bool,
     /// The operator's fixed receive-audio trim, in dB — the other part of
@@ -3504,6 +3586,28 @@ struct Engine {
     /// yet, which is different from having said "there is nothing wrong".
     vdl2_idle_sent: Option<Option<String>>,
 
+    /// The VOR lane: the navigation beacon the receiver is parked on, read for
+    /// its radial and its Morse ident.
+    ///
+    /// Not a mode and not a setting. It runs whenever the dial is inside
+    /// 108-118 MHz and the front end delivers raw I/Q around it, in whatever
+    /// mode the operator is listening in, because it takes its own
+    /// down-conversion of the stream and its own envelope detector: the radial
+    /// is a phase, and the listening chain's filters would shift it.
+    vor_ddc: Option<Ddc>,
+    vor: Option<VorDecoder>,
+    vor_buf: Vec<Complex32>,
+    vor_audio: Vec<f32>,
+    /// The channel the decoder was last pointed at.
+    vor_dial_hz: f64,
+    /// The stream rate `vor_ddc` was built to decimate.
+    vor_in_rate: f64,
+    /// Newest reading of the 30 Hz pair.
+    vor_reading: Option<sdroxide_vor::Reading>,
+    /// When the status last went out, and what it said about being up.
+    vor_sent_at: Option<Instant>,
+    vor_sent_state: Option<(bool, Option<sdroxide_types::VorUnavailable>)>,
+
     /// The AIS lane: a fifth window, on the two ship-reporting channels either
     /// side of 162.000 MHz.
     ///
@@ -3597,6 +3701,43 @@ struct Engine {
     sonde: Option<SondeBank>,
     /// The stream rate `sonde` was built for.
     sonde_in_rate: f64,
+    /// Meshtastic receiver: a downconversion centred on the chosen channel,
+    /// resampled to the preset's lane rate, plus a worker-thread demodulator;
+    /// present only while the receiver is enabled. The same fixed-frequency
+    /// shape as the HFDL lane, so a retune is re-seating the mixer
+    /// (`sync_meshtastic_window`). It listens only while the channel is inside
+    /// the window and the receive band list lets the radio listen there
+    /// (`mesh_gate`); the list is read, never written.
+    mesh_ddc: Option<Ddc>,
+    mesh: Option<MeshtasticController>,
+    mesh_buf: Vec<Complex32>,
+    mesh_rs: Option<ComplexResampler>,
+    mesh_res_buf: Vec<Complex32>,
+    /// The stream rate `mesh_ddc` was built to decimate.
+    mesh_in_rate: f64,
+    /// The preset the lane was built for.
+    mesh_preset: &'static str,
+    /// The channel is inside the window and the receive list allows it.
+    mesh_gate: bool,
+    /// The last status the worker sent, kept so the flags can be refreshed and
+    /// the status repeated while the gate is shut.
+    mesh_last: Option<sdroxide_types::MeshtasticStatus>,
+    /// Unix second the last status went out.
+    mesh_sent_s: i64,
+    /// The message being transmitted: its I/Q at the modem's rate, and how far
+    /// it has gone. `Some` for the length of the over, and only then.
+    mesh_tx: Option<MeshTxBurst>,
+    /// The transmissions of the last hour, for the region's duty cycle.
+    mesh_duty: sdroxide_meshtastic::tx::DutyTracker,
+    /// Why the last attempt was refused, and how many went out.
+    mesh_tx_refused: Option<sdroxide_types::MeshTxRefusal>,
+    mesh_tx_sent: u32,
+    /// Weather-satellite (NOAA APT) decoder lane: one 48 kS/s channel mixed
+    /// from the wide window, only while the operator has it enabled. See
+    /// `sdroxide_wxsat::WxsatLane`.
+    wxsat: Option<WxsatLane>,
+    /// Counts the times the lane was switched on: the picture's number.
+    wxsat_pass: u32,
     /// Open capture file for `--record-iq`, and the interleaving scratch it is
     /// written from.
     iq_rec: Option<std::io::BufWriter<std::fs::File>>,
@@ -3823,6 +3964,23 @@ struct Engine {
     /// [`Engine::tune_refused`] and the session written on the way out, and both
     /// have to treat zero as "no record" rather than as a frequency.
     good_vfo_hz: f64,
+    /// Last satellite CAT frequency sent to a CAT rig, for rate-limiting.
+    /// Zero means "nothing sent yet".
+    sat_cat_last_freq: f64,
+    /// Last VFO B frequency sent (SAT uplink), for rate-limiting.
+    sat_vfo_b_last_freq: f64,
+    /// When that VFO B write went out, for `SAT_VFO_B_GAP`.
+    sat_vfo_b_last_at: Option<Instant>,
+    /// Whether the rig's split is currently on (SAT lock).
+    sat_split_on: bool,
+    /// The transmit frequency last put on a CAT rig's VFO B for SPLIT outside a
+    /// satellite lock. Zero means "nothing sent".
+    manual_vfo_b_hz: f64,
+    /// Whether the satellite lock switched SPLIT on (it does, for a link with
+    /// an uplink on a CAT rig), and what SPLIT was before it did — put back
+    /// when the lock ends.
+    sat_took_split: bool,
+    split_before_lock: bool,
     /// The centre an open attempt on this radio failed at, and which a later
     /// attempt should therefore not simply repeat.
     ///
@@ -4018,6 +4176,21 @@ struct Engine {
     /// caught up with. See [`EngineConfig::store_sync`].
     store_sync: Option<Arc<crate::StoreSync>>,
     shared_gen_seen: u64,
+    /// [`sdroxide_types::band_plan_revision`] as this engine last saw it. When
+    /// the process-wide plan becomes a different one — chosen here, or by
+    /// another radio's engine, or from a screen — this radio's operator has
+    /// checked its band lists against a plan that is no longer running, and the
+    /// engine withdraws both confirmations (see [`Engine::poll_band_plan`]).
+    seen_plan_rev: u64,
+    /// The band plan this radio runs on its own ([`sdroxide_types::RadioConfig::band_plan`]),
+    /// kept for the life of the program, or `None` while it follows the
+    /// station's. Declared to the engine thread as its plan
+    /// ([`sdroxide_types::set_thread_band_plan`]), which is what makes every band
+    /// edge, lockout and skimmer window this engine consults this radio's own.
+    own_plan: Option<&'static sdroxide_types::BandPlan>,
+    /// The name the radio's `radio.json` holds for [`Engine::own_plan`] — kept
+    /// even when its file cannot be read, so the choice is not lost with it.
+    own_plan_name: Option<String>,
     /// Which of the station's radios is on FreeDV. See
     /// [`EngineConfig::rade_watch`].
     rade_watch: Option<Arc<crate::RadeWatch>>,
@@ -4514,6 +4687,23 @@ fn collapse_superseded(batch: &mut Vec<Command>) {
     });
 }
 
+/// The band plan `cfg` says this radio runs on its own, read from the station's
+/// library: `None` when it names none, or when its file cannot be read — in
+/// which case the radio runs the station's plan and the operator is told.
+fn read_own_plan(cfg: &sdroxide_types::RadioConfig) -> Option<sdroxide_types::BandPlan> {
+    let name = cfg.band_plan.as_deref()?;
+    match sdroxide_config::read_band_plan(name) {
+        Ok(plan) => Some(plan),
+        Err(e) => {
+            warn!("this radio's own band plan: {e}");
+            sdroxide_config::note_startup(format!(
+                "This radio's own band plan could not be read — it runs the station's plan. {e}"
+            ));
+            None
+        }
+    }
+}
+
 fn engine_thread(
     source: Box<dyn IqSource>,
     mut caps: DeviceCaps,
@@ -4545,6 +4735,14 @@ fn engine_thread(
     // any test that brings one up — is on the station's band plan too. The
     // first call also seeds `bandplan.json` if the operator has none.
     sdroxide_types::set_band_plan(sdroxide_config::load_band_plan());
+    // This radio's own plan, if it has one: declared to *this* thread, so every
+    // lookup the engine makes from here on — the first `Band::containing`
+    // below included — is this radio's, and no other radio's.
+    let (own_plan_name, own_plan) = {
+        let cfg = engine_cfg.store.load_radio_config();
+        (cfg.band_plan.clone(), read_own_plan(&cfg).map(sdroxide_types::leak_band_plan))
+    };
+    sdroxide_types::set_thread_band_plan(own_plan);
     sdroxide_types::set_region(sdroxide_config::load_region());
     sdroxide_types::set_cb_plan(sdroxide_config::load_cb_plan());
     // The operator's deliberate opt-in to transmit on 11 m, which is otherwise
@@ -4738,11 +4936,23 @@ fn engine_thread(
     } else {
         hfdl_cfg
     };
+    let wxsat_cfg = sdroxide_config::load_wxsat_config();
+    state.wxsat = if audio_mode {
+        sdroxide_types::WxsatSettings { enabled: false, ..wxsat_cfg } // wideband-only
+    } else {
+        wxsat_cfg
+    };
     let sonde_cfg = sdroxide_config::load_sonde_config();
     state.sonde = if audio_mode {
         sdroxide_types::SondeSettings { enabled: false, ..sonde_cfg } // wideband-only
     } else {
         sonde_cfg
+    };
+    let mesh_cfg = sdroxide_config::load_meshtastic_config();
+    state.meshtastic = if audio_mode {
+        sdroxide_types::MeshtasticSettings { enabled: false, ..mesh_cfg } // wideband-only
+    } else {
+        mesh_cfg
     };
     let dab_cfg = engine_cfg.store.load_dab_config();
     state.dab = if audio_mode {
@@ -4869,12 +5079,28 @@ fn engine_thread(
     // [`Engine::emit_radio_config`]), and this one table is consulted on every
     // transmitted block.
     let mut radio_cfg = engine_cfg.store.load_radio_config();
+    // The "Other" row is gone from both lists; an older file may still name it.
+    if radio_cfg.drop_other_band() {
+        info!("radio.json named the \"Other\" band — removed from the band lists");
+        if let Err(e) = engine_cfg.store.save_radio_config(&radio_cfg) {
+            warn!("saving the cleaned band lists: {e}");
+        }
+    }
     // An upgrade: the bands the radio could already key become the operator's
     // list, still unconfirmed, so nothing transmits until they have checked it.
     if radio_cfg.migrate_tx_bands(|hz| caps.may_tx_hz(hz)) {
         info!("radio.json had no transmit band list — carried the amateur bands over, unconfirmed");
         if let Err(e) = engine_cfg.store.save_radio_config(&radio_cfg) {
             warn!("saving the migrated transmit bands: {e}");
+        }
+    }
+
+    // The same for reception: the bands the hardware publishes it reaches,
+    // ticked but not confirmed, so the operator checks the list once.
+    if radio_cfg.migrate_rx_bands(|hz| caps.may_rx_hz(hz)) {
+        info!("radio.json had no receive band list — filled it from the published range, unconfirmed");
+        if let Err(e) = engine_cfg.store.save_radio_config(&radio_cfg) {
+            warn!("saving the migrated receive bands: {e}");
         }
     }
 
@@ -5062,6 +5288,10 @@ fn engine_thread(
         tx_drive_max: radio_cfg.tx_drive_ceiling(),
         tx_band_enable: radio_cfg.tx_band_enable.clone().unwrap_or_default(),
         tx_bands_confirmed: radio_cfg.tx_bands_confirmed,
+        rx_band_enable: radio_cfg.rx_band_enable.clone().unwrap_or_default(),
+        rx_bands_confirmed: radio_cfg.rx_bands_confirmed,
+        rx_bands_enforced: engine_cfg.rx_bands_enforced,
+        rx_swl: radio_cfg.hide_tx,
         rx_af_gain_db: radio_cfg.rx_audio_gain_db,
         swap_iq: radio_cfg.swaps_iq(),
         tx_center_hz: 0.0,
@@ -5174,6 +5404,15 @@ fn engine_thread(
         vdl2_in_rate: 0.0,
         vdl2_cfg,
         vdl2_idle_sent: None,
+        vor_ddc: None,
+        vor: None,
+        vor_buf: Vec::new(),
+        vor_audio: Vec::new(),
+        vor_dial_hz: 0.0,
+        vor_in_rate: 0.0,
+        vor_reading: None,
+        vor_sent_at: None,
+        vor_sent_state: None,
         ais_ddc: None,
         ais: None,
         ais_buf: Vec::new(),
@@ -5207,6 +5446,22 @@ fn engine_thread(
         hfdl_in_rate: 0.0,
         sonde: None,
         sonde_in_rate: 0.0,
+        mesh_ddc: None,
+        mesh: None,
+        mesh_buf: Vec::new(),
+        mesh_rs: None,
+        mesh_res_buf: Vec::new(),
+        mesh_in_rate: 0.0,
+        mesh_preset: "",
+        mesh_gate: false,
+        mesh_last: None,
+        mesh_sent_s: 0,
+        mesh_tx: None,
+        mesh_duty: sdroxide_meshtastic::tx::DutyTracker::default(),
+        mesh_tx_refused: None,
+        mesh_tx_sent: 0,
+        wxsat: None,
+        wxsat_pass: 0,
         // From `hfdl.json`, as `qo100_cfg` is.
         hfdl_cfg: sdroxide_config::load_hfdl_config(),
         iq_rec,
@@ -5294,6 +5549,13 @@ fn engine_thread(
         // Where the source opened — or, when it never opened, what was last
         // recorded; see the note where that is worked out.
         good_vfo_hz: seeded_good_vfo_hz,
+        sat_cat_last_freq: 0.0,
+        sat_vfo_b_last_freq: 0.0,
+        sat_vfo_b_last_at: None,
+        sat_split_on: false,
+        manual_vfo_b_hz: 0.0,
+        sat_took_split: false,
+        split_before_lock: false,
         // Nothing has been refused yet on a front end that opened, so the first
         // attempt is made at the dial and only its failure arms the fallback.
         refused_center_hz: seeded_refused_center_hz,
@@ -5344,6 +5606,11 @@ fn engine_thread(
         tx_gate: engine_cfg.tx_gate,
         cw_gate_until: None,
         shared_gen_seen: engine_cfg.store_sync.as_ref().map_or(0, |s| s.generation()),
+        // After the `set_band_plan` at the top of this function: the plan this
+        // engine starts under is not a change of plan.
+        seen_plan_rev: sdroxide_types::band_plan_revision(),
+        own_plan,
+        own_plan_name,
         store_sync: engine_cfg.store_sync,
         rade_watch: engine_cfg.rade_watch,
     };
@@ -5379,6 +5646,8 @@ fn engine_thread(
         engine.sync_qo100(); // and the beacon lane, from qo100.json
         engine.sync_hfdl(); // ...and the HFDL lane, likewise
         engine.sync_sonde(); // ...and the radiosonde lane, likewise
+        engine.sync_meshtastic(); // ...and the Meshtastic lane, likewise
+        engine.sync_wxsat(); // ...and the weather-satellite lane, likewise
     }
     // This radio's callsign override, read once here so the hot paths never
     // have to touch the file. `SetRadioConfig` is the other writer.
@@ -5550,6 +5819,12 @@ fn engine_thread(
     // it where they happen.
     engine.refresh_rx_gains();
 
+    // A radio confirmed against one plan and started under another — the file
+    // was swapped, or `config.toml` edited, while the program was off — is
+    // unconfirmed from the first block, exactly as if the plan had changed
+    // while it ran.
+    engine.reconcile_band_confirmations_at_start();
+
     // The commands waiting at the top of a tick, kept between iterations so the
     // batch costs no allocation. See [`collapse_superseded`].
     let mut batch: Vec<Command> = Vec::new();
@@ -5571,6 +5846,9 @@ fn engine_thread(
                     engine.rig_tx = false;
                     engine.cw_gate_until = None;
                     engine.release_tx_gate();
+                    // Quitting with the Meshtastic receiver on puts the dial and
+                    // the mode back where they were before it took the radio.
+                    engine.restore_meshtastic_on_exit();
                     // A change made since the last session tick still has to
                     // reach the file, or quitting within ten seconds of making
                     // it forgets it.
@@ -5599,6 +5877,10 @@ fn engine_thread(
         // Catch up with shared-store writes by any other engine in the process
         // (an atomic load per tick; reloads only when the generation moved).
         engine.poll_shared_stores();
+
+        // The band plan, if another radio's engine or a screen changed it since
+        // the last tick: an atomic load, and a withdrawal only when it moved.
+        engine.poll_band_plan();
 
         // The band plan's repeater shift, if the operator asked to follow it.
         // Ahead of `push_tx_freq`, which is what tells an accessory where we
@@ -5633,11 +5915,14 @@ fn engine_thread(
         engine.poll_ism();
         engine.poll_adsb();
         engine.poll_vdl2();
+        engine.poll_vor();
         engine.poll_ais();
         engine.poll_dab();
         engine.poll_qo100();
         engine.poll_hfdl();
         engine.poll_sonde();
+        engine.poll_meshtastic();
+        engine.poll_wxsat();
         engine.poll_scanner();
         engine.poll_tci_server();
         engine.poll_rigctld();
@@ -6053,13 +6338,8 @@ fn engine_thread(
                     }
                 }
                 let (adc_peak_dbfs, adc_clip) = engine.adc.read();
-                let s_dbm = if engine.source.smeter_during_tx() {
-                    engine.source.rx_signal_dbm().unwrap_or(-127.0)
-                } else {
-                    -127.0
-                };
                 Some(Meters {
-                    s_dbm,
+                    s_dbm: -127.0,
                     pa_temp_c,
                     adc_peak_dbfs,
                     adc_clip,
@@ -6711,6 +6991,13 @@ impl Engine {
             &mut self.main_play_r,
         );
 
+        // The receive band list, judged here while nothing is borrowed: the
+        // main receiver on the dial, the sub receiver on its own frequency.
+        let main_off = rx_audio_cut(
+            !unscaled_preview && self.rx_band_refusal(self.state.active_freq_hz()).is_some(),
+        );
+        let sub_off = rx_audio_cut(self.rx_band_refusal(self.state.sub_rx_hz).is_some());
+
         // Both taps come out of one borrow: `run`'s own return would keep the
         // chain mutably borrowed, leaving no way to ask for the recorder tap
         // as well.
@@ -6777,6 +7064,18 @@ impl Engine {
         }
         let (speaker, speaker_right): (&[f32], Option<&[f32]>) =
             if self.replay.on() { (&self.replay_buf, None) } else { (&self.main_play, right) };
+        // The receive band list: a dial on a band that is RX NO, or while the RX
+        // list is unconfirmed, is not heard and not recorded. The preview of a
+        // voice-keyer message is the operator's own audio, not the band, and is
+        // left alone. The right channel is the sub receiver's when it runs, so
+        // it is judged on the sub's own frequency.
+        let right_off = if sub_audio.is_some() { sub_off } else { main_off };
+        let (mut z_l, mut z_r, mut z_rec, mut z_rec_r) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        let speaker = silenced_copy(main_off, speaker, &mut z_l);
+        let speaker_right = speaker_right.map(|r| silenced_copy(right_off, r, &mut z_r));
+        let rec_left = silenced_copy(main_off, &self.main_play_rec, &mut z_rec);
+        let rec_right = rec_right.map(|r| silenced_copy(right_off, r, &mut z_rec_r));
         let now = Instant::now();
         if self.audio_level_until.is_some_and(|t| now < t) {
             if let Some(level) =
@@ -6786,7 +7085,7 @@ impl Engine {
             }
         }
         if let Some(mixer) = self.mixer.as_mut() {
-            mixer.push(speaker, speaker_right, &self.main_play_rec, rec_right);
+            mixer.push(speaker, speaker_right, rec_left, rec_right);
         }
         // Feed the high-resolution channel spectrum from the DDC output.
         if let (Some(ca), Some(main)) = (self.channel_analyzer.as_mut(), self.main.as_ref()) {
@@ -6830,6 +7129,21 @@ impl Engine {
             ddc.process(iq, &mut self.vdl2_buf);
             if let Some(d) = self.vdl2.as_ref() {
                 d.on_rx_iq(&self.vdl2_buf);
+            }
+        }
+        // ...and the VOR lane, from the one 50 kHz channel the dial is on. The
+        // detector is the plain magnitude: the decoder wants the envelope with
+        // nothing between, because a filter would delay the 30 Hz and move the
+        // radial by the same angle.
+        if let Some(ddc) = self.vor_ddc.as_mut() {
+            self.vor_buf.clear();
+            ddc.process(iq, &mut self.vor_buf);
+            self.vor_audio.clear();
+            self.vor_audio.extend(self.vor_buf.iter().map(|z| z.norm()));
+            if let Some(d) = self.vor.as_mut() {
+                if let Some(r) = d.push(&self.vor_audio).reading {
+                    self.vor_reading = Some(r);
+                }
             }
         }
         // ...and the AIS lane, from 150 kHz around 162.000 MHz. The two
@@ -6880,6 +7194,37 @@ impl Engine {
         // ...and the radiosonde decoder lanes, mixed from the wide stream.
         if let Some(bank) = self.sonde.as_mut() {
             bank.on_wide_iq(iq, unix_now());
+        }
+        // ...and the Meshtastic receiver from a lane centred on its channel,
+        // resampled onto the preset's exact lane rate. Fed only while the
+        // channel is inside the window and the receive band list allows it.
+        if let Some(ddc) = self.mesh_ddc.as_mut() {
+            if self.mesh_gate {
+                self.mesh_buf.clear();
+                ddc.process(iq, &mut self.mesh_buf);
+                let lane = if let Some(rs) = self.mesh_rs.as_mut() {
+                    self.mesh_res_buf.clear();
+                    rs.push(&self.mesh_buf, &mut self.mesh_res_buf);
+                    &self.mesh_res_buf
+                } else {
+                    &self.mesh_buf
+                };
+                if let Some(c) = self.mesh.as_ref() {
+                    c.on_rx_iq(lane);
+                }
+            }
+        }
+        // ...and the weather-satellite lane, only while the channel is inside
+        // the window (a window parked elsewhere has nothing of it to decode).
+        if let Some(lane) = self.wxsat.as_mut() {
+            if sdroxide_types::wxsat_window_covers(
+                self.state.center_hz,
+                self.state.sample_rate,
+                lane.frequency_hz(),
+                lane.kind(),
+            ) {
+                lane.on_wide_iq(iq);
+            }
         }
         // Feed TCI clients: the same clean tap the digital decoders use (so
         // muting or turning down sdroxide can't silence somebody's decoder),
@@ -7094,8 +7439,14 @@ impl Engine {
         }
         let (speaker, speaker_right): (&[f32], Option<&[f32]>) =
             if self.replay.on() { (&self.replay_buf, None) } else { (&self.audio_play, right) };
+        // The same receive band list as the SDR path.
+        let off = rx_audio_cut(self.rx_band_refusal(self.state.active_freq_hz()).is_some());
+        let (mut z_l, mut z_r, mut z_rec) = (Vec::new(), Vec::new(), Vec::new());
+        let speaker = silenced_copy(off, speaker, &mut z_l);
+        let speaker_right = speaker_right.map(|r| silenced_copy(off, r, &mut z_r));
+        let rec_left = silenced_copy(off, &self.audio_play_rec, &mut z_rec);
         if let Some(mixer) = self.mixer.as_mut() {
-            mixer.push(speaker, speaker_right, &self.audio_play_rec, None);
+            mixer.push(speaker, speaker_right, rec_left, None);
         }
     }
 
@@ -7350,6 +7701,18 @@ impl Engine {
                 // end put there (`rig_cw_offset_hz`). Taking it back out is what
                 // stops the readout climbing by one pitch per poll.
                 let hz = hz - self.rig_cw_offset_hz();
+                // SAT Doppler (step 1, RX only): when a satellite lock is
+                // active with Doppler correction, the rig's VFO sits on the
+                // corrected downlink, not the nominal dial. If the rig reports
+                // that corrected frequency back, it is our own write's echo —
+                // not an operator dial move — so adopt nothing and keep the
+                // dial on its published frequency.
+                if self.sat_lock.as_ref().is_some_and(|l| l.track.corrections_active) {
+                    let good = self.good_vfo_hz;
+                    if (hz - good).abs() < 15.0 {
+                        return;
+                    }
+                }
                 match self.state.active_vfo {
                     Vfo::A => self.state.vfo_a_hz = hz,
                     Vfo::B => self.state.vfo_b_hz = hz,
@@ -7439,6 +7802,8 @@ impl Engine {
                 self.sync_qo100_window();
                 self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_meshtastic_window();
+                self.sync_wxsat_window();
                 self.update_tuning();
                 let _ = self.event_tx.send(RadioEvent::State(self.state.clone()));
             }
@@ -7648,7 +8013,9 @@ impl Engine {
         // carrier it came from, and the operator has no RF panorama to read the
         // band off — so the tuned frequency is what belongs under the cursor.
         // The whole passband is shown either side of it.
-        let dial = self.state.rx_freq_hz();
+        // Where the rig is actually tuned, a satellite lock's correction
+        // included — the audio is centred there (see `audio_rig_dial_hz`).
+        let dial = self.state.rx_freq_hz() + self.sat_rx_doppler_hz();
         self.state.center_hz = dial;
         self.state.sample_rate = self.audio_bw * 2.0;
         // Demodulated audio is not an ADC's output: the band the demodulator
@@ -7723,6 +8090,8 @@ impl Engine {
         // is just re-seating the mixer.
         self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_meshtastic_window();
+                self.sync_wxsat_window();
         // Re-seat the DDCs on the new centre. Without this the main receiver
         // keeps the offset it had against the old one, which is exactly how a
         // rig-initiated retune ends up demodulating somewhere the readout does
@@ -9532,8 +9901,27 @@ impl Engine {
         // Symmetric about the dial: see `update_display_center` for why an
         // audio-only front end puts the tuned frequency in the middle, not at
         // the edge.
-        let dial = self.state.active_freq_hz();
+        let dial = self.audio_rig_dial_hz();
         (dial - self.audio_bw, dial + self.audio_bw)
+    }
+
+    /// Where a demod-audio rig is actually tuned, which is where its audio is
+    /// centred: the dial, plus a satellite lock's receive correction, which on
+    /// such a rig rides on its VFO rather than on a DDC. Everything that lays
+    /// that audio out against RF (the window, the frames) goes from here.
+    fn audio_rig_dial_hz(&self) -> f64 {
+        self.state.active_freq_hz() + if self.audio_mode { self.sat_rx_doppler_hz() } else { 0.0 }
+    }
+
+    /// While a CAT rig transmits under its own control with a satellite lock's
+    /// split held, the corrected uplink it is on — the frequency the panadapter
+    /// shows the over at, as it does one keyed from here.
+    fn rig_own_uplink_hz(&self) -> Option<f64> {
+        if !(self.audio_mode && self.rig_tx && self.sat_split_on) {
+            return None;
+        }
+        let up = self.sat_lock.as_ref()?.track.uplink_hz?;
+        Some(up + self.sat_tx_doppler_hz())
     }
 
     /// The viewport, when it lies inside the rig's own passband — and so when
@@ -9683,6 +10071,20 @@ impl Engine {
             return self.make_tx_frame();
         }
         let bins = self.cfg.bins();
+        // The rig keyed itself (its microphone) during a satellite lock: the
+        // over is shown at the uplink, as one keyed from here is — with what
+        // the rig sends on its audio output meanwhile, its monitor or nothing.
+        if let Some(up) = self.rig_own_uplink_hz() {
+            let vp = (up - self.audio_bw, up + self.audio_bw);
+            return self.analyzer.make_frame(
+                up,
+                self.radio_fs,
+                self.cfg.db_floor,
+                self.cfg.db_ceil,
+                bins,
+                Some(vp),
+            );
+        }
         if self.audio_mode {
             // Zoomed inside the rig's own passband: its audio resolves that
             // window by two orders of magnitude more than its scope can, so it
@@ -9690,7 +10092,7 @@ impl Engine {
             // test, because the scope is what owns the picture everywhere else.
             if let Some(vp) = self.audio_zoom_window() {
                 return self.analyzer.make_frame(
-                    self.state.active_freq_hz(),
+                    self.audio_rig_dial_hz(),
                     self.radio_fs,
                     self.cfg.db_floor,
                     self.cfg.db_ceil,
@@ -9709,7 +10111,7 @@ impl Engine {
             // RF panorama to read. USB's audio lands above the dial and LSB's
             // below; the other half is the real signal's own mirror, which is
             // what a real-audio spectrum has and no RF claim is made about it.
-            let dial = self.state.active_freq_hz();
+            let dial = self.audio_rig_dial_hz();
             let vp = (dial - self.audio_bw, dial + self.audio_bw);
             return self.analyzer.make_frame(
                 dial,
@@ -9865,8 +10267,16 @@ impl Engine {
             // `follow_dial` still keeps the window, so only the
             // rig-as-front-end case moves.
             SetVfo { vfo, hz } | TuneInSpan { vfo, hz } => {
-                self.stop_scan_for_operator();
                 let hz = hz.max(0.0);
+                // The receive band list: no order reaches the radio for a band
+                // that is off or unconfirmed, and it stays on its last
+                // frequency. No new message — the band notice the screen
+                // already raises says why.
+                if let Some(why) = self.rx_band_refusal(hz) {
+                    warn!("tune refused: {why:?} at {:.6} MHz", hz / 1e6);
+                    return;
+                }
+                self.stop_scan_for_operator();
                 match vfo {
                     Vfo::A => self.state.vfo_a_hz = hz,
                     Vfo::B => self.state.vfo_b_hz = hz,
@@ -9896,11 +10306,25 @@ impl Engine {
                         // channel.
                         self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_meshtastic_window();
+                self.sync_wxsat_window();
+                    }
+                    // Same for a sonde: with the decoder on one channel, the
+                    // dial is the channel. Tuning onto a sonde by hand used to
+                    // leave the lane on the channel box's old value, so a signal
+                    // with packets on the waterfall decoded nothing.
+                    if let Some(cfg) = self.state.sonde.following_dial(hz) {
+                        self.state.sonde = cfg;
+                        self.sync_sonde();
                     }
                 }
                 self.update_tuning();
             }
             TuneWidebandTo(hz) => {
+                if let Some(why) = self.rx_band_refusal(hz.max(0.0)) {
+                    warn!("tune refused: {why:?} at {:.6} MHz", hz / 1e6);
+                    return;
+                }
                 self.stop_scan_for_operator();
                 // The dial that puts the front end's *own centre* on `hz`,
                 // which is where a wideband lane's window is placed from. On a
@@ -9927,6 +10351,10 @@ impl Engine {
                 }
                 self.update_tuning();
             }
+            // Under a satellite lock holding the rig's split, VFO A is the
+            // downlink and VFO B the uplink until the lock ends: a selection or a
+            // swap from a key binding (the chips are greyed out) is ignored.
+            SelectVfo(_) | SwapVfos if self.sat_lock.is_some() && self.sat_split_on => {}
             SelectVfo(v) => {
                 // The mode goes with the VFO, and so does the antenna socket.
                 // Shelve what the one being left was listening in, and put the
@@ -9954,7 +10382,12 @@ impl Engine {
                 // offset is taken for the mode it is about to be put in.
                 let mode = self.vfo_memory[v.index()].mode;
                 let rig_hz = self.state.active_freq_hz() + self.rig_cw_offset_hz_in(mode);
-                self.source.select_vfo(v, rig_hz);
+                // Except under a satellite lock holding the rig's split: the
+                // rig stays on VFO A (the downlink) with VFO B the uplink, and
+                // selecting B would put the Doppler writes onto the transmitter.
+                if !(self.sat_lock.is_some() && self.sat_split_on) {
+                    self.source.select_vfo(v, rig_hz);
+                }
                 self.recall_vfo_mode();
                 self.recall_vfo_antenna();
                 self.state.band = Band::containing(self.state.active_freq_hz());
@@ -9990,7 +10423,55 @@ impl Engine {
                 self.recall_vfo_antenna();
                 self.update_tuning();
             }
-            SetSplit(on) => self.state.split = on,
+            SetSplit(on) => {
+                self.state.split = on;
+                // Under a satellite lock SPLIT is the lock's split: on, VFO B
+                // carries the (corrected) uplink and the over goes out on it;
+                // off, the rig's split goes and an over borrows the dial onto
+                // the uplink instead.
+                if self.source.controls_rig_split() && self.sat_lock.is_some() {
+                    let uplink = self.sat_lock.as_ref().and_then(|l| l.track.uplink_hz);
+                    match (on, uplink) {
+                        (true, Some(up)) => {
+                            self.source.split_on();
+                            let f = up + self.sat_tx_doppler_hz();
+                            self.source.set_vfo_b_freq(f);
+                            self.sat_vfo_b_last_freq = f;
+                            self.source.set_sat_split_on(true);
+                            self.sat_split_on = true;
+                        }
+                        // A downlink-only lock has nothing to transmit on.
+                        (true, None) => self.state.split = false,
+                        (false, _) => {
+                            if self.sat_split_on {
+                                self.source.split_off();
+                                self.source.set_sat_split_on(false);
+                                self.sat_split_on = false;
+                            }
+                        }
+                    }
+                }
+                // A CAT rig carries SPLIT in its own split: VFO B gets the
+                // transmit frequency and an over goes out on it as the rig
+                // stands (once the rig has confirmed the split — until then, and
+                // if it never does, the over borrows the dial as before).
+                if self.source.controls_rig_split() && self.sat_lock.is_none() {
+                    if on {
+                        // The rig's own VFO keeps its mode: a VFO B mode write
+                        // goes through VFO B and back to A, which on a split
+                        // worked from B would leave the rig on the wrong VFO.
+                        self.source.split_on();
+                        let tx = self.state.tx_freq_hz();
+                        self.source.set_vfo_b_freq(tx);
+                        self.manual_vfo_b_hz = tx;
+                        self.source.set_sat_split_on(true);
+                    } else {
+                        self.source.split_off();
+                        self.source.set_sat_split_on(false);
+                        self.manual_vfo_b_hz = 0.0;
+                    }
+                }
+            }
             SetCenter(hz) => {
                 // Never onto the VFO itself: see `guarded_center`.
                 let hz = self.guarded_center(hz);
@@ -10007,6 +10488,10 @@ impl Engine {
             SetSampleRate(_) => { /* needs stream re-open; deferred */ }
             SetDecimation(factor) => self.set_decimation(factor),
             SetBand(band) => {
+                if let Some(why) = self.rx_band_refusal_for(band) {
+                    warn!("band change refused: {why:?} for {}", band.label());
+                    return;
+                }
                 self.stop_scan_for_operator();
                 self.change_band(band);
             }
@@ -10020,11 +10505,8 @@ impl Engine {
                 // service bands.
                 let band = self.state.band;
                 if !band.accepts_mode(mode) {
-                    self.notice(&format!(
-                        "{} is not used on {} — pick a band it belongs to",
-                        mode.label(),
-                        band.label()
-                    ));
+                    warn!("mode change refused: {} is not used on {}", mode.label(), band.label());
+                    let _ = self.event_tx.send(RadioEvent::ModeRefused(mode, band));
                     return;
                 }
                 // Decided before the mode is applied, because knowing whether
@@ -10626,39 +11108,9 @@ impl Engine {
                 }
             }
             ImportMemories(channels) => {
-                // The engine owns the numbering: an id that came in over the
-                // wire, or out of somebody's file, is not one this list can
-                // trust not to collide with what is already stored.
-                let mut next = self.memories.iter().map(|m| m.id).max().unwrap_or(0) + 1;
-                let mut added = 0usize;
-                for mut m in channels {
-                    let name = m.name.trim().to_string();
-                    if !m.freq_hz.is_finite() || m.freq_hz <= 0.0 {
-                        continue;
-                    }
-                    // A channel already on the list is not stored twice, so
-                    // re-importing an updated directory adds what is new
-                    // rather than doubling what is not. Frequency and mode
-                    // rather than name: two clubs name the same machine
-                    // differently, and nobody wants it twice for that.
-                    if self
-                        .memories
-                        .iter()
-                        .any(|o| (o.freq_hz - m.freq_hz).abs() < 1.0 && o.mode == m.mode)
-                    {
-                        continue;
-                    }
-                    m.id = next;
-                    m.name = name;
-                    m.repeater = Some(m.repeater.unwrap_or_default().clamped());
-                    next += 1;
-                    self.memories.push(m);
-                    added += 1;
-                }
-                if added > 0 {
-                    self.save_memories();
-                }
+                self.import_memories(channels.into_iter().map(|m| (m, None)).collect(), false);
             }
+            ImportMemoriesFiled(channels) => self.import_memories(channels, true),
             DeleteMemory(id) => {
                 self.memories.retain(|m| m.id != id);
                 self.save_memories();
@@ -11089,6 +11541,12 @@ impl Engine {
                     d.wefax_nudge(px);
                 }
             }
+            WefaxRevertSlant => {
+                if let Some(d) = self.digi.as_mut() {
+                    d.wefax_revert_slant();
+                }
+            }
+            SetWideWindow(hz) => self.source.set_wide_center_hz(hz),
             SstvTx { mode, png } => {
                 // Decode the UI-composed PNG to RGB and queue it; the controller
                 // keys TX on the next poll.
@@ -11303,6 +11761,18 @@ impl Engine {
                 }
                 // `sync_sonde` hands the new settings to a running bank itself.
                 self.sync_sonde();
+            }
+
+            SetMeshtasticConfig(cfg) => self.set_meshtastic_config(cfg),
+            SendMeshtastic(msg) => self.send_meshtastic(msg),
+
+            SetWxsatConfig(cfg) => {
+                let cfg = cfg.sane();
+                self.state.wxsat = cfg;
+                if let Err(e) = sdroxide_config::save_wxsat_config(&cfg) {
+                    warn!("saving weather-satellite config: {e}");
+                }
+                self.sync_wxsat();
             }
 
             ReloadIsmDecoders => {
@@ -11926,41 +12396,188 @@ impl Engine {
                 self.emit_station_config();
             }
             ReloadBandPlan => {
-                // A missing file is seeded here as well as at startup, which is
-                // what makes "delete it to get the defaults back" work without
-                // a restart.
+                // Read again from the library, which is what makes a plan file
+                // edited in place take effect without a restart — and a chosen
+                // plan whose file has gone fall back to the built-in tables
+                // with the loader's alert.
                 let plan = sdroxide_config::load_band_plan();
                 let custom = !plan.is_default();
-                // The plan is process-wide, so a second radio at this station
-                // is transmitting under the new edges from this moment too —
-                // the lockout reads it at key time. Only its *displayed* band
-                // lags, until it next retunes and recomputes.
-                sdroxide_types::set_band_plan(plan);
-                // Same reason as `SetRegion`: the dial has not moved but the
-                // band under it may have.
-                self.state.band = Band::containing(self.state.active_freq_hz());
-                self.relay_bands_told = None;
-                self.emit_station_config();
+                self.adopt_band_plan(plan);
+                self.reload_own_plan();
                 // Whatever the loader had to say — a row it dropped, a file it
                 // could not read — reaches the operator who asked for the
                 // reload, not just the log.
                 let alerts = sdroxide_config::take_load_alerts();
-                if alerts.is_empty() {
-                    self.notice(if custom {
-                        "Band plan reloaded from bandplan.json."
-                    } else {
-                        "Band plan reloaded — it matches the built-in IARU tables."
-                    });
-                } else {
+                // Nothing to say when it went well: a plan that loaded is not an
+                // event, and a "reloaded" warning on every load was noise.
+                let _ = custom;
+                if !alerts.is_empty() {
                     self.notice(&alerts.join("\n"));
                 }
             }
+            // A plan from a screen, wherever that screen is: the text comes over
+            // the wire and this machine, which owns the disk, checks and keeps
+            // it. Only added — running it is a separate, deliberate choice,
+            // because choosing it withdraws every radio's band confirmations.
+            ImportBandPlan { name, json } => {
+                // A flat list of bands in hertz is not a band plan file but one
+                // import away from it: converted here, on the machine that owns
+                // the disk, and then held to exactly the check a plan file of
+                // our own is.
+                let prepared = if sdroxide_types::looks_like_band_list(&json) {
+                    sdroxide_types::convert_band_list(&json, "").map(|c| (c.text, Some(c.dropped)))
+                } else {
+                    Ok((json, None))
+                };
+                match prepared.and_then(|(text, listed)| {
+                    sdroxide_config::import_band_plan(&name, &text).map(|key| (key, listed))
+                }) {
+                    Ok((key, listed)) => {
+                        self.emit_station_config();
+                        let how = match listed {
+                            None => String::new(),
+                            Some(dropped) if dropped.is_empty() => {
+                                " It was a list of bands and has been converted.".to_string()
+                            }
+                            Some(dropped) => format!(
+                                " It was a list of bands and has been converted; {} row(s) were \
+                                 left out: {}{}",
+                                dropped.len(),
+                                dropped.iter().take(3).cloned().collect::<Vec<_>>().join(" "),
+                                if dropped.len() > 3 { " …" } else { "" }
+                            ),
+                        };
+                        self.notice(&format!(
+                            "Band plan “{key}” added.{how} Choose it in Settings → General to \
+                             run it."
+                        ));
+                    }
+                    Err(e) => self.notice(&e),
+                }
+            }
+            SelectBandPlan { name } => match sdroxide_config::select_band_plan(name.as_deref()) {
+                Ok(plan) => {
+                    let shown = match name.as_deref() {
+                        None => "the built-in IARU band plan".to_string(),
+                        Some(_) if plan.meta().name.trim().is_empty() => {
+                            format!("“{}”", name.as_deref().unwrap_or_default())
+                        }
+                        Some(_) => format!("“{}”", plan.meta().name),
+                    };
+                    let same = *sdroxide_types::station_band_plan() == plan;
+                    self.adopt_band_plan(plan);
+                    if self.own_plan.is_some() {
+                        // The station's plan moved (or did not); this radio runs a
+                        // plan of its own and is not affected either way.
+                        self.notice(&format!(
+                            "The station now runs {shown}; this radio keeps its own band plan."
+                        ));
+                    } else if same {
+                        // Already running it: nothing moved, so nothing is
+                        // withdrawn and nothing needs checking again.
+                        self.notice(&format!("Band plan: {shown} was already running."));
+                    } else {
+                        self.notice(&format!("Band plan: now running {shown}."));
+                    }
+                    let alerts = sdroxide_config::take_load_alerts();
+                    if !alerts.is_empty() {
+                        self.notice(&alerts.join("\n"));
+                    }
+                }
+                Err(e) => self.notice(&e),
+            },
+            // The plan running now, kept as a file that can be chosen, downloaded
+            // and shared. Not a change of plan: what runs is untouched.
+            SaveCurrentBandPlan { name } => {
+                match sdroxide_config::save_current_band_plan(&name, sdroxide_types::band_plan()) {
+                    Ok(key) => {
+                        self.emit_station_config();
+                        self.notice(&format!("The band plan was kept as “{key}”."));
+                    }
+                    Err(e) => self.notice(&e),
+                }
+            }
+            // The file goes to every screen; the one that asked is the one that
+            // saves it (the bridge does not know who it was).
+            ExportBandPlan { name } => match sdroxide_config::export_band_plan_text(&name) {
+                Ok((file, json)) => {
+                    let _ = self.event_tx.send(RadioEvent::BandPlanExport { file, json });
+                }
+                Err(e) => self.notice(&e),
+            },
+            // Missing or edited shipped plans are put back; the plan that runs is
+            // read again, so restoring the one in use takes effect at once and,
+            // if it differs, is a change of plan like any other.
+            RestoreShippedBandPlans => match sdroxide_config::restore_shipped_band_plans() {
+                Ok(written) => {
+                    let plan = sdroxide_config::load_band_plan();
+                    self.adopt_band_plan(plan);
+                    self.reload_own_plan();
+                    let alerts = sdroxide_config::take_load_alerts();
+                    if !alerts.is_empty() {
+                        self.notice(&alerts.join("\n"));
+                    } else if written.is_empty() {
+                        self.notice("The shipped band plans were all in place already.");
+                    } else {
+                        self.notice(&format!(
+                            "Shipped band plans put back: {}.",
+                            written.join(", ")
+                        ));
+                    }
+                }
+                Err(e) => self.notice(&e),
+            },
+            // A plan for this radio only. The station's plan and every other radio
+            // are untouched; this radio's own confirmations are withdrawn if the
+            // plan it runs changes, and no other radio's.
+            SelectRadioBandPlan { name } => {
+                let resolved = match name.as_deref() {
+                    None => Ok(None),
+                    Some(n) => sdroxide_config::read_band_plan(n).map(Some),
+                };
+                match resolved {
+                    Err(e) => self.notice(&e),
+                    Ok(plan) => {
+                        let key = name.as_deref().and_then(|n| sdroxide_config::band_plan_key(n).ok());
+                        let shown = match &plan {
+                            Some(p) if !p.meta().name.trim().is_empty() => {
+                                format!("the band plan “{}”", p.meta().name)
+                            }
+                            Some(_) => format!("the band plan “{}”", key.clone().unwrap_or_default()),
+                            None => "the station's band plan".to_string(),
+                        };
+                        let mut cfg = self.store.load_radio_config();
+                        cfg.band_plan = key.clone();
+                        if let Err(e) = self.store.save_radio_config(&cfg) {
+                            warn!("saving this radio's band plan: {e}");
+                        }
+                        self.own_plan_name = key;
+                        let changed = self.set_own_plan(plan);
+                        self.emit_station_config();
+                        self.emit_radio_config();
+                        self.notice(&format!("This radio now runs {shown}."));
+                        if changed {
+                            self.withdraw_band_confirmations();
+                        }
+                    }
+                }
+            }
+            DeleteBandPlan { name } => match sdroxide_config::delete_band_plan(&name) {
+                Ok(()) => {
+                    self.emit_station_config();
+                    self.notice("Band plan deleted.");
+                }
+                Err(e) => self.notice(&e),
+            },
 
             // This radio's own `radio.json` (no RadioState change → return
             // before the State emit below). The engine is the one that writes
             // it: the file is in *this* machine's config directory, and the
             // screen asking for the change may be in another country.
             SetRadioConfig { cfg, reopen } => {
+                let mut cfg = cfg;
+                cfg.drop_other_band();
+                self.vet_band_confirmations(&mut cfg);
                 if let Err(e) = self.store.save_radio_config(&cfg) {
                     warn!("saving radio config: {e}");
                 }
@@ -11983,6 +12600,9 @@ impl Engine {
                 self.drive_trim = cfg.tx_drive_trim.clone();
                 self.tx_band_enable = cfg.tx_band_enable.clone().unwrap_or_default();
                 self.tx_bands_confirmed = cfg.tx_bands_confirmed;
+                self.rx_band_enable = cfg.rx_band_enable.clone().unwrap_or_default();
+                self.rx_bands_confirmed = cfg.rx_bands_confirmed;
+                self.rx_swl = cfg.hide_tx;
                 // And the ceiling beside it, live rather than at the next
                 // reopen: the operator setting one is very likely doing it
                 // because the radio is making too much power *now*.
@@ -13026,6 +13646,520 @@ impl Engine {
         let Some(bank) = self.sonde.as_mut() else { return };
         let Some(status) = bank.poll(now) else { return };
         let _ = self.event_tx.send(RadioEvent::SondeStatus(Box::new(status)));
+    }
+
+    /// Whether the Meshtastic channel is inside the window the radio captures,
+    /// and why the receive band list would not let the radio listen there. The
+    /// list is only read: the lane idles on a refusal and says so in its status,
+    /// it never moves the dial or edits the list.
+    fn mesh_gate_state(&self) -> (bool, Option<sdroxide_types::RxBlock>) {
+        let cfg = &self.state.meshtastic;
+        let rate = if self.state.usable_hz > 0.0 {
+            self.state.usable_hz.min(self.state.sample_rate)
+        } else {
+            self.state.sample_rate
+        };
+        let in_window = sdroxide_types::meshtastic_window_covers(
+            self.state.center_hz,
+            rate,
+            cfg.frequency_hz,
+            f64::from(lane_bw_hz(cfg)),
+        );
+        (in_window, self.rx_band_refusal(cfg.frequency_hz))
+    }
+
+    /// Build (or rebuild) the Meshtastic downconverter on the current centre,
+    /// at the lane rate of the current preset.
+    fn build_mesh_lane(&mut self) {
+        let cfg = &self.state.meshtastic;
+        let rate = lane_rate_for(cfg);
+        let mut ddc = Ddc::new(self.state.sample_rate, rate);
+        ddc.set_offset_hz(cfg.frequency_hz - self.state.center_hz);
+        let out_rate = ddc.out_rate();
+        self.mesh_rs = ComplexResampler::new(out_rate, rate);
+        self.mesh_ddc = Some(ddc);
+        self.mesh_in_rate = self.state.sample_rate;
+        self.mesh_preset = lane_name(cfg);
+        self.mesh_buf.clear();
+        self.mesh_res_buf.clear();
+    }
+
+    /// Construct or tear down the Meshtastic receiver to match
+    /// `state.meshtastic.enabled`, and hand a running worker its new settings.
+    fn sync_meshtastic(&mut self) {
+        // Wideband-only, for the same reason as the other lanes.
+        if self.audio_mode {
+            self.state.meshtastic.enabled = false;
+        }
+        match (self.state.meshtastic.enabled, self.mesh.is_some()) {
+            (true, false) => {
+                self.build_mesh_lane();
+                self.mesh = Some(MeshtasticController::new(self.state.meshtastic.clone()));
+                info!(preset = self.mesh_preset, "meshtastic receiver started");
+            }
+            (false, true) => {
+                self.mesh = None;
+                self.mesh_ddc = None;
+                self.mesh_rs = None;
+                self.mesh_buf.clear();
+                self.mesh_res_buf.clear();
+                self.mesh_gate = false;
+                // A last status that says it stopped, with the table kept, so
+                // a panel does not keep showing a running receiver.
+                let mut last = self.mesh_last.take().unwrap_or_default();
+                last.running = false;
+                let _ = self.event_tx.send(RadioEvent::MeshtasticStatus(Box::new(last)));
+                info!("meshtastic receiver stopped");
+            }
+            (true, true) => {
+                self.sync_meshtastic_window();
+                if let Some(c) = self.mesh.as_ref() {
+                    c.set_config(&self.state.meshtastic);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Re-seat the Meshtastic mixer after a retune, and rebuild the lane if the
+    /// sample rate feeding it, or its preset, has changed (a `Ddc` bakes its
+    /// input rate in at construction).
+    fn sync_meshtastic_window(&mut self) {
+        if self.mesh_ddc.is_none() {
+            return;
+        }
+        if (self.state.sample_rate - self.mesh_in_rate).abs() >= 1.0
+            || lane_name(&self.state.meshtastic) != self.mesh_preset
+        {
+            self.build_mesh_lane();
+            info!(preset = self.mesh_preset, "meshtastic window rebuilt");
+        } else if let Some(ddc) = self.mesh_ddc.as_mut() {
+            ddc.set_offset_hz(self.state.meshtastic.frequency_hz - self.state.center_hz);
+        }
+        let (in_window, refused) = self.mesh_gate_state();
+        self.mesh_gate = in_window && refused.is_none();
+    }
+
+    /// Drain the Meshtastic receiver's latest status and forward it, with the
+    /// two facts only the engine knows: whether the channel is in the window,
+    /// and whether the receive band list refuses it. While the lane is idle for
+    /// either reason the last status is repeated once a second, so the panel
+    /// can say why.
+    fn poll_meshtastic(&mut self) {
+        if self.mesh.is_none() {
+            return;
+        }
+        let (in_window, refused) = self.mesh_gate_state();
+        self.mesh_gate = in_window && refused.is_none();
+        let fresh = self.mesh.as_ref().and_then(|c| c.poll());
+        let now = unix_now();
+        let mut status = match fresh {
+            Some(s) => s,
+            None if !self.mesh_gate && now != self.mesh_sent_s => {
+                self.mesh_last.clone().unwrap_or_default()
+            }
+            None => return,
+        };
+        status.running = true;
+        status.in_window = in_window;
+        status.refused = refused;
+        self.fill_mesh_tx(&mut status);
+        self.mesh_last = Some(status.clone());
+        self.mesh_sent_s = now;
+        let _ = self.event_tx.send(RadioEvent::MeshtasticStatus(Box::new(status)));
+    }
+
+    /// Apply the operator's Meshtastic settings. Turning the receiver on
+    /// records where the radio is; turning it off puts the dial and the mode
+    /// back. The restore point is the station's own: whatever a client sends in
+    /// it is ignored.
+    fn set_meshtastic_config(&mut self, cfg: sdroxide_types::MeshtasticSettings) {
+        let prev = self.state.meshtastic.clone();
+        let mut next = cfg.sane();
+        if self.audio_mode {
+            next.enabled = false;
+        }
+        next.restore = if next.enabled {
+            prev.restore.or_else(|| {
+                Some(sdroxide_types::MeshtasticRestore {
+                    dial_hz: match self.state.active_vfo {
+                        Vfo::A => self.state.vfo_a_hz,
+                        Vfo::B => self.state.vfo_b_hz,
+                    },
+                    mode: self.state.rx[0].mode,
+                })
+            })
+        } else {
+            None
+        };
+        if !next.enabled
+            && let Some(r) = prev.restore
+        {
+            self.restore_tuning(r);
+        }
+        self.state.meshtastic = next;
+        if let Err(e) = sdroxide_config::save_meshtastic_config(&self.state.meshtastic) {
+            warn!("saving meshtastic config: {e}");
+        }
+        self.sync_meshtastic();
+    }
+
+    /// Put the dial and the mode back where the receiver found them, through
+    /// the ordinary commands: the receive band list still decides, and a dial
+    /// it now refuses stays where it is.
+    fn restore_tuning(&mut self, r: sdroxide_types::MeshtasticRestore) {
+        let vfo = self.state.active_vfo;
+        self.apply(Command::SetVfo { vfo, hz: r.dial_hz });
+        if self.state.rx[0].mode != r.mode {
+            self.apply(Command::SetModeListen { rx: RxId::Main, mode: r.mode });
+        }
+    }
+
+    /// Quitting with the receiver on is leaving it: restore the radio, switch
+    /// the receiver off for the next start and write the session so the dial
+    /// that comes back is the one that is remembered.
+    fn restore_meshtastic_on_exit(&mut self) {
+        let Some(r) = self.state.meshtastic.restore else { return };
+        if !self.state.meshtastic.enabled {
+            return;
+        }
+        self.restore_tuning(r);
+        self.state.meshtastic.enabled = false;
+        self.state.meshtastic.restore = None;
+        if let Err(e) = sdroxide_config::save_meshtastic_config(&self.state.meshtastic) {
+            warn!("saving meshtastic config: {e}");
+        }
+        self.save_session();
+    }
+
+    /// Fill the transmit half of a Meshtastic status.
+    fn fill_mesh_tx(&mut self, st: &mut sdroxide_types::MeshtasticStatus) {
+        let now = unix_now_f64();
+        st.tx_refused = self.mesh_tx_refused;
+        st.tx_busy = self.mesh_tx.is_some();
+        st.tx_sent = self.mesh_tx_sent;
+        st.tx_used_ms = (self.mesh_duty.used_s(now) * 1000.0) as u32;
+        st.tx_budget_ms = sdroxide_meshtastic::tx::duty_cycle_percent(&self.state.meshtastic.region)
+            .map(|p| (f64::from(p) / 100.0 * sdroxide_meshtastic::tx::DUTY_WINDOW_S * 1000.0) as u32);
+    }
+
+    /// Send the Meshtastic status now, with the transmit half refreshed: the
+    /// receiver may be off, so the poll that normally carries it may not run.
+    fn publish_mesh_status(&mut self) {
+        let mut st = self.mesh_last.clone().unwrap_or_default();
+        self.fill_mesh_tx(&mut st);
+        self.mesh_last = Some(st.clone());
+        let _ = self.event_tx.send(RadioEvent::MeshtasticStatus(Box::new(st)));
+    }
+
+    /// The station's node number: the one kept, or a new one drawn the first
+    /// time. Never broadcast, never in the reserved low range.
+    fn mesh_node_id(&mut self) -> u32 {
+        if self.state.meshtastic.node_id >= 256 && self.state.meshtastic.node_id != u32::MAX {
+            return self.state.meshtastic.node_id;
+        }
+        let n = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_or(0x5EED_u64, |d| d.as_nanos() as u64);
+        // splitmix64 finaliser: a clock's low bits are not a number to send.
+        let mut z = n.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        let id = ((z ^ (z >> 31)) as u32).max(256);
+        let id = if id == u32::MAX { 256 } else { id };
+        self.state.meshtastic.node_id = id;
+        if let Err(e) = sdroxide_config::save_meshtastic_config(&self.state.meshtastic) {
+            warn!("saving meshtastic config: {e}");
+        }
+        id
+    }
+
+    /// Send a text message on the Meshtastic channel, and say why when it does
+    /// not go.
+    fn send_meshtastic(&mut self, msg: sdroxide_types::MeshtasticSend) {
+        self.mesh_tx_refused = self.try_send_meshtastic(msg).err();
+        self.publish_mesh_status();
+    }
+
+    /// The checks, in order, then the key-down. The transmit band list is the
+    /// ordinary one, asked on the frequency the radio would radiate on: this
+    /// reads it and adds nothing to it.
+    fn try_send_meshtastic(&mut self, msg: sdroxide_types::MeshtasticSend) -> Result<(), sdroxide_types::MeshTxRefusal> {
+        use sdroxide_types::MeshTxRefusal as Why;
+        use sdroxide_meshtastic::tx;
+        if self.mesh_tx.is_some() || self.tx_active {
+            return Err(Why::Busy);
+        }
+        // Raw I/Q or nothing: a rig that takes audio cannot carry a chirp.
+        if self.audio_mode || self.caps.tx_audio || !self.caps.is_transmit_capable() {
+            return Err(Why::NoTransmitter);
+        }
+        let cfg = self.state.meshtastic.clone();
+        let txf = self.state.tx_freq_hz();
+        if (txf - cfg.frequency_hz).abs() > 1_000.0 {
+            return Err(Why::OffChannel);
+        }
+        if let Some(why) = self.tx_band_refusal(txf) {
+            return Err(Why::Band(why));
+        }
+        if msg.text.is_empty() || msg.text.len() > sdroxide_types::MESH_TX_TEXT_MAX {
+            return Err(Why::BadText);
+        }
+        let preset = preset_of(&cfg);
+        let region = sdroxide_meshtastic::protocol::lookup_region(&cfg.region)
+            .unwrap_or(&sdroxide_meshtastic::protocol::REGIONS[2]);
+        let params = tx::tx_params(preset, region);
+        let from = self.mesh_node_id();
+        let packet_id = (from.rotate_left(13) ^ (unix_now() as u32).wrapping_mul(2_654_435_761)).max(1);
+        let psk = tx::channel_key(preset, &cfg.keys);
+        let frame = tx::build_text_frame(from, msg.to, packet_id, &msg.text, preset, &psk)
+            .ok_or(Why::BadText)?;
+        let airtime_s = tx::airtime_s(frame.len(), &params);
+        match self.mesh_duty.check(unix_now_f64(), airtime_s, tx::duty_cycle_percent(&cfg.region)) {
+            Ok(()) => {}
+            Err(tx::DutyRefusal::Wait(s)) => return Err(Why::DutyCycle(s.ceil() as u32)),
+            Err(tx::DutyRefusal::TooLong) => return Err(Why::TooLong),
+        }
+        let iq = sdroxide_meshtastic::modulate(&frame, &params);
+        self.mesh_tx = Some(MeshTxBurst {
+            iq,
+            pos: 0,
+            rate: f64::from(params.sample_rate()),
+            airtime_s,
+            duc: None,
+            started: None,
+        });
+        // The ordinary key-down: every rail that applies to a PTT applies here.
+        self.state.tx.ptt = true;
+        self.sync_tx_state();
+        if !self.tx_active {
+            self.mesh_tx = None;
+            self.state.tx.ptt = false;
+            return Err(Why::Rails);
+        }
+        let _ = self.event_tx.send(RadioEvent::State(self.state.clone()));
+        Ok(())
+    }
+
+    /// One ~10 ms block of the Meshtastic burst: through its own upconverter to
+    /// the device's rate, written out, paced to real time. Unkeys at the end and
+    /// counts the air time against the duty cycle.
+    fn tx_block_mesh(&mut self) -> crate::Result<()> {
+        let drive = self.tx_drive();
+        let cushion_ms = self.source.tx_pace_cushion_ms();
+        let (Some(tx), Some(b)) = (self.tx.as_mut(), self.mesh_tx.as_mut()) else {
+            return Ok(());
+        };
+        let block = ((b.rate / 100.0).round() as usize).max(1);
+        let end = (b.pos + block).min(b.iq.len());
+        let duc = b.duc.get_or_insert_with(|| Duc::new(b.rate, tx.tx_rate));
+        tx.mod_buf.clear();
+        tx.mod_buf.extend(b.iq[b.pos..end].iter().map(|z| {
+            let z = *z * drive;
+            let mag = z.norm();
+            if mag > 1.0 { z / mag } else { z }
+        }));
+        tx.tx_buf.clear();
+        duc.process(&tx.mod_buf, &mut tx.tx_buf);
+        if !tx.tx_buf.is_empty() {
+            self.source.tx_write(&tx.tx_buf)?;
+            self.analyzer.process(&tx.tx_buf);
+        }
+        b.pos = end;
+        // Real-time pacing: the block just written ends at `pos / rate`; sleep
+        // until that, less the device's own cushion.
+        let started = *b.started.get_or_insert_with(Instant::now);
+        let target = Duration::from_secs_f64((b.pos as f64 / b.rate - cushion_ms.max(0.0) / 1000.0).max(0.0));
+        if let Some(d) = target.checked_sub(started.elapsed()) {
+            std::thread::sleep(d);
+        }
+        if b.pos >= b.iq.len() {
+            let airtime_s = b.airtime_s;
+            self.source.tx_drain();
+            self.mesh_tx = None;
+            self.mesh_duty.record(unix_now_f64(), airtime_s);
+            self.mesh_tx_sent = self.mesh_tx_sent.saturating_add(1);
+            self.mesh_tx_refused = None;
+            self.state.tx.ptt = false;
+            self.sync_tx_state();
+            let _ = self.event_tx.send(RadioEvent::State(self.state.clone()));
+            self.publish_mesh_status();
+        }
+        Ok(())
+    }
+
+    /// Construct or tear down the weather-satellite lane: one fixed-frequency
+    /// channel mixed from the sample window, like [`Self::sync_sonde`]. The
+    /// channel has to lie inside the window with room for its 40 kHz.
+    fn sync_wxsat(&mut self) {
+        // Wideband-only, for the same reason as the HFDL lane.
+        if self.audio_mode {
+            self.state.wxsat.enabled = false;
+        }
+        match (self.state.wxsat.enabled, self.wxsat.is_some()) {
+            (true, false) => {
+                self.wxsat_pass = self.wxsat_pass.wrapping_add(1);
+                self.wxsat = Some(WxsatLane::new(
+                    self.state.sample_rate,
+                    self.state.center_hz,
+                    self.state.wxsat,
+                    self.wxsat_pass,
+                ));
+                info!(hz = self.state.wxsat.frequency_hz, "weather-satellite decoder started");
+            }
+            (false, true) => {
+                self.wxsat = None;
+                info!("weather-satellite decoder stopped");
+            }
+            (true, true) => {
+                let kind_changed = self.wxsat.as_ref().is_some_and(|l| l.kind() != self.state.wxsat.kind);
+                if kind_changed {
+                    // Another signal is another lane (its own rate) and another picture.
+                    self.wxsat_pass = self.wxsat_pass.wrapping_add(1);
+                    self.wxsat = Some(WxsatLane::new(
+                        self.state.sample_rate,
+                        self.state.center_hz,
+                        self.state.wxsat,
+                        self.wxsat_pass,
+                    ));
+                    info!(kind = ?self.state.wxsat.kind, "weather-satellite decoder switched");
+                } else {
+                    self.sync_wxsat_window();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Re-seat the weather-satellite mixer after a retune, and rebuild the lane
+    /// if the sample rate feeding it changed (a `Ddc` bakes its input rate in).
+    /// A new lane keeps the picture's number: it is the same picture.
+    fn sync_wxsat_window(&mut self) {
+        let Some(lane) = self.wxsat.as_mut() else { return };
+        if (self.state.sample_rate - lane.in_rate()).abs() >= 1.0 {
+            let pass = lane.pass();
+            self.wxsat =
+                Some(WxsatLane::new(self.state.sample_rate, self.state.center_hz, self.state.wxsat, pass));
+            info!("weather-satellite window rebuilt");
+            return;
+        }
+        lane.set_tuning(self.state.center_hz, self.state.wxsat.frequency_hz);
+    }
+
+    /// Drain the weather-satellite decoder's statuses and forward them. Each
+    /// carries lines nobody else has, so none is dropped.
+    fn poll_wxsat(&mut self) {
+        let Some(lane) = self.wxsat.as_ref() else { return };
+        for status in lane.poll() {
+            let _ = self.event_tx.send(RadioEvent::WxsatStatus(Box::new(status)));
+        }
+    }
+
+    /// What the VOR lane should be doing for the dial and the front end as they
+    /// are now.
+    fn vor_plan(&self) -> VorPlan {
+        let dial = self.state.rx_freq_hz();
+        let (lo, hi) = sdroxide_types::VOR_BAND_HZ;
+        if !(lo..=hi).contains(&dial) {
+            return VorPlan::Off;
+        }
+        if self.audio_mode {
+            return VorPlan::Blocked(sdroxide_types::VorUnavailable::AudioFront);
+        }
+        // The channel and a margin either side must be inside what the
+        // down-converter's own filter passes.
+        let reach = self.state.sample_rate * 0.4;
+        if self.state.sample_rate < VOR_MIN_STREAM_HZ
+            || (dial - self.state.center_hz).abs() + VOR_HALF_WIDTH_HZ > reach
+        {
+            return VorPlan::Blocked(sdroxide_types::VorUnavailable::OutsideWindow);
+        }
+        VorPlan::Run(dial)
+    }
+
+    /// Follow the dial, run the VOR lane while it is on a beacon, and tell the
+    /// window what it hears: twice a second while it runs, and once each time
+    /// it starts, stops or is refused.
+    fn poll_vor(&mut self) {
+        let plan = self.vor_plan();
+        match plan {
+            VorPlan::Run(dial) => self.vor_follow(dial),
+            _ => {
+                if self.vor.is_some() {
+                    info!("VOR decoder stopped");
+                }
+                self.vor = None;
+                self.vor_ddc = None;
+                self.vor_buf.clear();
+                self.vor_reading = None;
+            }
+        }
+        let state = match plan {
+            VorPlan::Run(_) => (self.vor.is_some(), None),
+            VorPlan::Blocked(why) => (false, Some(why)),
+            VorPlan::Off => (false, None),
+        };
+        let changed = self.vor_sent_state != Some(state);
+        let due = state.0
+            && self.vor_sent_at.is_none_or(|t| t.elapsed() >= Duration::from_millis(500));
+        if !changed && !due {
+            return;
+        }
+        // Never in the band and nothing said yet: there is nobody to tell.
+        if changed && self.vor_sent_state.is_none() && state == (false, None) {
+            self.vor_sent_state = Some(state);
+            return;
+        }
+        self.vor_sent_state = Some(state);
+        self.vor_sent_at = Some(Instant::now());
+        let (running, unavailable) = state;
+        let mut st = sdroxide_types::VorStatus {
+            running,
+            unavailable,
+            freq_hz: self.vor_dial_hz,
+            ..Default::default()
+        };
+        if let Some(r) = self.vor_reading.filter(|_| running) {
+            st.radial_deg = r.radial_deg;
+            st.var_depth = r.var_depth;
+            st.ref_depth = r.ref_depth;
+            st.deviation_hz = r.ref_deviation_hz;
+            st.locked = r.locked;
+        }
+        st.ident = self.vor.as_ref().and_then(|d| d.ident()).map(str::to_owned);
+        let _ = self.event_tx.send(RadioEvent::VorStatus(Box::new(st)));
+    }
+
+    /// Start the lane on `dial`, or keep it on it after a retune.
+    fn vor_follow(&mut self, dial: f64) {
+        let rate_changed = (self.state.sample_rate - self.vor_in_rate).abs() >= 1.0;
+        if self.vor.is_none() || self.vor_ddc.is_none() || rate_changed {
+            let ddc = Ddc::new(self.state.sample_rate, VOR_TARGET_RATE_HZ);
+            let Ok(decoder) = VorDecoder::new(ddc.out_rate().round() as u32) else {
+                self.vor = None;
+                self.vor_ddc = None;
+                return;
+            };
+            info!(rate = ddc.out_rate(), dial, "VOR decoder started");
+            self.vor_ddc = Some(ddc);
+            self.vor = Some(decoder);
+            self.vor_in_rate = self.state.sample_rate;
+            self.vor_dial_hz = dial;
+            self.vor_reading = None;
+        } else if (dial - self.vor_dial_hz).abs() > VOR_NEW_BEACON_HZ {
+            // Another channel is another beacon: what was heard of the last
+            // one is not evidence about this one. A fine-tuning nudge is not.
+            if let Some(d) = self.vor.as_mut() {
+                d.reset();
+            }
+            self.vor_dial_hz = dial;
+            self.vor_reading = None;
+        }
+        // Re-seated every pass: the offset is measured from the hardware
+        // centre, and a retune of the hardware is what moves that.
+        if let Some(ddc) = self.vor_ddc.as_mut() {
+            ddc.set_offset_hz(dial - self.state.center_hz);
+        }
     }
 
     /// Drain the HFDL decoder's latest status and forward it.
@@ -14749,6 +15883,8 @@ impl Engine {
                 cb_plan: sdroxide_types::cb_plan(),
                 cb_tx_allowed: sdroxide_types::cb_tx_allowed(),
                 band_plan: sdroxide_types::band_plan().clone(),
+                band_plans: sdroxide_config::list_band_plans(),
+                band_plan_name: sdroxide_config::band_plan_selection(),
                 digi_presets: sdroxide_types::digi_presets().to_vec(),
             },
         )));
@@ -14836,11 +15972,83 @@ impl Engine {
             )));
             return;
         };
+        info!(
+            "satellite lock {} (norad {}): audio_mode {}, doppler {}, uplink {:?}, tone {:?}, \
+             split held {}, already locked {:?}",
+            cfg.name,
+            cfg.norad_id,
+            self.audio_mode,
+            cfg.doppler,
+            cfg.uplink,
+            cfg.ctcss_hz,
+            self.sat_split_on,
+            self.sat_lock.as_ref().map(|l| (l.cfg.norad_id, l.cfg.uplink)),
+        );
         if self.audio_mode && cfg.doppler {
             let _ = self.event_tx.send(RadioEvent::Notice(Some(
-                "CAT rig: satellite tracking runs, but Doppler correction needs an IQ front end"
+                "CAT rig: satellite RX Doppler correction via CAT (experimental)"
                     .into(),
             )));
+        }
+        // A CAT transceiver — on its own or behind a panadapter receiver —
+        // transmits on its own split for the lock.
+        if self.source.controls_rig_split() {
+            // Step 2: the rig's own split, VFO A on the downlink and VFO B on
+            // the uplink. Only for a link with an uplink: a downlink-only lock
+            // (a beacon, an APT bird) has nothing to put on VFO B.
+            //
+            // The order is the one both families need. Split first, which on
+            // Icom also puts the rig on VFO A in VFO mode; then mode and tone,
+            // which Yaesu sets on VFO A for the copy to B that comes with the
+            // frequency; the frequency last.
+            //
+            // The same lock arriving again — a DOPPLER or ROTATOR flip resends
+            // it whole — finds all of that done already; redoing it would take
+            // the rig through VFO B (on Icom, visibly) for nothing.
+            let relock = self.sat_split_on
+                && self.sat_lock.as_ref().is_some_and(|l| {
+                    l.cfg.norad_id == cfg.norad_id
+                        && l.cfg.uplink == cfg.uplink
+                        && l.cfg.ctcss_hz == cfg.ctcss_hz
+                });
+            info!(
+                "satellite lock: relock {relock}; the rig's split and VFO B are {}",
+                if cfg.uplink.is_some() && !relock { "being set up" } else { "left as they are" }
+            );
+            if let Some(u) = cfg.uplink
+                && !relock
+            {
+                // The rig on VFO A first (on Icom also off a memory channel):
+                // the Doppler writes are for the VFO in use, and that has to
+                // be the downlink one.
+                let down = if cfg.downlink_hz > 0.0 { cfg.downlink_hz } else { self.state.vfo_a_hz };
+                self.source.select_vfo(Vfo::A, down);
+                self.source.split_on();
+                self.source.set_vfo_b_mode(self.state.rx[0].mode);
+                // Only the tone the link names: a link without one gets none,
+                // rather than the ISS repeater's 67 Hz by default.
+                // A link that names none gets the tone switched off (zero),
+                // not left with the one an earlier link put on VFO B.
+                self.source.set_vfo_b_ctcss(cfg.ctcss_hz.unwrap_or(0.0));
+                // The nominal uplink now, so VFO B never transmits on whatever
+                // it held before; the Doppler-corrected one follows with the
+                // first track (`sat_vfo_b_last_freq` at zero makes sure of it,
+                // however small the correction is then).
+                let up = u.uplink_for(self.state.active_freq_hz()) + self.state.xit.effective_hz();
+                self.source.set_vfo_b_freq(up);
+                self.sat_vfo_b_last_freq = 0.0;
+                self.source.set_sat_split_on(true);
+                self.sat_split_on = true;
+                // SPLIT as the operator had it before the *first* lock: moving
+                // the lock to another link finds SPLIT on already, but on
+                // because the lock put it there, and that is not what to give
+                // back when the lock ends.
+                if !self.sat_took_split {
+                    self.split_before_lock = self.state.split;
+                }
+                self.sat_took_split = true;
+                self.state.split = true;
+            }
         }
         self.stop_scan_for_operator();
         // The dial goes to the nominal downlink through the normal tuning
@@ -14893,10 +16101,29 @@ impl Engine {
         if self.sat_lock.take().is_none() {
             return;
         }
+        // Step 2: restore the rig's split state.
+        if self.sat_split_on {
+            self.source.split_off();
+            self.source.set_sat_split_on(false);
+            self.sat_split_on = false;
+        }
+        // And SPLIT as it was before the lock switched it on — including the
+        // operator's own SPLIT, which on a CAT rig goes back into the rig.
+        if std::mem::take(&mut self.sat_took_split) {
+            self.state.split = std::mem::take(&mut self.split_before_lock);
+            if self.state.split && self.source.controls_rig_split() {
+                self.source.split_on();
+                let tx = self.state.tx_freq_hz();
+                self.source.set_vfo_b_freq(tx);
+                self.manual_vfo_b_hz = tx;
+                self.source.set_sat_split_on(true);
+            }
+        }
         if let Some(tx) = self.tx.as_mut() {
             tx.sat_nco = None;
         }
         self.update_tuning();
+        self.emit_state();
         // The antenna stops chasing a satellite nobody is locked to.
         self.drive_rotator();
         let _ = self.event_tx.send(RadioEvent::SatTrack(None));
@@ -15008,7 +16235,7 @@ impl Engine {
                 t.uplink_hz = f_up;
                 t.visible = o.el_deg > 0.0;
                 t.stale_elements = false;
-                t.corrections_active = lock.cfg.doppler && !self.audio_mode;
+                t.corrections_active = lock.cfg.doppler;
                 (t.doppler_rx_hz, t.doppler_tx_hz) = if t.corrections_active {
                     (
                         sdroxide_types::doppler_rx_hz(f_down, o.range_rate_km_s),
@@ -15308,6 +16535,10 @@ impl Engine {
             return;
         }
         self.rig_tx = on;
+        // The screen too: a satellite lock's readout follows the rig onto the
+        // uplink while the operator talks into its microphone.
+        self.state.tx.rig_keyed = on;
+        self.emit_state();
         info!(
             "the radio is {} under {how}",
             match on {
@@ -15332,6 +16563,13 @@ impl Engine {
     fn sat_rx_doppler_hz(&self) -> f64 {
         match &self.sat_lock {
             Some(l) if l.track.corrections_active => l.track.doppler_rx_hz,
+            _ => 0.0,
+        }
+    }
+
+    fn sat_tx_doppler_hz(&self) -> f64 {
+        match &self.sat_lock {
+            Some(l) if l.track.corrections_active => l.track.doppler_tx_hz,
             _ => 0.0,
         }
     }
@@ -17137,8 +18375,40 @@ impl Engine {
         if !self.tx_bands_confirmed {
             return Some(TxBlock::Unconfirmed);
         }
-        if !self.tx_band_enable.contains(&band) {
+        // "Other" is never a transmit band: no list can grant a key-down
+        // outside every band (the row is gone from the screen, and a list
+        // that still names it — an old file, a remote client — is ignored).
+        if band == Band::Gen || !self.tx_band_enable.contains(&band) {
             return Some(TxBlock::BandOff(band));
+        }
+        // 11 m is the one band with a second lock: the list says the operator
+        // wants it, "Allow transmit on 11 m (CB)" says they accepted the rules.
+        if band == Band::M11 && !self.cb_tx_allowed {
+            return Some(TxBlock::CbOff);
+        }
+        None
+    }
+
+    /// Why the dial may not be moved to `hz` under the operator's receive band
+    /// list, or `None` when it may. The same rule as
+    /// [`sdroxide_types::RadioConfig::rx_block_reason`], on the copy the engine
+    /// holds. Always `None` when the list is not enforced (tests).
+    fn rx_band_refusal(&self, hz: f64) -> Option<sdroxide_types::RxBlock> {
+        self.rx_band_refusal_for(Band::containing(hz))
+    }
+
+    /// [`Self::rx_band_refusal`] for a band chosen by name (a band button).
+    fn rx_band_refusal_for(&self, band: Band) -> Option<sdroxide_types::RxBlock> {
+        if !self.rx_bands_enforced || self.rx_swl || band.rx_always_open() {
+            return None;
+        }
+        if !self.rx_bands_confirmed {
+            return Some(sdroxide_types::RxBlock::Unconfirmed);
+        }
+        // Outside every band (ADS-B, DAB, AIS...) is listening only and has
+        // no row of its own: a confirmed list covers it.
+        if band != Band::Gen && !self.rx_band_enable.contains(&band) {
+            return Some(sdroxide_types::RxBlock::BandOff(band));
         }
         None
     }
@@ -17848,6 +19118,65 @@ impl Engine {
         let _ = self.event_tx.send(RadioEvent::Memories(self.memories.clone()));
     }
 
+    /// Add channels read from a file to the memory list (issues #234, #623).
+    ///
+    /// `filed` says the file named folders: each channel then goes into the
+    /// folder of the name it came with (found without regard to case, created
+    /// when there is none, and only for a channel that is actually added), or
+    /// to the top level when it came with none. Otherwise the channel keeps
+    /// the folder field it arrived with, as before folders could be named.
+    fn import_memories(&mut self, channels: Vec<(MemoryChannel, Option<String>)>, filed: bool) {
+        // The engine owns the numbering: an id that came in over the
+        // wire, or out of somebody's file, is not one this list can
+        // trust not to collide with what is already stored.
+        let mut next = self.memories.iter().map(|m| m.id).max().unwrap_or(0) + 1;
+        let (mut added, mut made_folder) = (0usize, false);
+        for (mut m, folder) in channels {
+            let name = m.name.trim().to_string();
+            if !m.freq_hz.is_finite() || m.freq_hz <= 0.0 {
+                continue;
+            }
+            // A channel already on the list is not stored twice, so
+            // re-importing an updated directory adds what is new
+            // rather than doubling what is not. Frequency and mode
+            // rather than name: two clubs name the same machine
+            // differently, and nobody wants it twice for that. The one
+            // already stored stays where it is, folder included.
+            if self.memories.iter().any(|o| (o.freq_hz - m.freq_hz).abs() < 1.0 && o.mode == m.mode)
+            {
+                continue;
+            }
+            if filed {
+                m.folder = None;
+                if let Some(fname) = folder.as_deref().map(str::trim).filter(|n| !n.is_empty()) {
+                    let known = self
+                        .mem_folders
+                        .iter()
+                        .find(|f| f.name.trim().to_lowercase() == fname.to_lowercase())
+                        .map(|f| f.id);
+                    m.folder = Some(known.unwrap_or_else(|| {
+                        let id = self.mem_folders.iter().map(|f| f.id).max().unwrap_or(0) + 1;
+                        self.mem_folders.push(MemoryFolder { id, name: fname.to_string() });
+                        made_folder = true;
+                        id
+                    }));
+                }
+            }
+            m.id = next;
+            m.name = name;
+            m.repeater = Some(m.repeater.unwrap_or_default().clamped());
+            next += 1;
+            self.memories.push(m);
+            added += 1;
+        }
+        if made_folder {
+            self.save_mem_folders();
+        }
+        if added > 0 {
+            self.save_memories();
+        }
+    }
+
     fn save_mem_folders(&mut self) {
         if let Err(e) = sdroxide_config::save_memory_folders(&self.mem_folders) {
             warn!("saving memory folders: {e}");
@@ -17875,6 +19204,160 @@ impl Engine {
             self.shared_gen_seen = g;
             self.reload_shared_stores();
         }
+    }
+
+    /// Take on `plan` as the station's band plan and tell every screen.
+    ///
+    /// Process-wide, so a second radio at this station is transmitting under the
+    /// new edges from this moment too — the lockout reads it at key time. Its
+    /// *displayed* band lags until it next retunes and recomputes, and its band
+    /// confirmations are withdrawn on its own next tick
+    /// ([`Engine::poll_band_plan`]), because the plan is the one thing both
+    /// radios were checked against.
+    fn adopt_band_plan(&mut self, plan: sdroxide_types::BandPlan) {
+        sdroxide_types::set_band_plan(plan);
+        // Same reason as `SetRegion`: the dial has not moved but the band under
+        // it may have.
+        self.state.band = Band::containing(self.state.active_freq_hz());
+        self.relay_bands_told = None;
+        self.emit_station_config();
+    }
+
+    /// Take on `plan` as this radio's own (`None`: follow the station's), and
+    /// say whether the plan this radio *runs* is a different one as a result.
+    fn set_own_plan(&mut self, plan: Option<sdroxide_types::BandPlan>) -> bool {
+        let before = sdroxide_types::band_plan();
+        match (&plan, self.own_plan) {
+            (None, None) => {}
+            // The same plan read again: nothing to install, nothing to keep.
+            (Some(new), Some(current)) if new == current => {}
+            _ => {
+                self.own_plan = plan.map(sdroxide_types::leak_band_plan);
+                sdroxide_types::set_thread_band_plan(self.own_plan);
+            }
+        }
+        let changed = before != sdroxide_types::band_plan();
+        // As for the station's plan: the dial has not moved but the band under it
+        // may have.
+        self.state.band = Band::containing(self.state.active_freq_hz());
+        self.relay_bands_told = None;
+        changed
+    }
+
+    /// Read this radio's own plan from its file again (the station's plan was
+    /// just re-read, and a plan edited in place has to reach this radio too) and
+    /// withdraw its confirmations if what it runs is different now.
+    fn reload_own_plan(&mut self) {
+        let cfg = self.store.load_radio_config();
+        self.own_plan_name = cfg.band_plan.clone();
+        if self.own_plan_name.is_some() && read_own_plan(&cfg).is_none() {
+            // Unreadable: the name stays, the radio runs the station's plan.
+            self.set_own_plan(None);
+            return;
+        }
+        let plan = read_own_plan(&cfg);
+        if self.set_own_plan(plan) {
+            self.withdraw_band_confirmations();
+        }
+    }
+
+    /// Withdraw this radio's band confirmations when the station's band plan has
+    /// become a different plan since this engine last looked.
+    ///
+    /// The operator confirmed the transmit and the receive list *against a plan*.
+    /// A different plan can put a band edge somewhere else, or take a band away,
+    /// so both lists are checked and confirmed again — as if they never had been.
+    /// The lists themselves stay ticked as they were; only the confirmation goes,
+    /// and with it the permission to key and to tune (see [`Engine::tx_band_refusal`]
+    /// and [`Engine::rx_band_refusal_for`]).
+    fn poll_band_plan(&mut self) {
+        let rev = sdroxide_types::band_plan_revision();
+        if rev != self.seen_plan_rev {
+            self.seen_plan_rev = rev;
+            // The station's plan moved. A radio running a plan of its own is not
+            // on it, so nothing it was checked against has changed.
+            if self.own_plan.is_none() {
+                self.withdraw_band_confirmations();
+            }
+            // Every radio's screen is told, whichever engine took the command:
+            // a tab that follows the station draws the new plan, and all of them
+            // show which plan the station runs.
+            self.state.band = Band::containing(self.state.active_freq_hz());
+            self.relay_bands_told = None;
+            self.emit_station_config();
+        }
+    }
+
+    /// Clear both confirmations, in this engine and in the radio's `radio.json`,
+    /// tell the screens, and say why if there was anything to withdraw.
+    fn withdraw_band_confirmations(&mut self) {
+        let mut cfg = self.store.load_radio_config();
+        let had = cfg.tx_bands_confirmed
+            || cfg.rx_bands_confirmed
+            || self.tx_bands_confirmed
+            || self.rx_bands_confirmed;
+        cfg.tx_bands_confirmed = false;
+        cfg.rx_bands_confirmed = false;
+        cfg.band_plan_fp = 0;
+        if let Err(e) = self.store.save_radio_config(&cfg) {
+            warn!("withdrawing the band confirmations: {e}");
+        }
+        self.tx_bands_confirmed = false;
+        self.rx_bands_confirmed = false;
+        self.emit_radio_config();
+        if had {
+            info!("the band plan changed: transmit and receive band lists need checking again");
+            self.notice(
+                "The band plan changed — check the TX and RX band lists again and confirm them.",
+            );
+        }
+    }
+
+    /// At start-up: a radio whose lists were confirmed against a plan other than
+    /// the one that is running is unconfirmed, and a radio confirmed before the
+    /// plan was recorded is taken to have been confirmed against this one.
+    fn reconcile_band_confirmations_at_start(&mut self) {
+        if !(self.tx_bands_confirmed || self.rx_bands_confirmed) {
+            return;
+        }
+        let fp = sdroxide_types::band_plan().fingerprint();
+        let mut cfg = self.store.load_radio_config();
+        match cfg.band_plan_fp {
+            0 => {
+                cfg.band_plan_fp = fp;
+                if let Err(e) = self.store.save_radio_config(&cfg) {
+                    warn!("recording the band plan the lists were confirmed against: {e}");
+                }
+            }
+            stored if stored != fp => self.withdraw_band_confirmations(),
+            _ => {}
+        }
+    }
+
+    /// What a screen may confirm. The engine stamps a confirmation with the plan
+    /// running now, and refuses one a screen made against another.
+    ///
+    /// A settings dialog keeps its own copy of `radio.json` while it is open. If
+    /// the plan changes under it, that copy still says "confirmed" — and the
+    /// next Apply, for anything at all, would send it back and quietly undo the
+    /// withdrawal. The copy carries the fingerprint it was confirmed under, so a
+    /// confirmation made against a different plan is recognised and dropped; one
+    /// made after the screen heard of the change arrives with no fingerprint and
+    /// is stamped.
+    fn vet_band_confirmations(&self, cfg: &mut sdroxide_types::RadioConfig) {
+        let fp = sdroxide_types::band_plan().fingerprint();
+        if (cfg.tx_bands_confirmed || cfg.rx_bands_confirmed)
+            && cfg.band_plan_fp != 0
+            && cfg.band_plan_fp != fp
+        {
+            warn!("a band confirmation made against another band plan was dropped");
+            cfg.tx_bands_confirmed = false;
+            cfg.rx_bands_confirmed = false;
+        }
+        cfg.band_plan_fp = if cfg.tx_bands_confirmed || cfg.rx_bands_confirmed { fp } else { 0 };
+        // The radio's own plan is the engine's to say, like the fingerprint: a
+        // settings dialog that was open before it changed holds the old name.
+        cfg.band_plan = self.own_plan_name.clone();
     }
 
     /// Re-read the station-shared stores after another engine in this process
@@ -18488,6 +19971,12 @@ impl Engine {
         self.caps.commands_rig_power = self.source.commands_rig_power();
         self.caps.has_rx_antenna = self.source.rx_antenna().is_some();
         self.caps.wide_span_hz = self.source.wide_span_hz();
+        // The old front end's full-band lane went with it. Left in place, its
+        // last sweep stayed the window the strip was drawn against.
+        self.wide_bins.clear();
+        self.wide_window = None;
+        self.wide_fresh = false;
+        self.wide_levels = None;
         self.audio_mode = self.caps.audio_mode;
         self.radio_fs = self.source.sample_rate();
         self.audio_bw = self.source.display_bandwidth().unwrap_or(self.radio_fs / 2.0);
@@ -18676,6 +20165,8 @@ impl Engine {
             self.sync_qo100();
             self.sync_hfdl();
             self.sync_sonde();
+            self.sync_meshtastic();
+            self.sync_wxsat();
         }
         // Re-derive the TCI streams at the new device rate and push a fresh
         // state burst, so connected clients follow the swap.
@@ -18751,12 +20242,30 @@ impl Engine {
             // old station here as it does on the DDC path below, which a CAT
             // rig never reaches.
             self.note_rds_dial(dial);
-            if self.source.set_center_hz(dial).is_ok() {
-                // The rig took the dial: this is where a refused tune goes back
-                // to. Tracked here rather than in `keep_vfo_in_span`, which a
-                // CAT rig never reaches.
-                self.note_frequency_taken(dial);
+            // SAT Doppler (step 1, RX only): for a CAT rig with an active lock
+            // and Doppler enabled, the rig's VFO is steered to the corrected
+            // downlink instead of the nominal dial. The dial itself stays on the
+            // published frequency so tuning stays relative to nominal.
+            // Rate-limited: only send when the correction has changed by more
+            // than 1 Hz (1 Hz resolution, per SP9TKN). Never during TX.
+            let corrected = if !self.tx_active
+                && self.sat_lock.as_ref().is_some_and(|l| l.track.corrections_active)
+            {
+                dial + self.sat_rx_doppler_hz()
+            } else {
+                dial
+            };
+            // Rate limit: only send if changed by > 1 Hz from last sent.
+            let should_send = (corrected - self.sat_cat_last_freq).abs() > 1.0
+                || self.sat_cat_last_freq == 0.0;
+            if should_send && self.source.set_center_hz(corrected).is_ok() {
+                // The rig took the (possibly corrected) frequency: this is where
+                // a refused tune goes back to. Tracked here rather than in
+                // `keep_vfo_in_span`, which a CAT rig never reaches.
+                self.note_frequency_taken(corrected);
+                self.sat_cat_last_freq = corrected;
             }
+            self.sync_rig_vfo_b();
             self.update_display_center();
             return;
         }
@@ -18809,12 +20318,52 @@ impl Engine {
         // Keep a wideband-IQ rig's own VFO on our dial (TCI); no-op elsewhere. This
         // way returning from TX doesn't snap the rig back to the IQ centre.
         self.source.set_if_offset(main_offset);
+        // A transceiver paired with this receiver keeps its own split: VFO B
+        // follows the satellite uplink (or SPLIT's transmit frequency) here too.
+        self.sync_rig_vfo_b();
         // On a screen wider than the skim window the dial decides which part of
         // it is skimmed ([`skim_center_for`]), and tuning inside the span moves
         // the dial without moving the front end or the client's view — so this
         // is the only place that would notice. A handful of comparisons, and the
         // dead band means ordinary tuning changes nothing.
         self.sync_skim_window();
+    }
+
+    /// Keep a CAT transceiver's VFO B — the transmit VFO of its own split — on
+    /// the frequency it has to transmit on: a satellite lock's corrected uplink,
+    /// or SPLIT's transmit frequency outside one. Never mid-over.
+    ///
+    /// The track's uplink already carries XIT; a downlink-only lock has none,
+    /// and then VFO B is left alone. With the corrections off (or the elements
+    /// stale) VFO B still follows the nominal mapping: `sat_tx_doppler_hz` is
+    /// zero then.
+    fn sync_rig_vfo_b(&mut self) {
+        if self.tx_active || !self.source.controls_rig_split() {
+            return;
+        }
+        let uplink = self.sat_lock.as_ref().and_then(|l| l.track.uplink_hz);
+        if self.sat_split_on
+            && let Some(uplink) = uplink
+        {
+            let up = uplink + self.sat_tx_doppler_hz();
+            // Finer than the receive side needs, but not every hertz: on Icom
+            // each VFO B write takes the rig through VFO B for a moment.
+            let due = self.sat_vfo_b_last_freq == 0.0
+                || ((up - self.sat_vfo_b_last_freq).abs() >= SAT_VFO_B_STEP_HZ
+                    && self.sat_vfo_b_last_at.is_none_or(|t| t.elapsed() >= SAT_VFO_B_GAP));
+            if due {
+                self.source.set_vfo_b_freq(up);
+                self.sat_vfo_b_last_freq = up;
+                self.sat_vfo_b_last_at = Some(Instant::now());
+            }
+        }
+        if self.state.split && self.sat_lock.is_none() && self.manual_vfo_b_hz != 0.0 {
+            let tx = self.state.tx_freq_hz();
+            if (tx - self.manual_vfo_b_hz).abs() >= 1.0 {
+                self.source.set_vfo_b_freq(tx);
+                self.manual_vfo_b_hz = tx;
+            }
+        }
     }
 
     /// Where a key-down would transmit: the dial's transmit frequency, or
@@ -18824,7 +20373,14 @@ impl Engine {
     /// filters on the uplink's band rather than the downlink's.
     fn tx_target_hz(&self) -> f64 {
         match self.sat_lock.as_ref().and_then(|l| l.cfg.uplink) {
-            Some(u) => u.uplink_for(self.state.active_freq_hz()) + self.state.xit.effective_hz(),
+            Some(u) => {
+                let up = u.uplink_for(self.state.active_freq_hz()) + self.state.xit.effective_hz();
+                if self.sat_lock.as_ref().is_some_and(|l| l.track.corrections_active) {
+                    up + self.sat_tx_doppler_hz()
+                } else {
+                    up
+                }
+            }
             None => self.state.tx_freq_hz(),
         }
     }
@@ -19279,7 +20835,14 @@ impl Engine {
             let txf = match self.sat_lock.as_ref() {
                 Some(l) => match l.cfg.uplink {
                     Some(u) => {
-                        u.uplink_for(self.state.active_freq_hz()) + self.state.xit.effective_hz()
+                        let up = u.uplink_for(self.state.active_freq_hz()) + self.state.xit.effective_hz();
+                        // SAT Doppler (step 2): pre-correct the uplink so the
+                        // satellite hears the published frequency.
+                        if self.sat_lock.as_ref().is_some_and(|l| l.track.corrections_active) {
+                            up + self.sat_tx_doppler_hz()
+                        } else {
+                            up
+                        }
                     }
                     None => {
                         return self.deny_tx(
@@ -19402,6 +20965,10 @@ impl Engine {
             // On a radio that makes its own CW carrier the VFO *is* the transmit
             // frequency, and the contact sits a sidetone above the dial — the
             // same offset the receive window already rides on.
+            // Under a satellite lock with the rig's split on, this is still the
+            // real (corrected) uplink: the source keeps VFO A where it is only
+            // once the rig has confirmed its split, and otherwise borrows the
+            // dial onto this frequency for the over (see `AudioCatSource::tx_begin`).
             let rig_txf = txf + self.rig_cw_offset_hz();
             // Every rail has passed and the station is about to be on the air.
             // The external T/R switch leads the RF — contacts first, drive
@@ -19584,6 +21151,9 @@ impl Engine {
             // short must not leave one armed to play into the next.
             self.burst = None;
             self.burst_unkeys = false;
+            // A Meshtastic frame cut short (PTT released, device swapped) is not
+            // sent again: it was not counted either, so no air time is booked.
+            self.mesh_tx = None;
             // The run of over-limit readings belongs to the over that just
             // ended. The LATCH deliberately survives: that is what makes it a
             // latch rather than a per-over warning.
@@ -20339,6 +21909,10 @@ impl Engine {
         if self.audio_mode || self.caps.tx_audio {
             return self.tx_block_audio();
         }
+        // A Meshtastic frame: modulated I/Q of its own, not audio.
+        if self.mesh_tx.is_some() {
+            return self.tx_block_mesh();
+        }
         // Digital-mode burst: the FT8/FT4 controller supplies the audio; the
         // real mic is drained and discarded so it can't leak into the burst.
         if self.digi_tx {
@@ -21018,6 +22592,8 @@ impl Engine {
                 self.sync_qo100_window();
                 self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_meshtastic_window();
+                self.sync_wxsat_window();
                 true
             }
             Err(e) => {
@@ -23917,6 +25493,19 @@ mod frame_watch_tests {
 #[cfg(test)]
 mod decode_feed_tests {
     use super::*;
+
+    /// The receive band list cuts the audio by replacing it with silence of the
+    /// same length, and costs nothing when it is not cutting.
+    #[test]
+    fn silenced_copy_is_silence_of_the_same_length_or_the_source_itself() {
+        let src = [0.5f32, -0.25, 0.75];
+        let mut scratch = Vec::new();
+        assert_eq!(silenced_copy(false, &src, &mut scratch), &src[..]);
+        assert!(scratch.is_empty(), "nothing allocated when not cutting");
+        assert_eq!(silenced_copy(true, &src, &mut scratch), &[0.0, 0.0, 0.0][..]);
+        let mut again = Vec::new();
+        assert!(silenced_copy(true, &[], &mut again).is_empty());
+    }
 
     fn line() -> FeedLine<'static> {
         FeedLine {

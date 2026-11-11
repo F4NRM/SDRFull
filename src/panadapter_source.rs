@@ -52,8 +52,19 @@ use std::collections::VecDeque;
 use std::time::Instant;
 
 use sdroxide_radio::{Complex32, ControlUpdate, IqSource, Result};
-use sdroxide_types::{DeviceCaps, Mode, PanadapterAudio, PanadapterConfig};
+use sdroxide_types::{DeviceCaps, KiwiConfig, Mode, PanadapterAudio, PanadapterConfig};
 use tracing::{info, warn};
+
+/// How far in the lent KiwiSDR's own waterfall is zoomed while it is somebody's
+/// panadapter: 30 MHz / 2^4, about 1.9 MHz around the dial.
+///
+/// A Kiwi on its own opens on its whole 0-30 MHz band, which is a band map to
+/// tune by. Beside a transceiver the operator wants the band they are on, not a
+/// strip where one pixel is 29 kHz. Only a receiver that reports no zoom at all
+/// (zoom 0, the default) is moved: one the operator zoomed on purpose is left
+/// where they put it, and a receiver that is not a Kiwi has no such control and
+/// is never asked.
+const PAIRED_KIWI_WF_ZOOM: u8 = 4;
 
 /// How much transceiver audio may queue up before the oldest is dropped.
 ///
@@ -123,11 +134,21 @@ impl PanadapterSource {
     /// `rx_caps` and `ctrl_caps` are what the two devices reported when they
     /// opened; [`Self::merge_caps`] is what the engine is told.
     pub fn new(
-        rx: Box<dyn IqSource>,
+        mut rx: Box<dyn IqSource>,
         ctrl: Box<dyn IqSource>,
         cfg: PanadapterConfig,
         mode: Option<Mode>,
     ) -> Self {
+        let unzoomed_kiwi = rx
+            .current_gains()
+            .iter()
+            .any(|(name, zoom)| name == KiwiConfig::WF_ZOOM_ELEMENT && *zoom < 0.5);
+        if unzoomed_kiwi
+            && let Err(e) =
+                rx.set_gain_element(KiwiConfig::WF_ZOOM_ELEMENT, f64::from(PAIRED_KIWI_WF_ZOOM))
+        {
+            warn!("could not zoom the paired KiwiSDR's waterfall: {e}");
+        }
         let off = mode.map_or(cfg.offset_hz, |m| cfg.offset_for(m));
         let label = format!("{} + {} panadapter", ctrl.describe(), rx.describe());
         info!(
@@ -401,6 +422,14 @@ impl IqSource for PanadapterSource {
         self.rx.lo_offset_hz()
     }
 
+    /// The receiver's own usable part of its rate. The span the engine shows
+    /// is the receiver's stream, so the share of it the receiver's filter
+    /// really passes has to come through the pairing too, or a paired
+    /// receiver is drawn across a band it does not deliver.
+    fn usable_frac(&self) -> f64 {
+        self.rx.usable_frac()
+    }
+
     fn read(&mut self, buf: &mut [Complex32]) -> Result<usize> {
         self.pump_ctrl();
         let n = self.rx.read(buf)?;
@@ -422,6 +451,11 @@ impl IqSource for PanadapterSource {
     fn wide_spectrum_db(&mut self, out: &mut Vec<f32>) -> Option<(f64, f64)> {
         let (center, span) = self.rx.wide_spectrum_db(out)?;
         Some((center - self.off, span))
+    }
+
+    /// The receiver sits `off` above the dial, so its window is placed there.
+    fn set_wide_center_hz(&mut self, hz: Option<f64>) {
+        self.rx.set_wide_center_hz(hz.map(|hz| hz + self.off));
     }
 
     /// The lent receiver's lane, whose width the I.F. offset does not change.
@@ -622,10 +656,6 @@ impl IqSource for PanadapterSource {
         None
     }
 
-    fn smeter_during_tx(&self) -> bool {
-        self.ctrl.smeter_during_tx()
-    }
-
     /// The *receiver's*, not the transceiver's: what overflows is the converter
     /// the spectrum is coming out of, and the transceiver in this arrangement
     /// is not in that path at all.
@@ -712,6 +742,47 @@ impl IqSource for PanadapterSource {
     /// rig's scale, like everything else it is handed.
     fn set_tx_freq_hz(&mut self, hz: f64) {
         self.ctrl.set_tx_freq_hz(hz + self.cw_offset_hz());
+    }
+
+    // The transceiver's own split and VFOs are the transceiver's, panadapter
+    // or not: a satellite lock and SPLIT command them through to it, with the
+    // same CW offset every other frequency handed to it carries.
+    fn controls_rig_split(&self) -> bool {
+        self.ctrl.controls_rig_split()
+    }
+
+    fn split_on(&mut self) {
+        self.ctrl.split_on();
+    }
+
+    fn split_off(&mut self) {
+        self.ctrl.split_off();
+    }
+
+    fn set_vfo_b_freq(&mut self, hz: f64) {
+        self.ctrl.set_vfo_b_freq(hz + self.cw_offset_hz());
+    }
+
+    fn set_vfo_b_mode(&mut self, mode: Mode) {
+        self.ctrl.set_vfo_b_mode(mode);
+    }
+
+    fn set_vfo_b_ctcss(&mut self, tone_hz: f64) {
+        self.ctrl.set_vfo_b_ctcss(tone_hz);
+    }
+
+    fn set_sat_split_on(&mut self, on: bool) {
+        self.ctrl.set_sat_split_on(on);
+    }
+
+    /// sdroxide's A/B onto the transceiver's, and the dial with it — the
+    /// transceiver is now on that VFO, and the next `set_dial` must not be
+    /// skipped as a frequency it is already on.
+    fn select_vfo(&mut self, vfo: sdroxide_types::Vfo, hz: f64) {
+        let hz = hz + self.cw_offset_hz();
+        self.ctrl.select_vfo(vfo, hz);
+        self.dial_known = true;
+        self.dial_hz = hz;
     }
 
     /// The pitch the operator is copying CW at, which is the whole of
@@ -844,13 +915,27 @@ mod tests {
         /// Samples handed over by `read`, real part only.
         audio: Vec<f32>,
         signal_dbm: Option<f32>,
+        /// What `usable_frac` answers: 1.0 for a receiver with no opinion.
+        usable: f64,
+        /// The KiwiSDR waterfall zoom this fake reports, or none for a receiver
+        /// that has no such control.
+        kiwi_zoom: Option<f64>,
     }
 
     impl Fake {
         fn new(name: &'static str, rate: f64, center: f64) -> (Self, Arc<Mutex<Log>>) {
             let log = Arc::new(Mutex::new(Log::default()));
             (
-                Fake { name, rate, center, log: log.clone(), audio: Vec::new(), signal_dbm: None },
+                Fake {
+                    name,
+                    rate,
+                    center,
+                    log: log.clone(),
+                    audio: Vec::new(),
+                    signal_dbm: None,
+                    usable: 1.0,
+                    kiwi_zoom: None,
+                },
                 log,
             )
         }
@@ -895,6 +980,38 @@ mod tests {
         fn rx_signal_dbm(&mut self) -> Option<f32> {
             self.signal_dbm
         }
+        fn usable_frac(&self) -> f64 {
+            self.usable
+        }
+        fn current_gains(&self) -> Vec<(String, f64)> {
+            self.kiwi_zoom.map(|z| vec![(KiwiConfig::WF_ZOOM_ELEMENT.to_string(), z)]).unwrap_or_default()
+        }
+    }
+
+    /// Pair `rx` with a plain rig and say which gain elements the receiver was
+    /// asked to set while the pairing was being built.
+    fn pair_with(rx: Fake, rx_log: &Arc<Mutex<Log>>) -> Vec<String> {
+        let (ctrl, _) = Fake::new("rig", 48_000.0, 14_100_000.0);
+        let _src = PanadapterSource::new(Box::new(rx), Box::new(ctrl), cfg(), Some(Mode::Usb));
+        let asked = rx_log.lock().unwrap().gains.clone();
+        asked
+    }
+
+    /// Proves: a KiwiSDR left on its whole 0-30 MHz band is zoomed in when it
+    /// becomes a transceiver's panadapter, a Kiwi the operator already zoomed
+    /// is left alone, and a receiver with no such control is never asked.
+    #[test]
+    fn a_paired_kiwi_on_its_whole_band_is_zoomed_in() {
+        let (mut kiwi, log) = Fake::new("kiwi", 12_000.0, 14_100_000.0);
+        kiwi.kiwi_zoom = Some(0.0);
+        assert_eq!(pair_with(kiwi, &log), vec![format!("kiwi:{}", KiwiConfig::WF_ZOOM_ELEMENT)]);
+
+        let (mut zoomed, log) = Fake::new("kiwi", 12_000.0, 14_100_000.0);
+        zoomed.kiwi_zoom = Some(6.0);
+        assert!(pair_with(zoomed, &log).is_empty(), "a zoom chosen on purpose is kept");
+
+        let (plain, log) = Fake::new("sdr", 2_000_000.0, 14_100_000.0);
+        assert!(pair_with(plain, &log).is_empty(), "only a Kiwi has this control");
     }
 
     fn cfg() -> PanadapterConfig {
@@ -922,6 +1039,18 @@ mod tests {
         assert_eq!(rx_log.lock().unwrap().centers, vec![14_200_000.0]);
         assert_eq!(src.center_hz(), 14_200_000.0);
         assert!(ctrl_log.lock().unwrap().centers.is_empty(), "a span move is not a dial move");
+    }
+
+    /// The receiver's usable share of its rate is the pairing's: the engine
+    /// draws the span from it, and a receiver whose filter passes 61 % of its
+    /// rate must not be drawn as if it passed all of it.
+    #[test]
+    fn the_receivers_usable_span_is_the_pairings() {
+        let (mut rx, _) = Fake::new("rx", 2_500_000.0, 14_100_000.0);
+        rx.usable = 0.6144;
+        let (ctrl, _) = Fake::new("rig", 48_000.0, 14_100_000.0);
+        let src = PanadapterSource::new(Box::new(rx), Box::new(ctrl), cfg(), Some(Mode::Usb));
+        assert_eq!(src.usable_frac(), 0.6144);
     }
 
     /// An I.F. tap: the receiver sits on the intermediate frequency and the

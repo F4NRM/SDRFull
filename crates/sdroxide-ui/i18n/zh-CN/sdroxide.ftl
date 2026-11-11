@@ -458,6 +458,7 @@ settings-radio-n = 电台 { $n }
 settings-on-station = 位于 { $station }
 settings-add-radio-on-station = 在 { $station } 上添加电台——电台站点会立即为其提供服务
 settings-panadapter-receiver-for = { $radio } 的全景接收机
+settings-panadapter-kiwi-zoom-note = 使用 KiwiSDR 作为接收机时，其瀑布图会以拨盘为中心放大到约 2 MHz。可在该电台设置的“频段视图跨度”中更改。
 settings-hang-up-stays-on = 挂断。电台仍保留在 { $station } 上。
 settings-close-on-station = 要在 { $station } 上关闭 { $radio } 吗？其配置仍保留在该机器上；此处的选项卡随之关闭，其他人的也一样。
 settings-close-it-on = 在 { $station } 上关闭它
@@ -568,8 +569,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = 重新加载频段计划
-settings-general-re-read-bandplan-json-machine = 在电台所连接的机器上重新读取 bandplan.json 并应用它——频段边界、子频段和 skimmer 窗口——无需重启。
-settings-general-running-station-s-own-band = 正在使用电台站点自己的频段计划。
 settings-general-running-built-iaru-tables = 正在使用内置的 IARU 表。
 settings-general-settings-file = 设置文件
 settings-general-settings-are-machine-radio-attached = 设置保存在电台所连接的机器上。请在那里导出。
@@ -632,7 +631,6 @@ settings-net-checking = 正在检查……
 
 settings-amp-connected-to = 已连接到 { $model }
 settings-controls-last-midi = 最后一条消息：{ $message }  数值 { $value }
-settings-general-band-plan-file = 每个频段边界和子频段都来自 { $path }。该文件首次运行时由内置的 IARU 表写入，之后即归你编辑——把某个频段缩窄到你的执照范围，sdroxide 就会拒绝在其之外发射。频率以 MHz 为单位；删除该文件可重新获得默认值的副本。这是区域分配，而不是你的执照：你自己的条件可能更窄，而且同一区域内的各国计划也有所不同。
 settings-general-exported = 已导出 { $note }——请选择保存位置。
 settings-general-export-failed = 导出失败：{ $error }
 settings-general-import-failed = 导入失败：{ $error }
@@ -655,7 +653,6 @@ settings-add-radio-here-station-you = 添加电台——在此处，或在你已
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = 每个频段边界和子频段都来自电台所连接机器上的 bandplan.json。这是区域分配，而不是你的执照：你自己的条件可能更窄，而且同一区域内的各国计划也有所不同。
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -3158,7 +3155,6 @@ sat-downlink-mhz = 下行（MHz）
 sat-uplink-mhz = 上行（MHz）
 sat-mode = 模式
 sat-tune = 调谐
-sat-set-dial-mode-link-no = 将表盘和模式设为此链路——不锁定，不校正
 sat-locked = {" "}已锁定{" "}
 sat-lock = {" "}锁定{" "}
 sat-track-satellite-doppler-correction-rx = 跟踪此卫星：对接收和发射进行多普勒校正，上行按转发器映射，三维视图随之跟随
@@ -3481,7 +3477,6 @@ qo100-write-converter-lnb-offset-puts = 写入变频器/LNB 偏移，使信标�
 qo100-write-converter-lnb-offset-puts-2 = 写入变频器/LNB 偏移，使跟踪器的估计值对应到 10489.750 MHz，然后重新打开接收机——与“设置 ▸ 电台 ▸ 应用”所造成的短暂中断相同
 qo100-waiting-second-crc-valid-frame = 等待第二个 CRC 校验通过的帧，然后才提供写入此项——仅一次锁定可能只是偶然匹配
 qo100-write-corrected-converter-lnb-offset = 写入校正后的变频器/LNB 偏移并重新打开接收机——短暂中断，与“设置 ▸ 电台 ▸ 应用”所造成的相同
-qo100-decoder-runs-receiving-station-readout = 解码器在接收电台上运行——其读数不会发送给远程客户端
 qo100-starting = 正在启动……
 qo100-searching-first-window-fills-after = 正在搜索——第一个窗口约 24 秒后填满，然后重复
 
@@ -3864,21 +3859,25 @@ fsq-add = 添加
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + 选项卡
-publicsdr-open-receiver-new-radio-own = 将此接收机作为新电台打开，并位于其自己的选项卡中
-publicsdr-point-radio-receiver-replacing-whatever = 将*此*电台指向该接收机，替换其当前所在的任何接口——会再次询问，因为那相当于整台电台的设置
 publicsdr-not-stated = 未说明
-publicsdr-replace = 替换
-publicsdr-point-radio-you-are-receiver = 将你所在的电台指向此接收机
-publicsdr-tab-instead = + 改为选项卡
-publicsdr-open-receiver-another-radio-leave = 将接收机作为另一台电台打开，并保持此电台不变
-publicsdr-cancel = 取消
 publicsdr-public-sdrs = 公共 SDR
 publicsdr-available = 可用
 publicsdr-hide-receivers-are-full-ones = 隐藏已满的接收机，以及其操作员未向浏览器以外的应用开放任何通道的接收机
 publicsdr-band = 在频段内
 publicsdr-only-receivers-cover-current-dial = 仅显示覆盖当前表盘频率的接收机
 publicsdr-low-bw = 低带宽
+publicsdr-map-cities = 城市
+publicsdr-map-cities-tip = 在此地图上显示或隐藏城市。
+publicsdr-view-list = 列表
+publicsdr-view-map = 地图
+publicsdr-view-map-tip = 在世界地图上显示同样的接收机。点击一个点即可选择其下的所有接收机。
+publicsdr-map-pick = 点击一个点以选择其下的接收机。
+publicsdr-map-names = 名称
+publicsdr-map-names-tip = 在地图上显示接收机名称。关闭：只显示所选接收机的名称。
+publicsdr-check-online = 在线
+publicsdr-check-silent = 无响应
+publicsdr-check-waiting = 检查中…
+publicsdr-check-no-answer = 20 秒内无响应。
 publicsdr-take-spyserver-low-bandwidth-shape = 以低带宽形式接入 SpyServer：一个跟随表盘的窄幅 I/Q 窗口，加上服务器自己的频段视图，而不是数兆比特的宽带 I/Q。对 KiwiSDR 无影响，因为它只有这一种形式。
 publicsdr-refresh = ⟳ 刷新
 publicsdr-fetch-both-directories-again = 重新获取两个目录
@@ -3888,9 +3887,6 @@ publicsdr-fetching-receiver-lists = 正在获取接收机列表……
 publicsdr-machine-radio-attached-does-not = 此电台所连接的机器不应答设备查询，因此它也无法获取列表。
 publicsdr-no-match = 无匹配
 publicsdr-nothing-matches-try-turning-filter = 没有任何内容匹配——请尝试重新打开某个过滤标签
-publicsdr-radio = 此电台
-publicsdr-radio-s-configuration-has-not = 此电台的配置尚未从它所在的机器送达，因此没有可指向接收机的目标——请改用“+ 选项卡”添加。
-publicsdr-position-not-published-so-nothing = {" "}其位置未公布，因此它所听到的任何内容都不会被报告。
 
 ## hd (src/app/hd.rs)
 
@@ -4675,14 +4671,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } 台接收机 · { $per_net } · 获取于 { $age } 前
 publicsdr-showing-search-narrow = 显示 { $n } 个中的 { $shown } 个——搜索以缩小范围
 publicsdr-match = { $n } 个匹配
-publicsdr-replace-taking-receiver-points-same =
-    用 { $entry } 替换 { $this }？
-
-    { $this2 } is on { $iface }. Taking this receiver points the same tab at { $address } instead, renames it “{ $entry2 }”, and holds the dial to the { $range_label } the receiver publishes — nothing here transmits.
-
-    The { $iface2 } settings stay where they are, and so do the ranges stated for them: switching the interface back in Settings → Radio brings the radio back as it was.
-publicsdr-receptions-will-reported = {" "}接收结果将以 { $value } 为位置报告。
-publicsdr-pointing-radio = 正在将此电台指向 { $entry }……{ $site }
+publicsdr-map-status = 地图上 { $shown } 个 · 无位置 { $unplaced } 个
 publicsdr-opening-another-radio = 正在将 { $entry } 作为另一台电台打开……
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -4986,7 +4975,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld（网络）
 cat-family-flrig = flrig（网络）
-publicsdr-its-interface = 其接口
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = 关
@@ -5312,8 +5300,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = 两者
 
-panels-sensitivity = 灵敏度
-
 navtex-hunting = 搜索中
 
 navtex-hunting-hint =
@@ -5325,11 +5311,8 @@ navtex-hunting-hint =
 
     还请记住，NAVTEX 是按时间表发送的，而不是对话：海岸电台每四小时发送十分钟，所以大部分时间安静是正常的。您必须在电台的发送时刻收听。而且 518 kHz 只在夜间才活跃，白天波段安静并不意味着解码器坏了。
 
-navtex-sensitivity-hint =
-    灵敏度：解码器锁定并保持信号的难易程度。
-navtex-auto-hint = 恢复为参考阈值 (0)。启用时高亮显示。
 
-navtex-tune-dial-usb-below-channel = 在此调谐拨盘（USB，比信道低 1.710 kHz）。
+navtex-tune-dial-usb-below-channel = 在此调谐拨盘（USB，比信道低 1.700 kHz）。
 
 settings-audio-your-audio = 您的音频
 
@@ -7594,7 +7577,6 @@ net-wavelog-no-station-location = 没有可供下载的电台位置，请先测�
 
 publicsdr-could-not-connect = 本次会话无法连接
 
-publicsdr-use-chip = 使用
 
 weather-title = 天气报告
 
@@ -9000,7 +8982,6 @@ publicsdr-mine = 我的
 
 publicsdr-mine-hint = 仅显示你加星的接收机
 
-publicsdr-mine-empty = 还没有加星——点行上的 ☆ 即可把该接收机保存在这里。
 
 publicsdr-star-receiver = 将此接收机保存在“我的”中
 
@@ -9131,16 +9112,513 @@ sonde-export-csv-hover = 将此探空仪的飞行保存为可用于电子表格�
 
 sonde-export-none = 此探空仪尚无已保存的位置。
 
-sonde-col-temp = æ°”æ¸©
+sonde-col-temp = 气温
 
-sonde-col-humidity = æ¹¿åº¦
+sonde-col-humidity = 湿度
 
-sonde-col-pressure = æ°”åŽ‹
+sonde-col-pressure = 气压
 
 settings-net-broadcast-import-needs-station = 连接到电台以导入。
 
 
+sonde-online-why-signin = 站点要求先登录。
 
+sonde-online-why-busy = 站点已按允许的最高频率查询 SondeHub，请一分钟后再试。
+
+sonde-online-why-upstream = 站点无法连接 SondeHub。
+
+sonde-online-why-unreadable = 返回的内容不是探空仪列表。
+
+sonde-online-why-no-station = 没有可查询的站点，且本页面无法直接访问 SondeHub。
+
+sonde-online-why-http = 响应：HTTP { $n }。
+settings-general-band-plan = 波段计划
+
+settings-general-band-plan-built-in = 内置IARU
+
+
+
+
+sonde-card-source = 来源
+
+sonde-card-source-radio = 本电台
+
+sonde-card-source-hub = SondeHub（由其他站点接收）
+
+sonde-card-model = 型号
+
+sonde-card-maker = 制造商
+
+sonde-card-variant = 型式
+
+sonde-card-position = 位置
+
+sonde-card-from-you = 距本站
+
+sonde-card-heading = 航向
+
+sonde-card-satellites = 卫星数
+
+sonde-card-snr = 信噪比
+
+sonde-card-station = 接收站
+
+sonde-card-station-position = 接收站位置
+
+sonde-card-antenna = 天线
+
+sonde-card-software = 软件
+
+sonde-card-frames = 已收帧数
+
+sonde-card-open = 在 { $site } 打开
+
+sonde-card-close = 关闭
+
+aircraft-mode-vor-hover = 读取电台所调谐的 VOR 导航台：径向线与摩尔斯识别码
+
+vor-audio-front = 此接收机提供的是已解调的音频；VOR 读取需要原始 I/Q 数据流。
+
+vor-outside-window = 所调谐的频道超出接收机提供的带宽。请将接收机居中于该频道。
+
+vor-not-in-band = 调谐到 VOR 导航台（108.00–117.95 MHz）即可读取其径向线。
+
+vor-locked = 已锁定
+
+vor-no-lock = 未锁定
+
+vor-no-lock-hover = 30 Hz 可变信号或 9960 Hz 基准信号缺失或太弱。此频段的 ILS 航向台永远不会锁定。
+
+vor-ident-heard = 听到的识别码：{ $ident }
+
+vor-ident-waiting = 正在等待识别码（约每 10 秒发送一次）…
+
+vor-charted = 航图：{ $ident } — { $name }
+
+vor-var-depth = 30 Hz 调幅：载波的 { $pct } %
+
+vor-ref-depth = 9960 Hz 调频：载波的 { $pct } %，频偏 ±{ $dev } Hz
+
+vor-caveat = 径向线是接收机相对于导航台的方位，以导航台自身的磁北为基准。不可用于导航。
+
+vor-nearby = 离您电台最近的 VOR
+
+vor-no-grid = 请在数字模式设置中填写您的网格定位符，以列出最近的 VOR。
+
+vor-tune-hover = 用调幅调谐此 VOR
+
+tx-bands-power-hint = 此波段在 Drive 调到最大时的最大功率(瓦)。不清楚请保持为 —。
+
+tx-bands-power-note = 可选。没有功率计的电台会用这些数值在 S 表上以瓦显示发射功率;未填写时,以百分比显示 Drive 设置。
+
+band-plan-title = 此电台的频段计划
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = 仅对此电台需要收听的频段将 RX 设为“是”。电台绝不会调谐到设为“否”的频段，在确认 RX 列表之前也完全不会调谐。TX 与 RX 相互独立：同一频段可以是 TX 否、RX 是。
+
+rx-bands-title = 接收频段
+
+rx-bands-check-again = 重新检查 RX
+
+rx-bands-check-again-hint = 撤销确认以重新检查接收列表。更改任何频段时会自动撤销。
+
+rx-bands-confirmed = ✓ 此电台的接收频段已确认
+
+rx-bands-ack = 我已对照我的电台检查了这些接收频段
+
+rx-bands-confirm = 确认这些接收频段
+
+rx-bands-confirm-hint = 请先勾选复选框：每台电台只需确认一次。
+
+rx-bands-notice = 接收频段列表尚未确认：在您检查并确认一次接收频段之前，电台不会调谐。
+
+rx-bands-out-of-range = 此电台公布的范围未覆盖该频段。
+
+rx-bands-band-off = 在此电台的频段计划（设置）中该频段的接收已关闭，或接收列表尚未确认。
+
+settings-general-re-read-band-plan-file = 在电台所连接的机器上重新读取所选方案的文件并应用——波段边界、子段和 skimmer 窗口——无需重启。
+
+settings-general-running-band-plan = 正在使用波段方案“{ $name }”。
+
+settings-general-band-plan-choose-hint = 从电台的方案库中选择一个波段方案。默认是内置的 IARU 表。更换方案后，需要重新检查并确认 TX 和 RX 波段列表。
+
+settings-general-band-plan-import = 导入方案
+
+settings-general-band-plan-import-hint = 把波段方案文件添加到电台的方案库。只含波段的简单列表（名称、类型、以赫兹为单位的起止频率）会先被转换。会先检查，仅添加——在列表中选择它才会使用。
+
+settings-general-band-plan-reset = 恢复内置 IARU
+
+settings-general-band-plan-reset-hint = 重新使用内置的 IARU 表。之后需要重新检查并确认 TX 和 RX 波段列表。
+
+settings-general-band-plan-folder = 方案就是电台所连接机器上 { $path } 中的文件，可以自行添加和删除。把某个波段缩小到您的执照范围，sdroxide 就会拒绝在其之外发射。频率单位为 MHz。这是区域划分，不是您的执照：您的实际条件可能更窄，各国方案在同一区域内也有差异。
+
+settings-general-band-plan-station-folder = 方案保存在电台所连接的机器上。把某个波段缩小到您的执照范围，sdroxide 就会拒绝在其之外发射。这是区域划分，不是您的执照：您的实际条件可能更窄，各国方案在同一区域内也有差异。
+
+settings-general-band-plan-manager = 波段方案管理
+
+settings-general-band-plan-run = 使用
+
+settings-general-band-plan-run-hint = 使用此方案。需要重新检查并确认 TX 和 RX 波段列表。
+
+settings-general-band-plan-download = 下载
+
+settings-general-band-plan-download-hint = 把此方案的文件保存到这台电脑。
+
+settings-general-band-plan-delete = 删除
+
+settings-general-band-plan-delete-confirm = 再次点击以删除
+
+settings-general-band-plan-delete-hint = 从电台的方案库中删除此方案。正在使用的方案无法删除。
+
+settings-general-band-plan-running-tag = 使用中
+
+settings-general-band-plan-shipped-tag = 自带
+
+settings-general-band-plan-save-current = 将当前方案另存为
+
+settings-general-band-plan-save-current-hint = 把正在使用的方案以此名称保存到方案库。同名方案会被替换，旧文件仅保留一份 .bak。
+
+settings-general-band-plan-name-hint = 名称
+
+settings-general-band-plan-restore = 恢复自带方案
+
+settings-general-band-plan-restore-hint = 恢复随程序自带的方案，无论已删除还是已编辑。已编辑的会被替换，并保留一份 .bak。
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = 方案库中没有方案。
+
+settings-general-band-plan-radio = 此电台
+
+settings-general-band-plan-radio-follow = 跟随电台
+
+settings-general-band-plan-radio-hint = 仅在此电台上使用方案。电台整体方案和其他电台不受影响。需要重新检查并确认此电台的 TX 和 RX 波段列表。
+
+settings-general-band-plan-run-radio = 仅此电台
+
+settings-general-band-plan-radio-tag = 此电台
+
+meter-view-auto = 自动
+
+meter-view-rx = 信号 (RX)
+
+meter-view-power = 功率
+
+meter-view-swr = 驻波比
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = 上一个读数：{ $view }
+
+smeter-arrow-next-hover = 下一个读数：{ $view }
+
+smeter-arrow-prev-face = 上一个表盘
+
+smeter-arrow-next-face = 下一个表盘
+
+sonde-card-source-both = 无线电 + SondeHub（两者都收到）
+
+sonde-card-stale = 状态
+
+sonde-card-stale-value = 已不在列表中：最后已知位置
+
+sonde-card-detach = 分离
+
+sonde-card-attach = 固定
+tx-bands-outside-note = 此处列出的频段之外无法发射。频段外的接收（ADS-B、DAB、AIS 等）不需要单独一行。
+
+tx-off-cb = 11 m (CB) 禁止发射 — 该频段已在发射列表中，但“允许在 11 m (CB) 发射”未勾选。请在 设置 → 常规 中勾选。
+
+settings-cb-allow-tx-needs-band = 请先在此电台的 TX 频段列表（设置 → 电台）中将 11M-CB 设为“是”，然后在此允许。
+
+settings-cb-allow-tx-order-note = 两道锁，按此顺序：1) 电台 TX 频段列表中 11M-CB 为“是”且已确认；2) 此复选框。在 11 m 发射需要两者。将 11M-CB 从列表移除也会取消勾选此框。
+
+settings-ui-publicsdr-under-waterfall = 停靠在瀑布图下方
+
+settings-ui-publicsdr-place-hint = Public SDRs 的打开位置：在下方没有内容的语音模式中停靠在瀑布图下方，或使用窗口。数字模式、CW 和手机始终使用窗口。
+
+publicsdr-dock-hint = 将此列表停靠在瀑布图下方（下方无内容的语音模式）
+
+publicsdr-undock-hint = 将此列表放回独立窗口
+
+publicsdr-close-hint = 关闭 Public SDRs
+
+settings-net-hfcc-file-hint = 从您自己保存的软件包中读取 HFCC 节目表：HFCC 发布的 zip（例如 b26allx2.zip），其中包含节目表和两张对照表。
+
+schedule-import = 导入…
+wxsat-title = 气象卫星
+
+extras-wxsat-hint = 气象卫星 — NOAA（APT）或 Meteor（LRPT）卫星在 137 MHz 发送的图像，边接收边绘制，可在可分离的窗口中查看
+
+wxsat-decode = 解码
+
+wxsat-channel = 卫星
+
+wxsat-tune = 调谐到此
+
+wxsat-tune-hint = 打开解码器并将频率调到此信道，使信号位于采样窗口内。
+
+wxsat-clear = 清除
+
+wxsat-save = 保存为 PNG
+
+wxsat-flip = 翻转
+
+wxsat-flip-hint = 翻转图像：向南飞行的卫星的图像是倒置绘制的。
+
+wxsat-state-off = 解码器已关闭
+
+wxsat-level = 电平 { $db } dBFS
+
+wxsat-locked = 行同步已锁定
+
+wxsat-searching = 正在搜索行同步
+
+wxsat-lines = { $n } 行
+
+wxsat-outside-window = 信道在采样窗口之外，或离窗口边缘太近，容不下整个信号。请使用“调谐到此”，或换更宽的窗口。
+
+wxsat-waiting = 尚无图像。卫星在地平线以上时请打开解码器；一次过境约十分钟。
+
+wxsat-signal = 信号
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = 通道 { $n }
+
+wxsat-rows = { $n } 排
+
+wxsat-frame-locked = 帧同步已锁定
+
+wxsat-frames = { $n } 个好帧
+
+wxsat-waiting-lrpt = 尚无图像。Meteor 的 LRPT 是数字信号：收到卫星几秒后图像开始逐排出现，每个通道是一幅单独的图像。
+
+wxsat-searching-frame = 正在搜索帧同步
+
+qrzcard-loading = 正在查询 QRZ…
+
+qrzcard-not-found = QRZ 上未找到。
+
+qrzcard-years = { $n } 岁
+
+qrzcard-class = 级别：{ $class }
+
+qrzcard-qsl-paper = 纸质
+
+qrzcard-qsl-via = 经 { $mgr }
+
+qrzcard-switch = 指针停在呼号上时显示 QRZ 卡片
+
+qrzcard-switch-hint = 在瀑布图、解码器和 Spot 列表中显示来自 QRZ.com 的照片、姓名、年龄、地址、定位格和 QSL。照片、电子邮件和出生日期需要 QRZ XML 订阅。
+
+qrzcard-needs-login = 请选择 QRZ 作为提供方，并输入 QRZ 用户名和密码以启用卡片。
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = 接收
+
+meshtastic-region = 地区
+
+meshtastic-preset = 预设
+
+meshtastic-channel = 信道
+
+meshtastic-tune = 在此收听
+
+meshtastic-tune-hint = 打开接收器并将电台调到此信道。能否在此收听由“电台”菜单中的接收频段列表决定。关闭或退出时，电台会回到原来的状态。
+
+meshtastic-keys = 密钥
+
+meshtastic-keys-hint = 名称=密钥，以逗号分隔（hex:…、base64:…、simple1..10）。始终会尝试默认密钥。
+
+meshtastic-state-off = 接收器已关闭。
+
+meshtastic-level = 电平 { $db } dBFS
+
+meshtastic-counts = { $pre } 个前导码 · { $ok } 帧 · { $bad } 个 CRC 错误
+
+meshtastic-refused-band = 禁止接收 — { $freq } MHz（{ $band }）不是已确认的接收频段。请在“电台”菜单的接收频段中勾选并确认。
+
+meshtastic-refused-unconfirmed = 禁止接收 — 此电台的接收频段尚未确认。请在“电台”菜单的接收频段中检查并确认。
+
+meshtastic-out-of-window = 该信道不在电台采集的采样窗口内：请调谐得更近，或使用更高的采样率。
+
+meshtastic-none-yet = 尚未收到任何内容。
+
+meshtastic-nodes = 节点（{ $n }）
+
+meshtastic-log = 数据包（{ $n }）
+
+meshtastic-col-id = 节点
+
+meshtastic-col-name = 名称
+
+meshtastic-col-heard = 收到时间
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = 跳数
+
+meshtastic-col-position = 位置
+
+meshtastic-col-battery = 电池
+
+meshtastic-encrypted = 已加密（无密钥）
+
+meshtastic-via-mqtt = 经 MQTT
+
+meshtastic-bench-hint = 打开 Meshtastic 窗口：一个信道上的 LoRa 网状网络流量。
+
+extras-meshtastic-hint = Meshtastic：一个信道上的 LoRa 网状网络流量、收到的节点和数据包。
+
+meshtastic-message = 消息
+
+meshtastic-message-hint = 发给信道上所有人的文字（最多 200 字节）
+
+meshtastic-send = 发送…
+
+meshtastic-send-hint = 确认后在该信道上发射此文字。能否在此发射由“设置”中“电台”的发射频段列表决定；电台必须已调到该信道（在此收听）。
+
+meshtastic-confirm = 现在在 { $freq } MHz 上发射吗（发射时长 { $air } 秒）？范围内所有人都会收到，您须依据自己的执照和该频段的规定对此负责。
+
+meshtastic-confirm-yes = 发射
+
+meshtastic-confirm-no = 取消
+
+meshtastic-transmitting = 正在发射…
+
+meshtastic-tx-airtime = 本小时发射时长：{ $used } 秒 / { $budget } 秒
+
+meshtastic-tx-airtime-free = 本小时发射时长：{ $used } 秒（该地区未设上限）
+
+meshtastic-tx-sent = 已发送 { $n }
+
+meshtastic-tx-band-off = 禁止发射 — { $freq } MHz（{ $band }）不是已确认的发射频段。请在“设置 → 电台 → 发射频段”中勾选并确认。
+
+meshtastic-tx-unconfirmed = 禁止发射 — 此电台的发射频段尚未确认。请在“设置 → 电台 → 发射频段”中检查并确认。
+
+meshtastic-tx-duty = 已达到该地区的占空比上限：请等待 { $s } 秒后再发下一条。
+
+meshtastic-tx-too-long = 仅此一条消息就超过了该地区一小时的发射时长上限。
+
+meshtastic-tx-off-channel = 电台不在该信道上：请先点“在此收听”，让频率调到该信道。
+
+meshtastic-tx-no-transmitter = 此电台无法发送原始 I/Q（接收音频的电台，或仅接收的设备）。
+
+meshtastic-tx-bad-text = 文字为空或过长（最多 200 字节）。
+
+meshtastic-tx-busy = 已有一次发射正在进行。
+
+meshtastic-tx-rails = 发射机拒绝发射：原因见发射提示信息。
+rx-bands-swl-note = 此电台已启用 SWL 模式：没有接收锁定，可以调谐到任何波段。
+
+rx-bands-always-open = 收听波段（以及 SWL 模式）始终可以接收。
+
+sat-tune-link-both-vfos = 将频率、另一个VFO和模式设为此链路——下行在此VFO，上行在另一个VFO；此卫星上的锁定会随之移动
+
+sat-move-lock = {" "}移动锁定{" "}
+
+sat-locked-other-link-move-lock = 已通过另一条链路锁定此卫星：将锁定移到这一条——包括上行、亚音和多普勒
+
+sat-rig-rx = 电台接收
+
+sat-rig-tx = 电台发射
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = 已锁定卫星：锁定结束前，VFO A为下行，VFO B为上行
+
+qrzcard-photo-loading = 正在加载照片…
+
+qrzcard-no-photo = 无照片的记录
+
+sonde-card-listen-hover = 点击可将电台调到此信道：频率移到此处，解码器只监听该信道。
+
+sonde-card-decoding = 正由本电台解码
+
+sonde-card-waiting = 正在监听此信道，尚未解码
+
+sonde-card-click-to-listen = 点击频率即可收听
+
+sonde-type-all = 所有类型
+
+sonde-type-hover = 查找某一类探空仪：选择后开始扫描，窗口会在频段内移动，直到听到该类型。只列出并绘制该类型。
+
+meshtastic-preset-auto = 自动
+
+meshtastic-preset-auto-hint = 同时监听所有预设（从 ShortTurbo 到 LongSlow）。不知道网络使用哪一个时无需选择。
+
+meshtastic-freq-hint = 频道频率，精确到千赫。适用于不使用该地区标准频道的网络。松开时生效。
+
+meshtastic-close-hint = 关闭 Meshtastic 面板。接收器会一直运行，直到你将其关闭。
+
+meshtastic-float-hint = 将面板取出为悬浮在瀑布图上方的窗口。
+
+meshtastic-dock-hint = 将面板重新停靠到瀑布图下方。
+
+meshtastic-tune-mode-hint = 电台同时切换到宽带调频，使扬声器和录音获得该频道的信号；退出时模式会恢复。
+
+wefax-revert-auto-slant = 撤销倾斜校正
+
+wefax-revert-auto-slant-hint = 撤销此图的自动倾斜校正：时钟微调回到此处设置的值，自动校正在下一张图之前保持关闭。已接收的行不会改变。
+
+qrzcard-no-account = 未登记 QRZ.com 账户 -
+
+qrzcard-account-link = 查看账户状态
+
+navtex-other-frequencies = NAVTEX 与海岸电台频率
+
+navtex-other-frequencies-hint = 已公布的 NAVTEX 列表中的全部频率，按地区排列。选择后会按上边带调谐拨盘。标有 CW 的条目是莫尔斯气象通报，本解码器无法读取。
+
+navtex-freq-cw = CW 模式
+
+navtex-freq-international = 国际，英语
+
+navtex-freq-national = 国内，当地语言
+
+publicsdr-near-kiwi = 附近KIWI
+
+publicsdr-near-kiwi-tip = 仅显示离您的定位符最近且有空闲通道的 { $n } 台 KiwiSDR 接收机，最近的在前。可用作 CAT 电台的频段视图。
+
+publicsdr-near-kiwi-no-grid = “附近KIWI”需要您的定位符：请在电台设置中填写，以便按距离对接收机排序。
+
+sstv-add-clock = ＋ 日期/时间
+
+sstv-add-clock-hint = 添加一行，打印图像发送的日期和时间——UTC 或您的本地时间
+
+sstv-clock-date-time = 日期和时间
+
+sstv-clock-time = 时间
+
+sstv-clock-date = 日期
+
+sstv-clock-freeze-hint = 把这一行变成普通文本，固定在所显示的时间
+
+sstv-clock-hint = 打印图像发送那一刻的日期和时间，而不是制作它的时间。
+
+sstv-clock-local = 本地时间
+
+sstv-clock-local-hint = 打印本站的本地时间而不是 UTC，包含夏令时
+
+test-tci-connect-refused = 连接 { $address }：{ $detail } — 该端口上没有任何程序提供 TCI。TCI 由 SDR 程序（ExpertSDR3、Thetis）提供，而不是由电台本身提供，因此该程序必须在运行，并且已在其设置中开启 TCI。对于 MB1 这类独立机型，指的是电台内部运行的那份程序
+
+test-tci-connect-timed-out = 连接 { $address }：{ $detail } — 该地址没有应答。请检查主机，并确认防火墙没有拦截。如果提供 TCI 的 SDR 程序（ExpertSDR3、Thetis）没有在开启 TCI 的状态下运行，在 Windows 上关闭的端口可能会表现成这样
+
+test-connect-failed = 连接 { $address }：{ $detail }
+
+settings-ui-graphics = 图形驱动
+
+settings-ui-graphics-auto = 自动
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = 下次启动时生效。自动模式使用 DirectX 12；在会把瀑布图画成平直横条的旧版 AMD 驱动上则使用 OpenGL。如果瀑布图只显示水平线，请尝试 OpenGL。
 
 settings-controls-desktop-mic = 台式或外置麦克风
 settings-controls-desktop-mic-note = 来自连接到串口（或USB串口）握手线的麦克风或脚踏开关的PTT。
@@ -9153,7 +9631,6 @@ settings-controls-active-low = 低
 settings-controls-debounce = 消抖 (ms)
 serial-ptt-output-rts = RTS
 serial-ptt-output-dtr = DTR
-
 settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
 settings-controls-choose-serial-port = Choose serial port
 settings-controls-serial-port-chosen = Serial port chosen.

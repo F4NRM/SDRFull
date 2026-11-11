@@ -726,7 +726,7 @@ fn wideband_preview() {
             ..Default::default()
         };
         let mut full = ctx.run_ui(input, |ui| {
-            egui::CentralPanel::default().show_inside(ui, |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 app.band_menu_body(ui, &mut Vec::new());
             });
         });

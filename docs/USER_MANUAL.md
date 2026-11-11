@@ -6284,6 +6284,25 @@ stays listed). The window has to cover the sondes: centre the radio with the *Ch
 box, and note that a 2.4 MS/s receiver sees about 2.4 MHz of the 5.85 MHz band. The decoder needs a wideband source (a receiver that sends
 I/Q); it is off for a rig that only hands over audio. The setting is kept in `sonde.json`.
 
+**Weather satellites.** The **METEOSAT** chip in EXTRAS opens the WEATHER SATELLITES window:
+the picture a weather satellite sends on 137 MHz, drawn as it comes in. The *Signal* choice
+picks the kind. **APT** is the analogue signal of NOAA-15, 18 and 19: channel A on the left
+and channel B on the right, line by line. **LRPT** is the digital signal of Meteor-M2-3
+(137.900 MHz) and Meteor-M2-4 (137.100 MHz): QPSK at 72 ksym/s, picture rows of 1568 pixels,
+one separate picture for each channel the satellite sends (*Channel 1* to *Channel 6*, the
+visible and infrared bands), shown one at a time. Like SONDE it is not a radio mode: pick the
+satellite, then *Tune here* switches the decoder on and brings the dial to its channel (the
+lane works off the sample window, so the window has to hold the whole signal, about 40 kHz
+for APT and 115 kHz for LRPT; a note says so when it does not). Start it when the satellite
+rises; a pass lasts about ten minutes. The status line shows the level, the sync (line sync
+for APT, frame sync for LRPT) and the lines, or the good frames and rows, so far. LRPT needs
+a signal about 8 dB above the noise to lock; the receiver follows the Doppler and the drift of
+the sample clock by itself. *Flip* turns the picture over (a satellite flying south is drawn
+upside down), *Clear* empties it and *Save PNG* writes it out (the channel shown, for LRPT).
+The decoder needs a wideband source (a receiver that sends I/Q); it is off for a rig that only
+hands over audio. The setting is kept in `wxsat.json`. A window opened in the middle of a
+pass starts the picture where it joined.
+
 **Export.** The **CSV** and **JSON** buttons under *Export* in the AIRCRAFT window
 save the tracked aircraft as a table you can open in a spreadsheet or feed to a
 script. One row per aircraft: ICAO address, callsign, registration, category, type,
@@ -7519,7 +7538,7 @@ window holds none of its own sub-bands stands down completely and costs nothing
 until you tune back onto one — so an SDR parked on the broadcast FM band, the air
 band or any other non-amateur allocation is not running a neural CW decoder over
 it. Which frequencies count is the band plan's to say
-([`bandplan.json`](#the-band-plan-file)), and it ships with the HF allocations
+([the band plan](#the-band-plan-file)), and it ships with the HF allocations
 only. The skimmer-decoded text is a coarse best-effort copy; switch to the mode (click a box) for a clean
 decode — the CW skimmer runs the same decoder as the CW panel, but over hundreds
 of signals at once and re-reading each one only twice a second, so a signal you
@@ -8184,7 +8203,7 @@ decides every band plan sdroxide draws and enforces:
   27.700 SSTV calling channel aside). They tune by hand like anything else —
   the widened band edges reach them — and a licence that does cover part of
   that range (the UK's second CB block starts at 27.60125) goes in
-  `bandplan.json` and in your own saved frequencies.
+  a band plan and in your own saved frequencies.
 
   **11M/CB** — which channel plan the dial reads in, set on the General tab
   beside the IARU region and in the band/mode menu. Two licence-free services
@@ -8217,6 +8236,15 @@ decides every band plan sdroxide draws and enforces:
   per screen. It opens 11 m and nothing else. A station setting
   (`cb_tx_allowed` in `config.toml`), so it travels to every client along with
   the CB plan.
+
+  **11 m has two locks, in this order.** First the radio's own TX band list
+  ([6.2](#62-radio-choosing-and-configuring-the-rig)): **11M-CB** must be **YES**
+  and the list confirmed. Only then can the box above be ticked — it is greyed
+  until the band is listed, with a hover text that says so — and it does nothing
+  on its own. Both are needed to transmit on 11 m; with the band listed and the
+  box off, PTT is refused with a red notice that names the box. Ticking the band
+  does not tick the box, and ticking the box does not tick the band. Taking
+  **11M-CB** off the list also clears the box.
 - **Longwave, medium wave, shortwave and FM broadcast** — `LW`, `MW`, `SW` and
   `FM` are on the bar for the listener the way 11 m is for the CB operator.
   None is an amateur allocation, so with `tx_ham_only` set (the default) the
@@ -8269,17 +8297,123 @@ happen to be sitting. It takes effect immediately — no APPLY, no restart.
 
 #### The band plan file
 
-The numbers behind all of that live in **`bandplan.json`** in the config
-directory ([§13](#13-configuration-files)), and they are yours to change. On
-first start sdroxide writes the built-in IARU tables there; from then on that
-file is the authority for every band edge, sub-segment and skimmer window in the
-program.
+The numbers behind all of that live in **band plan files** in the **`bandplans`**
+folder of the config directory ([§13](#13-configuration-files)) on the machine
+the radio is attached to, and they are yours to change. The built-in IARU tables
+are the default and stay so until you choose another plan; the station runs
+exactly one plan at a time, and that plan is the authority for every band edge,
+sub-segment and skimmer window in the program.
 
-The General tab shows the path and a **RELOAD BAND PLAN** button, which re-reads
-the file on the machine the radio is attached to and applies it without a
-restart — so the loop is: edit, save, click, done.
+The **General** tab lists the plans the station holds and works the same on a
+native screen, a remote one and in a browser — nothing is read from or written
+to the screen's own disk, because the plans are kept **on the station**:
 
-The file is one row per line, in **megahertz**, and it explains itself in a
+- **The list** chooses the plan the station runs. It is remembered (`band_plan`
+  in `config.toml`) and survives a restart.
+- **IMPORT BAND PLAN** sends a plan file to the station, which checks it and
+  adds it to the list. Adding a plan does not run it. A file that does not pass
+  the check (not a plan, a band with its edges the wrong way round, a region with
+  no bands, far too big) is refused with a notice and nothing is written. A plan
+  with a name already in the list replaces it, and the old file is kept **once**
+  as `<name>.json.bak` — one backup, overwritten by the next replacement.
+- A file that is **a plain list of bands** — a name, a type and a start and an end in
+  *hertz* for each row, as many national band lists are published — is converted by the
+  station on the way in, and then held to the same check. The conversion is described
+  in *A list of bands* below.
+- **BACK TO BUILT-IN IARU** is the one click back to the default. It appears
+  whenever the station is running another plan.
+- **RELOAD BAND PLAN** re-reads the chosen plan's file on the machine the radio is
+  attached to and applies it without a restart — so the loop for a hand edit is
+  still: edit the file in the `bandplans` folder, save, click, done.
+
+Below them, **Band plan manager** lists every plan the station holds — name,
+country, author, date and size, with the one running marked and the ones that came
+with the program tagged *shipped* — and works the same on a native screen, a remote
+one and in a browser:
+
+- **RUN** runs that plan (the same change as choosing it in the list, with the same
+  consequence for the band confirmations).
+- **DOWNLOAD** saves that plan's file on the computer you are sitting at — a browser
+  downloads it like any other file. Nothing else leaves the station.
+- **DELETE** removes the plan from the station after a second click. The plan that is
+  running can be neither run again nor deleted: choose another first.
+- **SAVE CURRENT PLAN AS** keeps the plan running now under the name you type —
+  the way the built-in IARU tables, or a plan you have reloaded after editing, become
+  a file you can choose, download and share. A plan with that name is replaced and its
+  old file kept once as `<name>.json.bak`. It does not change what runs.
+- **RESTORE SHIPPED PLANS** puts back the plans that came with the program: one that was
+  deleted, or that a later version added, is written again; one that was edited is
+  replaced (your version kept once as `.bak`). If the plan that runs is one of them, it is re-read at once — and if it
+  differs, that is a change of plan like any other.
+
+**A plan for one radio.** At a station with several radios each radio can run a plan
+of its own while the others follow the station's — a national plan on the HF radio,
+the built-in tables on the VHF one. On the General tab of a radio, **This radio**
+chooses its plan (*Follows the station* is the default, and what every radio did
+before), and **THIS RADIO ONLY** in the manager runs a plan on that radio alone. The
+choice is kept in that radio's own `radio.json` (`band_plan`), so it survives a
+restart, and nothing one radio does reaches another: its band edges, its transmit
+lockout, its waterfall strip and its skimmer windows follow its own plan, and a
+split view of two radios draws each with its own.
+
+The band confirmations follow the radio, not the station. Choosing or leaving a plan
+for **this radio** withdraws the TX and RX confirmation of **this radio only** (and
+only if the plan it *runs* changes — leaving its own plan for a station plan that is
+identical changes nothing). A change of the **station's** plan withdraws the
+confirmations of the radios that follow it and leaves alone the ones running a plan of
+their own. A plan that a radio runs cannot be deleted; if its file goes missing the
+radio runs the station's plan and says so, and keeps the name.
+
+**A list of bands.** A list of this kind says who uses what — broadcasters, the sea,
+the air, mobile phones and, among them, the amateur bands. It does not say what *you* may
+transmit, so a converted plan changes what the waterfall strip draws and names and
+**never the transmit lockout**: the allocations stay the built-in IARU ones. The rows
+become sub-segments, each named after its row, in the region of the list's country (a
+list for the whole world, or for a country sdroxide does not know, goes into all three
+regions; the other regions keep the built-in tables). Amateur rows are drawn as CW, data,
+phone, beacon or all-modes when their name says so; CB, PMR 446, pagers and the like, which
+such lists often file under *amateur*, are drawn as what they are named and are never a
+band. Rows that overlap are cut so that none does, amateur rows first. A row that is not a
+range — ending before it starts, or not a number — is left out, and the notice bar says
+which and why; if nothing is left the file is refused. The converted plan has no author:
+the list says nothing the station can vouch for.
+
+**Changing the plan means checking the band lists again.** The TX and the RX band
+lists ([§6.2](#62-radio-choosing-and-configuring-the-rig)) were confirmed against one plan, and a different plan
+can put a band edge somewhere else or take a band away. So whenever the station
+starts running a plan other than the one it was running — choosing one, going
+back to the built-in tables, reloading a file you edited so that it differs — the
+confirmation of **every radio's** TX list and RX list is withdrawn, as if you had
+never confirmed them: the lists stay ticked as they were, but the radio does not
+tune or transmit until you have looked at them and confirmed them again, and the
+notice bar says why. Choosing the plan that is already running changes nothing.
+The same holds across a restart: if the plan the station runs at start-up is not
+the one the lists were confirmed against, they start unconfirmed.
+
+**Plans that come with the program.** The first time the station makes its library it
+copies in twenty plans, which never replace a file of yours afterwards and can be
+deleted like any other: national band lists for
+Australia, Austria, Belgium, Brazil, Canada, China (Mainland), France, Germany, Indonesia, Ireland,
+Italy, the Netherlands, the Republic of Korea, Russia, Slovakia, Turkey, the United
+Kingdom and the United States, plus a **Worldwide** list and **QO-100**. The national
+lists are converted band lists (*A list of bands*, above): they change what the waterfall
+strip draws and names and **never the transmit lockout**, which stays the built-in IARU
+one — narrow it in a plan of your own, with your licence in front of you. A few
+numbers that were plainly wrong in the lists as published (a digit too many, a row
+ending before it starts) were corrected by hand or left out. The program's own plans
+are not licence limits: the regional allocation is not your licence.
+
+A plan named in `config.toml` whose file has gone, or that will not parse as JSON,
+runs the built-in tables for that session and says so; the name and the file are
+left alone. A station that had a `bandplan.json` before the library existed has it
+carried into the folder once, as the plan `own`, and keeps running it; the old
+file is not touched.
+
+A plan file may say who it is for in an optional `meta` block (`name`, `country`,
+`author`), which is what the list shows; a file without one is listed under its
+file name.
+
+A plan file is one row per line, in **megahertz**, and it explains itself in a
 `readme` field at the top (JSON has no comments). Each region has four lists:
 
 | List | What it sets |
@@ -8303,7 +8437,7 @@ band buttons, the waterfall strip and the frequency displays all follow.
 **On a slotted digital mode the lockout vets what actually radiates**, not the
 dial. FT8, FT4, FT2, JS8 and WSPR transmit at the dial *plus* an audio offset,
 so the check is dial + offset + the mode's occupied bandwidth, and it is made
-against the **sub-segments** rather than the band edges — `bandplan.json` holds
+against the **sub-segments** rather than the band edges — a band plan file holds
 one range per band, and a licence like the UK's 60 m needs eleven. Narrow the
 segments there and the lockout narrows with them; nothing about this is
 UK-specific. An emission may cross from one sub-segment into a touching one — a
@@ -8330,8 +8464,8 @@ file is used, and the notice bar says which one and why. If the file will not
 parse as JSON at all, sdroxide runs on the built-in tables for that session and
 tells you so; **your file is left exactly as it is**, unlike the files sdroxide
 writes for itself, because a half-finished edit should survive the start that
-could not read it. Delete the file to get a fresh copy of the defaults — one is
-written on the next reload or start.
+could not read it. Going back to the built-in tables loses nothing: every plan
+you added is still in the folder.
 
 > This is the *regional* allocation, which is the widest set of edges the
 > region's amateurs share. Your own licence may grant less (and occasionally
@@ -8399,6 +8533,8 @@ URL is used exactly as typed and leaves those two boxes greyed out. See
 [§ 8.2 Connect a native remote client](#82-connect-a-native-remote-client).
 
 ### 6.2 Radio: choosing and configuring the rig
+
+**Band plan of each radio (TX and RX).** Radio settings holds, for every radio on its own, a table with one **TX** menu and one **RX** menu per band (there is no *Other* row: **outside the listed bands nothing can be transmitted**, ever, and reception outside the bands — ADS-B at 1090 MHz, DAB, AIS — needs no row, a confirmed RX list covers it). The two lists are independent: 160 m can be TX **NO** and RX **YES**. A radio never tunes to a band that is **NO** in its RX list, and does not tune at all until the RX list is confirmed; a banner asks for that check at launch, once per radio, exactly like the TX list. A band the hardware's published range does not reach is greyed and stays **NO**. A new radio starts with RX **YES** on every band its hardware reaches, still to be confirmed. The band buttons follow the RX list, and while the dial sits on a band that is **NO** (or the list is not confirmed yet) the radio is silent and nothing is recorded; the decoders keep running.
 
 In the native application the very top of the tab carries the **radio
 roster** — one button per radio, with the same TX / warning / mute markers as
@@ -13137,7 +13273,7 @@ spoken announcements below them under `[speech]`:
   the band-plan strip along the bottom of the waterfall: **Ham**, **CW**,
   **Digital**, **Voice**, **Beacon**, **Broadcast**, **AM / LW / MW** and
   **CB**. Same picker and same **Reset** as the spot colours above, and the same
-  standing — the plan itself comes from the station's `bandplan.json`, but what
+  standing — the plan itself comes from the station's band plan, but what
   colour a block is drawn in is whatever the operator looking at it can read.
   Bear in mind that the blocks are drawn semi-transparent over the waterfall, so
   a colour lands a good deal darker there than in the swatch: the stock burnt
@@ -17238,7 +17374,7 @@ and not the station's.
 | `memories.json` | JSON | Saved memory channels. |
 | `bandstacks.json` | JSON | Per-band memory of your last frequency/mode/filter (up to three per band). |
 | `profiles.json` | JSON | The saved station setups from Settings → Profiles ([6.12](#612-profiles-saved-station-setups)): each one's name, the remembered radio state (the same fields as `session.json`), the digital-mode settings and the band stacks. Shared by every radio of the station. |
-| `bandplan.json` | JSON | The band plan itself, per IARU region: band edges, the CW/data/phone/beacon/all-modes sub-segments, and the PSK and RTTY skimmer windows — all in MHz. Written from the built-in IARU tables on first start and meant to be edited; narrow a band here and the transmit lockout narrows with it. Which region applies is `region` in `config.toml`. **RELOAD BAND PLAN** on the General tab applies an edit without a restart, and deleting the file restores the defaults. See [§6.1](#61-general-station-audio-and-remote-access). |
+| `bandplans/` | folder of JSON | The station's library of band plans, one `<name>.json` per plan: band edges per IARU region, the CW/data/phone/beacon/all-modes sub-segments and the PSK and RTTY skimmer windows — all in MHz — and an optional `meta` block (name, country, author). Created with the plans that come with the program the first time; a plan added from a screen (**IMPORT BAND PLAN**) is written here by the station, and a replaced one is kept once as `<name>.json.bak`. Which plan the station runs is `band_plan` in `config.toml`; nothing chosen is the built-in IARU tables. Narrow a band in a plan and the transmit lockout narrows with it. **RELOAD BAND PLAN** on the General tab applies an edit without a restart, and **BACK TO BUILT-IN IARU** restores the defaults. A `bandplan.json` from before the library is carried into the folder once, as `own`. See [§6.1](#61-general-station-audio-and-remote-access). |
 | `digi_presets.json` | JSON | The frequencies you have added to the digital modes' own lists yourself, as `mode` / `dial_hz` / `note` — written by the **＋ Save** button in the **⇵** picker ([§3.1](#31-general-considerations)) and readable and editable by hand, which is where a `note` comes from. Belongs to the station, so every radio and every remote client offers the same list. Absent until you save one. |
 | `session.json` | JSON | Where you left the radio: both VFO dials and which of the two was selected, the mode, the RX/TX antenna ports, the AF volume, RX gain, AGC mode, squelch and noise reduction, the TX drive/tune drive/mic gain, and the front end's own gain stages (the sliders on the Radio tab's device panel), restored the next time you start. Written by the engine as you tune, so `--freq`, `--mode`, `--antenna` and `--tx-antenna` override it for a run without changing it. Gain stages are remembered by name: one your current front end does not have is kept, not thrown away, so switching back to the radio it belongs to brings it back, and a figure past what this device offers is clamped to its range. |
 | `qso_log.json` | JSON | The logbook (digital and manual QSOs, with contest/QSL fields). |
@@ -17255,7 +17391,7 @@ and not the station's.
 | `ais.json` | JSON | AIS decoder ([§3.16](#316-ais-ships-on-162-mhz)): which of the two channels to listen on, the slot threshold in dB, the two timeouts, how many minutes of trail to keep, how far ahead the vectors reach, and the ceiling on the vessel table. Restored at startup, and — like `adsb.json` — a receiver that cannot feed the decoder forces it off without disturbing what you picked. |
 | `dab.json` | JSON | DAB receiver: the channels a SCAN found, the stations heard on each, your ★ presets, the channel and station chosen, and the volume. Written whenever the panel changes it and restored at startup, so a scan is not lost to a restart. Delete it to start the list from nothing. |
 | `ism.json` | JSON | ISM decoder: whether it runs, which device families it listens for, the burst threshold in dB, and whether the rtl_433 decoders are on, which band they watch and how wide a window they get. Restored at startup, and — like `skimmer.json` — a narrowband (audio-mode) radio forces it off without disturbing what you picked. |
-| `rtl433_flex.conf` | text | Your own ISM decoders, in rtl_433's "flex" syntax ([§5.5](#55-adding-your-own-decoders-flex-specs)). Written with a commented example the first time the ISM decoder runs, and never rewritten afterwards — like `bandplan.json`, it is yours to edit. A specification that does not pass its check is listed in the ISM window and skipped; the rest still load. **RELOAD DECODERS** in the ISM window applies an edit without a restart. |
+| `rtl433_flex.conf` | text | Your own ISM decoders, in rtl_433's "flex" syntax ([§5.5](#55-adding-your-own-decoders-flex-specs)). Written with a commented example the first time the ISM decoder runs, and never rewritten afterwards — like a band plan file, it is yours to edit. A specification that does not pass its check is listed in the ISM window and skipped; the rest still load. **RELOAD DECODERS** in the ISM window applies an edit without a restart. |
 | `input.json` | JSON | Control inputs: keyboard bindings, panadapter mouse behaviour, mouse-button bindings, and the MIDI controller mapping. Belongs to the machine running the user interface, not the engine. |
 | `remote_login.json` | JSON | A sign-in to *somebody else's* server that you asked this client to remember ([§8.3](#83-sign-in-who-may-operate-the-station)). Written only when the **Remember on this device** box is ticked, holds the password in plaintext, and deleted when you untick it or the server refuses it. Belongs to the user interface, like `input.json`; the browser client keeps the same thing in local storage instead. |
 | `satellites.json` | JSON | Satellite additions for the 3D tracker: subscribed element-set listings, element sets pasted in by hand, and frequency entries that override the built-in table. Belongs to the engine, like `net.json`: the listings are fetched and cached where the radio is, so remote and browser clients track the same satellites. |
@@ -18457,24 +18593,26 @@ whether it covers the frequency you are on; the search box matches on the
 name, the place, the antenna and the band, so `40m denmark` or `7000` both
 work. Hovering a row shows its address, its hardware and its antenna.
 
-Each row offers two things. **USE** points the radio you are on at that
-receiver, keeping everything else about it — converter offset, audio devices,
-the lot. **+ TAB** opens it as another radio in a tab of its own, leaving the
-one you were on alone.
+Each row offers **ADD AS RADIO**: the receiver becomes a radio of its own, in a
+tab named after its directory entry (padding trimmed, cut at a word at 32
+characters; a placeholder such as "anonymous" gives way to the place, else to
+the device and host). The radio you are on is left exactly as it was, so
+nothing needs confirming, and the window closes: the new radio is where you
+listen now.
 
-**USE** replaces a radio, so on a tab that already has an interface it asks
-first, across the top of the list: which radio is about to become which
-receiver, and **REPLACE** / **+ TAB INSTEAD** / **CANCEL**. Going ahead also
-**renames the tab** after the receiver — a tab still calling itself "IC-9700"
-while it is really a dongle in another country, refusing your 2 m calling
-frequency as out of range, is a puzzle nobody should have to solve.
-
-Nothing is lost by taking a receiver in a tab you had set up. Every interface
-keeps its own settings, and the tuning ranges you stated go with the interface
-they were stated for ([6.2](#62-radio-choosing-and-configuring-the-rig)),
-so switching **Radio interface** back in Settings → Radio brings the transceiver
-back as it was — its address, its sound cards and its ranges. What it does not
-bring back is the tab's name; type it again in the **Name** box on that page.
+**LIST** and **MAP** at the head of the window are two views of the same
+receivers: every one the buttons and the search let through, as a dot on the
+world map where the directory gives a position (KiwiSDR cyan, SpyServer in the
+map's station colour, sdr-list green, grey where it cannot be taken). The map
+fits itself to what is shown, so typing a country or a callsign flies there;
+drag, wheel and a double-click work as on the other maps, and **NAMES** and
+**CITIES** switch the labels. A click picks every receiver under the pointer
+(up to six: sites with several KiwiSDRs share a coordinate), and each appears
+under the map as the list's own row with **ADD AS RADIO**, headed by a check
+of whether it answers right now: **ONLINE** or **SILENT**, asked half a second
+after the click by the machine the radio is attached to (a KiwiSDR's status
+page, a SpyServer's greeting, a TCP connect; three seconds each, no channel
+taken). The map fills its window; resize the window to make it larger.
 
 The lists are fetched by the machine the radio is attached to, not by the
 screen you are sitting at — so this works the same in the browser client, and

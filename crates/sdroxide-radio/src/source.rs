@@ -183,6 +183,33 @@ pub trait IqSource: Send {
         0.0
     }
 
+    /// Set VFO B's frequency (CAT rigs only). No-op on non-CAT front ends.
+    fn set_vfo_b_freq(&mut self, _hz: f64) {}
+
+    /// Switch the rig's split on (CAT rigs only). No-op on non-CAT front ends.
+    fn split_on(&mut self) {}
+
+    /// Switch the rig's split off (CAT rigs only). No-op on non-CAT front ends.
+    fn split_off(&mut self) {}
+
+    /// Set VFO B's mode (CAT rigs only). No-op on non-CAT front ends.
+    fn set_vfo_b_mode(&mut self, _mode: sdroxide_types::Mode) {}
+
+    /// Set CTCSS tone on VFO B (CAT rigs only). No-op on non-CAT front ends.
+    fn set_vfo_b_ctcss(&mut self, _tone_hz: f64) {}
+
+    /// Tell the source whether SAT split is on (so tx_begin skips the freq
+    /// write). No-op on non-CAT front ends.
+    fn set_sat_split_on(&mut self, _on: bool) {}
+
+    /// Whether this source commands a CAT transceiver's own VFOs and split —
+    /// a CAT rig on its own, or one paired with a panadapter receiver. Where it
+    /// does, a satellite lock and SPLIT run on the rig's split (VFO B the
+    /// transmit frequency) rather than borrowing the dial for each over.
+    fn controls_rig_split(&self) -> bool {
+        false
+    }
+
     /// Blocking read. Returns the number of samples written to `buf`;
     /// 0 means a timeout (caller should just retry).
     fn read(&mut self, buf: &mut [Complex32]) -> Result<usize>;
@@ -529,11 +556,6 @@ pub trait IqSource: Send {
     fn rx_signal_dbm(&mut self) -> Option<f32> {
         None
     }
-    /// Whether this source's S-meter keeps reporting while the transmitter is
-    /// keyed. Default: false.
-    fn smeter_during_tx(&self) -> bool {
-        false
-    }
     /// Absolute gain, in dB, between the antenna socket and the converter that
     /// produced these samples. `None` when the front end cannot say.
     ///
@@ -632,6 +654,16 @@ pub trait IqSource: Send {
     fn wide_spectrum_db(&mut self, _out: &mut Vec<f32>) -> Option<(f64, f64)> {
         None
     }
+
+    /// Scroll the window of [`IqSource::wide_spectrum_db`] to centre on `hz`
+    /// (on the dial's scale) without tuning, or hand it back to the dial with
+    /// `None`. For a front end whose window is narrower than what it can see
+    /// and can be placed — a KiwiSDR's zoomed waterfall. A scrolled window stays
+    /// where it was put until the dial moves.
+    ///
+    /// Default: nothing to scroll (a full-band lane that already shows
+    /// everything, or no lane at all).
+    fn set_wide_center_hz(&mut self, _hz: Option<f64>) {}
 
     /// How wide [`IqSource::wide_spectrum_db`]'s window is, in Hz — `0.0` for a
     /// source that publishes none.
@@ -1419,6 +1451,12 @@ impl IqSource for ConvertedSource {
     fn wide_spectrum_db(&mut self, out: &mut Vec<f32>) -> Option<(f64, f64)> {
         let (center, span) = self.inner.wide_spectrum_db(out)?;
         Some((self.down(center), span))
+    }
+
+    /// The window is placed in hardware frequency, so the converter's offset
+    /// goes on the way down, as it does for a tune.
+    fn set_wide_center_hz(&mut self, hz: Option<f64>) {
+        self.inner.set_wide_center_hz(hz.map(|hz| hz + self.step.rx_offset_hz));
     }
 
     /// A converter shifts where the lane sits, never how wide it is.

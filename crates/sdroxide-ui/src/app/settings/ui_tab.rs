@@ -159,6 +159,32 @@ pub(in crate::app) fn settings_ui_tab(
                 cfg.set_detached(module, on);
                 ui.end_row();
             }
+            // Public SDRs is not a module of its own but a tool window, with a
+            // third place the modules do not have: docked under the waterfall,
+            // as Radio Classic is. Where that slot is taken (a digital mode's
+            // panel, CW, a phone) it is a window whatever is chosen here.
+            {
+                let mut docked = cfg.public_sdr_docked;
+                ui.label(tr!("settings-ui-window-label", module = tr!("publicsdr-public-sdrs")));
+                ComboBox::from_id_salt("ui-publicsdr-place")
+                    .selected_text(if docked {
+                        tr!("settings-ui-publicsdr-under-waterfall")
+                    } else {
+                        tr!("settings-ui-undocked")
+                    })
+                    .show_styled(ui, |ui| {
+                        ui.selectable_value(
+                            &mut docked,
+                            true,
+                            tr!("settings-ui-publicsdr-under-waterfall"),
+                        );
+                        ui.selectable_value(&mut docked, false, tr!("settings-ui-undocked"));
+                    })
+                    .response
+                    .on_hover_text(tr!("settings-ui-publicsdr-place-hint"));
+                cfg.public_sdr_docked = docked;
+                ui.end_row();
+            }
             // Both directions at once, for arranging a whole screen in one
             // press: every module out, or every module home. Shown only while
             // they would do something, so neither is a button that changes
@@ -959,6 +985,10 @@ pub(in crate::app) fn pick_report_picture(
     std::thread::Builder::new()
         .name("sdroxide-report-pick".into())
         .spawn(move || {
+            // A test must never open a native dialog (see `download::save_as`).
+            if cfg!(test) {
+                return;
+            }
             if let Some(path) =
                 rfd::FileDialog::new().add_filter(tr!("widgets-image"), &["png", "jpg", "jpeg"]).pick_file()
             {
@@ -987,6 +1017,37 @@ pub(in crate::app) fn pick_report_picture(
 /// list here rather than behind a shortcut keeps it with the undocked rows it
 /// acts on: the same subject, one screen.
 ///
+/// The graphics API the window opens with — Windows only, where there is a
+/// choice between DirectX 12 and OpenGL (issue #559: an old AMD DirectX 12
+/// driver drew the waterfall as flat bands).
+///
+/// Saved the moment it is picked, in a file the next start reads before any
+/// window exists (`sdroxide_ui::graphics_backend`), so it needs no restart of
+/// the engine, only of the window.
+#[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
+pub(in crate::app) fn graphics_section(ui: &mut egui::Ui) {
+    use crate::GraphicsBackend;
+    let id = egui::Id::new("graphics-backend-choice");
+    let mut cur = ui.data(|d| d.get_temp::<GraphicsBackend>(id)).unwrap_or_else(crate::graphics_backend);
+    ui.label(RichText::new(tr!("settings-ui-graphics")).size(14.0).strong().color(crate::theme::CYAN()));
+    ui.add_space(6.0);
+    let label = |b: GraphicsBackend| match b {
+        GraphicsBackend::Auto => tr!("settings-ui-graphics-auto"),
+        GraphicsBackend::Dx12 => tr!("settings-ui-graphics-dx12"),
+        GraphicsBackend::Gl => tr!("settings-ui-graphics-gl"),
+    };
+    let before = cur;
+    enum_combo(ui, "ui-graphics-backend", &mut cur, &GraphicsBackend::ALL, label);
+    if cur != before {
+        if let Err(e) = crate::set_graphics_backend(cur) {
+            tracing::warn!("could not save the graphics choice: {e}");
+        }
+        ui.data_mut(|d| d.insert_temp(id, cur));
+    }
+    ui.add_space(4.0);
+    super::note_at(ui, &tr!("settings-ui-graphics-note"), Some(11.0));
+}
+
 /// Native only, like the undocked rows above it — the browser has one window and
 /// nothing to arrange.
 #[cfg(not(target_arch = "wasm32"))]
@@ -1071,6 +1132,7 @@ pub(in crate::app) fn workspaces_section(
 }
 
 /// A detachable module's name in the settings rows, in the interface language.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 fn module_label(m: sdroxide_types::DetachableModule) -> String {
     use sdroxide_types::DetachableModule as M;
     match m {

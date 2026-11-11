@@ -18,6 +18,16 @@ pub const SONDE_DEFAULT_HZ: f64 = 403_000_000.0;
 /// meteorological-aids band, with a little margin).
 pub const SONDE_BAND_HZ: (f64, f64) = (400_000_000.0, 406_100_000.0);
 
+/// Whether a sample window of `rate_hz` centred on `center_hz` reaches any of
+/// the sonde band. The decoder lanes mix from the window, so outside it there
+/// is nothing to decode and nothing worth scanning: the engine feeds them only
+/// while this is true (a window parked on 1090 MHz for ADS-B, or on the
+/// shortwave for HFDL, used to be scanned for sondes all the same).
+pub fn window_reaches_band(center_hz: f64, rate_hz: f64) -> bool {
+    let half = rate_hz.abs() / 2.0;
+    center_hz + half > SONDE_BAND_HZ.0 && center_hz - half < SONDE_BAND_HZ.1
+}
+
 /// How many sondes the status carries at once (the most recently heard).
 pub const SONDE_MAX_TRACKS: usize = 8;
 
@@ -53,6 +63,18 @@ impl SondeSettings {
     pub fn sane(mut self) -> SondeSettings {
         self.frequency_hz = self.frequency_hz.clamp(SONDE_BAND_HZ.0, SONDE_BAND_HZ.1);
         self
+    }
+
+    /// The settings after the operator moved the dial to `dial_hz`, or `None`
+    /// when the channel stays. With the decoder on and one channel (no scan) the
+    /// dial and the channel are two controls for one thing, as in HFDL: tuning
+    /// the dial onto a sonde in the band must make the lane decode *that*
+    /// signal, not sit on the channel box's old value while the operator hears
+    /// packets and nothing is decoded.
+    pub fn following_dial(&self, dial_hz: f64) -> Option<SondeSettings> {
+        let in_band = (SONDE_BAND_HZ.0..=SONDE_BAND_HZ.1).contains(&dial_hz);
+        (self.enabled && !self.scan && in_band && (self.frequency_hz - dial_hz).abs() >= 1.0)
+            .then_some(SondeSettings { frequency_hz: dial_hz, ..*self })
     }
 }
 
@@ -127,6 +149,27 @@ pub struct SondeStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_channel_follows_the_dial_only_when_one_channel_is_decoded_in_the_band() {
+        let on = SondeSettings { enabled: true, frequency_hz: 402_700_000.0, scan: false };
+        let moved = on.following_dial(401_002_000.0).expect("follows");
+        assert_eq!(moved.frequency_hz, 401_002_000.0);
+        assert!(moved.enabled && !moved.scan);
+        assert!(on.following_dial(402_700_000.4).is_none(), "already there");
+        assert!(on.following_dial(145_500_000.0).is_none(), "outside the band");
+        assert!(SondeSettings { enabled: false, ..on }.following_dial(401e6).is_none());
+        assert!(SondeSettings { scan: true, ..on }.following_dial(401e6).is_none());
+    }
+
+    #[test]
+    fn only_a_window_on_the_band_is_worth_decoding() {
+        assert!(window_reaches_band(403_000_000.0, 2_500_000.0));
+        assert!(window_reaches_band(399_000_000.0, 2_500_000.0), "its upper edge reaches in");
+        assert!(!window_reaches_band(1_090_000_000.0, 2_500_000.0), "ADS-B window");
+        assert!(!window_reaches_band(8_912_000.0, 2_500_000.0), "HFDL window");
+        assert!(!window_reaches_band(136_800_000.0, 2_500_000.0), "VDL2 window");
+    }
 
     #[test]
     fn the_saved_channel_is_brought_into_the_sonde_band() {

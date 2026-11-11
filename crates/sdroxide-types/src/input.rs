@@ -946,8 +946,7 @@ impl SerialPttOutput {
     }
 }
 
-/// Settings for the "desktop or external microphone" PTT input: a serial (or
-/// USB-serial) port whose handshake lines carry a foot-switch / mic PTT.
+/// Settings for the "desktop or external microphone" PTT input.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SerialPttSettings {
@@ -955,10 +954,8 @@ pub struct SerialPttSettings {
     pub port_id: String,
     pub port_name: String,
     pub output: SerialPttOutput,
-    /// Whether the output line is asserted (high) while enabled.
     pub output_on: bool,
     pub input: crate::SenseLine,
-    /// `true` = PTT keys when the input line reads high.
     pub active_high: bool,
     pub debounce_ms: u32,
 }
@@ -1277,9 +1274,6 @@ mod tests {
     fn the_bindings_survive_a_postcard_round_trip() {
         let mut settings = InputSettings::default();
         settings.ptt_hold_timeout_s = 1.25;
-        settings.serial_ptt.enabled = true;
-        settings.serial_ptt.port_name = "COM3".into();
-        settings.serial_ptt.input = crate::SenseLine::Cts;
         settings.keys.push(KeyBinding {
             chord: KeyChord { key: "F13".into(), ctrl: true, ..KeyChord::default() },
             action: Action::Ptt,

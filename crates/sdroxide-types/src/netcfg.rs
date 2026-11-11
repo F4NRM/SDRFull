@@ -454,9 +454,42 @@ pub struct NetworkConfig {
     /// Appended last, as the wire requires.
     #[serde(default = "NetworkConfig::default_dyndns_minutes")]
     pub dyndns_minutes: u32,
+
+    // ── QRZ card ──
+    /// Show a QRZ.com card (photo, name, age, address, locator, QSL) when the
+    /// pointer rests on a callsign in the waterfall, the decoders and the spot
+    /// lists. Off by default, and only ever active when the provider is QRZ and
+    /// its login is filled in ([`NetworkConfig::qrz_card_active`]).
+    ///
+    /// Held on the station and replayed to every screen, a browser included:
+    /// the lookup runs on the station, so one QRZ session serves all of them.
+    /// Appended last, as the wire requires.
+    #[serde(default)]
+    pub qrz_card: bool,
+    /// The QRZ card is **on by default** for an operator with a QRZ login: this
+    /// is the way to switch it off. It replaces [`NetworkConfig::qrz_card`],
+    /// which defaulted to off and was saved as `false` by every station, so it
+    /// could not tell "never chosen" from "chose off" (kept only so the wire
+    /// layout does not move; nothing reads it).
+    /// Appended last, as the wire requires.
+    #[serde(default)]
+    pub qrz_card_off: bool,
 }
 
 impl NetworkConfig {
+    /// The card is shown only for an operator who gave QRZ a login: the others
+    /// see nothing, make no request and have the switch greyed out.
+    pub fn qrz_card_ready(&self) -> bool {
+        self.lookup_provider == LookupProvider::Qrz
+            && !self.qrz.user.trim().is_empty()
+            && !self.qrz.password.trim().is_empty()
+    }
+
+    /// The switch is on **and** the login is there.
+    pub fn qrz_card_active(&self) -> bool {
+        !self.qrz_card_off && self.qrz_card_ready()
+    }
+
     /// Five minutes: often enough that an address change is invisible to a
     /// listener, rare enough that no provider counts it as abuse.
     pub fn default_dyndns_minutes() -> u32 {
@@ -509,7 +542,60 @@ impl Default for NetworkConfig {
             decode_udp: String::new(),
             dyndns_url: String::new(),
             dyndns_minutes: NetworkConfig::default_dyndns_minutes(),
+            qrz_card: false,
+            qrz_card_off: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod qrz_card_tests {
+    use super::*;
+
+    #[test]
+    fn the_card_needs_qrz_and_its_login() {
+        let mut c = NetworkConfig::default();
+        assert!(!c.qrz_card_active(), "no provider: no card");
+        c.lookup_provider = LookupProvider::Qrz;
+        assert!(!c.qrz_card_active(), "no login: no card");
+        c.qrz.user = "F4XXX".into();
+        c.qrz.password = "secret".into();
+        assert!(c.qrz_card_active(), "provider and login: on by default");
+        c.qrz_card_off = true;
+        assert!(!c.qrz_card_active(), "switched off: no card");
+        c.qrz_card_off = false;
+        c.lookup_provider = LookupProvider::HamQth;
+        assert!(!c.qrz_card_active(), "another provider: no card");
+    }
+
+    #[test]
+    fn the_switch_survives_the_wire_and_an_old_file() {
+        let mut cfg = NetworkConfig::default();
+        cfg.qrz_card_off = true;
+        let bytes = postcard::to_stdvec(&cfg).expect("encode");
+        let back: NetworkConfig = postcard::from_bytes(&bytes).expect("decode");
+        assert!(back.qrz_card_off);
+        // A file written before the switch existed, or by the first version of
+        // the card (`qrz_card: false` for everyone), reads as "on".
+        let mut v = serde_json::to_value(NetworkConfig::default()).unwrap();
+        v.as_object_mut().unwrap().remove("qrz_card_off");
+        let old: NetworkConfig = serde_json::from_value(v).unwrap();
+        assert!(!old.qrz_card_off);
+        assert!(!old.qrz_card, "the old field is ignored");
+    }
+
+    #[test]
+    fn a_card_with_a_photo_survives_the_wire() {
+        let mut i = crate::CallsignInfo::for_call("f4abc");
+        i.name = Some("Jean Dupont".into());
+        i.age = Some(58);
+        i.addr1 = Some("12 rue des Lilas".into());
+        i.qsl_lotw = true;
+        i.photo = Some(vec![0xFF, 0xD8, 0xFF, 0xD9]);
+        let bytes = postcard::to_stdvec(&i).expect("encode");
+        let back: crate::CallsignInfo = postcard::from_bytes(&bytes).expect("decode");
+        assert_eq!(back, i);
+        assert!(!back.is_empty());
     }
 }
 

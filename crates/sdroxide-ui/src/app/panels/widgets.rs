@@ -163,14 +163,14 @@ pub(in crate::app) fn row_cell(
     h: f32,
     align_right: bool,
     lbl: egui::Label,
-) {
+) -> egui::Response {
     let (rect, _) = ui.allocate_exact_size(egui::vec2(w, h), egui::Sense::hover());
     let layout = if align_right {
         egui::Layout::right_to_left(egui::Align::Center)
     } else {
         egui::Layout::left_to_right(egui::Align::Center)
     };
-    ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(layout)).add(lbl);
+    ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(layout)).add(lbl)
 }
 
 // ── Sortable table headings ──
@@ -498,6 +498,11 @@ pub(in crate::app) fn snr_color(snr_db: i16) -> Color32 {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(in crate::app) fn pick_image(inbox: Arc<Mutex<Option<Vec<u8>>>>) {
+    // A test must never open a native dialog: nobody is there to answer it, and
+    // a person watching the run is left to guess what to click.
+    if cfg!(test) {
+        return;
+    }
     std::thread::Builder::new()
         .name("sdroxide-pick".into())
         .spawn(move || {

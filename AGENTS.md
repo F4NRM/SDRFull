@@ -55,10 +55,37 @@ text or more choices than it is worth is a bad trade even when it is correct —
 and the operator at the bench is the one who pays for it. Nobody is pushed to
 the back of the queue for being the reason the program exists.
 
+## Line endings: LF everywhere, CRLF is not possible (decided 2026-11-10)
+
+The project was **LF from its first commit**. One accident (PR 507, 2026-11-06) turned about 1290 files
+to CRLF with no change of content; the tree was put back to LF in one dedicated change. Since then:
+
+- `.gitattributes` (`* text=auto eol=lf`) keeps LF in the repository **and** in every checkout, whatever the
+  contributor's `core.autocrlf`; a CRLF written by an editor is turned back into LF when the file is added.
+- `.editorconfig` (`end_of_line = lf`) and `newline_style = "Unix"` in `rustfmt.toml` make editors and
+  `rustfmt` write LF.
+- The `line-endings` workflow fails any push or pull request that adds a text file holding CRLF.
+- No text file is an exception: even the data files that came with CRLF (`cty.dat`, `sked-fallback.csv`,
+  the solar fixtures) are LF now, and their parsers read lines with `lines()`/`trim()`. Only the binary
+  files (`binary` in `.gitattributes`) keep their bytes.
+
+Rules for an agent:
+
+1. **Everything you write is LF**: files, messages, tables and PR bodies. The Edit and Write tools are fine.
+2. **Never write CRLF, never convert endings by hand** (`unix2dos`, `sed 's/$/\r/'`). If a tool adds CRLF,
+   fix it before committing; never edit `.gitattributes` to make it pass.
+3. Before every commit, read `git diff --numstat`: a file whose changed-line count is its whole length, or
+   hundreds of files for a small change, is an ending accident. Stop and find why before pushing.
+   `git ls-files --eol` must show no `i/crlf` and no `i/mixed`, no exception.
+4. `core.autocrlf` may stay as it is on a contributor's machine; `.gitattributes` wins. On Windows,
+   `git config core.autocrlf input` is the cleaner setting.
+5. A data file captured with CRLF (a server reply, a real-world format) is committed as LF; the parser must
+   accept both (`lines()`, `trim()`), as the real downloads keep their CRLF at run time. If a test needs
+   the CR itself, build the string in the test (`"a\r\nb"`), do not commit a CRLF file.
 
 ## F4NRM's areas (PR required, never straight to main)
 
-F4NRM owns: decoders SSTV, DAB, NAVTEX, APRS, WFM, DSC, Olivia, RTTY, WEFAX,
+F4NRM owns: decoders Bands plans, SSTV, DAB, NAVTEX, APRS, WFM, DSC, Olivia, RTTY, WEFAX,
 FT8, RDS and backends HackRF, PlutoSDR. RSP1 is NOT on his list (bench receiver).
 Confirmed on air by his radio group: WEFAX, DAB, SSTV, DSC, radio classic, aircraft.
 
@@ -82,8 +109,6 @@ or stackable and add it to the Detachable page in Settings.
   standing", no "to be transparent", no announcing that one is being candid.
   The correction is the whole of it.
 - **Ask a reporter one thing, not three.**
-- **F4NRM's replies are AI-drafted** — read as suggestions, not commands.
-  Answer short (3-4 sentences, one question max).
 - **A measurement that disagrees with a report is the first suspect.** Check:
   visible? measures the right thing? existing number disagrees? something
   fighting the fix?
@@ -117,6 +142,11 @@ or stackable and add it to the Detachable page in Settings.
   re-centre. Modes keep their preset bandwidth; CTR only moves the line. Touching
   waterfall or zoom code: keep the `ctr_zoom_sim` tests in
   `widgets/spectrum_view.rs` green and add the gesture you changed.
+  - Web sessions: every fix and every new feature must also work in web sessions (browser client
+connected to the web server), not only in the desktop app. Whatever needs to be stored is stored on the
+server and reaches the client through the protocol (see "Persistence"). Everything is added to the web
+server too, unless F4NRM says otherwise for that item. Check with
+cargo check --release --target wasm32-unknown-unknown -p sdroxide-ui when wasm-reachable code changes.
 
 ## Every piece of interface text is translated
 
@@ -194,6 +224,14 @@ one entry per work item.
   task, not only when the script fails.
 - Re-measurable numbers (crate version, PROTO_VERSION, open issues/PRs) must be
   kept current in TODO.md's state line and AGENTS.md.
+- **A project made of several PRs updates `TODO.md` only once, at the end.**
+  Each PR of the project is described on its own line (in the PR and in the
+  hand-off), but none of them touches `TODO.md`. When **all the PRs of the
+  project are merged**, a new PR made only for that updates `TODO.md` (and
+  `PROJECT-BOARD.md`) for the whole project. This avoids `TODO.md` conflicts
+  from one PR to the next. A change made of a single PR still updates `TODO.md`
+  in its own PR, as above; the "before starting" and "finished" rules above
+  apply to it unchanged.
 
 ## The wire
 

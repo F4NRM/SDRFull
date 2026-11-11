@@ -19,15 +19,25 @@ use sdroxide_types::{
     AgcMode, AirspyGain, AisKind, AlertEvent, AudioRouting, ButtonMode, ContestMode, ConverterTx,
     CwEngine, DecodeSort, DiversityMode, DxpedMode, FailSafe, FtpSecurity, HpsdrFilterBoard,
     HpsdrIoRxInput, HydraSdrGain, IcomRxSource, IcomScopeSpan, IsmFamily, IsmProtocol, Js8Speed,
-    LimeAuxRole, LookupProvider, MailFolder, MemorySort, MouseButton, NrLevel, NrStrength,
-    OrbitRings, QsoStep, RdsStandard, Region, RelativeMode, RelayLink, RelayRole, RfeChannel,
-    RfeLink, RfeModeControl, RifpEncoding, ScanKind, ScanResume, SenseLine, SerialPttOutput, Shift,
+    LimeAuxRole, LookupProvider, MailFolder, MemorySort, MeterView, MouseButton, NrLevel,
+    NrStrength, OrbitRings, QsoStep, RdsStandard, Region, RelativeMode, RelayLink, RelayRole,
+    RfeChannel, RfeLink, RfeModeControl, RifpEncoding, ScanKind, ScanResume, SenseLine, Shift,
     Speed, TlsVerify, ToneMode, UploadNaming, WheelAction,
 };
 
 /// A value's name, in the interface's language.
 pub(crate) trait Tr: Copy {
     fn tr(self) -> String;
+}
+
+impl Tr for sdroxide_types::ClockPart {
+    fn tr(self) -> String {
+        match self {
+            sdroxide_types::ClockPart::DateTime => tr!("sstv-clock-date-time"),
+            sdroxide_types::ClockPart::Time => tr!("sstv-clock-time"),
+            sdroxide_types::ClockPart::Date => tr!("sstv-clock-date"),
+        }
+    }
 }
 
 impl Tr for LayoutMode {
@@ -935,6 +945,18 @@ impl Tr for Shift {
             Shift::Simplex => tr!("shift-simplex"),
             Shift::Minus => tr!("shift-minus"),
             Shift::Plus => tr!("shift-plus"),
+        }
+    }
+}
+
+impl Tr for MeterView {
+    fn tr(self) -> String {
+        match self {
+            MeterView::Auto => tr!("meter-view-auto"),
+            MeterView::Rx => tr!("meter-view-rx"),
+            MeterView::Power => tr!("meter-view-power"),
+            MeterView::Swr => tr!("meter-view-swr"),
+            MeterView::Alc => tr!("meter-view-alc"),
         }
     }
 }

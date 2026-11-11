@@ -461,6 +461,7 @@ settings-radio-n = radyo { $n }
 settings-on-station = { $station } üzerinde
 settings-add-radio-on-station = { $station } üzerine bir radyo ekle — istasyon onu hemen sunar
 settings-panadapter-receiver-for = { $radio } için panadaptör alıcısı
+settings-panadapter-kiwi-zoom-note = Alıcı olarak bir KiwiSDR kullanıldığında şelalesi, frekansın çevresinde yaklaşık 2 MHz'e yakınlaştırılmış açılır. Bunu o telsizin ayarlarında, Bant görünümü aralığı altında değiştirin.
 settings-hang-up-stays-on = Bağlantıyı kes. Radyo { $station } üzerinde kalır.
 settings-close-on-station = { $radio }, { $station } üzerinde kapatılsın mı? Yapılandırması o makinede kalır; buradaki sekme onunla birlikte kapanır, herkesinkiyle birlikte de.
 settings-close-it-on = { $station } üzerinde kapat
@@ -571,8 +572,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = BANT PLANINI YENİDEN YÜKLE
-settings-general-re-read-bandplan-json-machine = Radyonun bağlı olduğu makinedeki bandplan.json dosyasını yeniden okuyup uygulayın — bant kenarları, alt segmentler ve skimmer pencereleri — yeniden başlatmadan.
-settings-general-running-station-s-own-band = İstasyonun kendi bant planında çalışıyor.
 settings-general-running-built-iaru-tables = Yerleşik IARU tablolarında çalışıyor.
 settings-general-settings-file = Ayarlar dosyası
 settings-general-settings-are-machine-radio-attached = Ayarlar, radyonun bağlı olduğu makinededir. Onları orada dışa aktarın.
@@ -635,7 +634,6 @@ settings-net-checking = denetleniyor…
 
 settings-amp-connected-to = { $model } modeline bağlanıldı
 settings-controls-last-midi = Son ileti: { $message }  değer { $value }
-settings-general-band-plan-file = Her bant kenarı ve alt segmenti { $path } dosyasından gelir; dosya ilk seferinde yerleşik IARU tablolarından yazılır ve sonrasında düzenlemek sizindir — bir bandı lisansınıza daraltırsanız sdroxide onun dışında yayın yapmayı reddeder. Frekanslar MHz cinsindendir; varsayılanların yeni bir kopyası için dosyayı silin. Bu bölgesel tahsistir, lisansınız değildir: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.
 settings-general-exported = { $note } dışa aktarıldı — kaydedileceği yeri seçin.
 settings-general-export-failed = Dışa aktarma başarısız: { $error }
 settings-general-import-failed = İçe aktarma başarısız: { $error }
@@ -658,7 +656,6 @@ settings-add-radio-here-station-you = Bir radyo ekleyin — burada ya da bağlı
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Her bant kenarı ve alt segmenti, radyonun bağlı olduğu makinedeki bandplan.json dosyasından gelir. Bu bölgesel tahsistir, lisansınız değildir: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -3186,7 +3183,6 @@ sat-downlink-mhz = AŞAĞI BAĞLANTI (MHz)
 sat-uplink-mhz = YUKARI BAĞLANTI (MHz)
 sat-mode = MOD
 sat-tune = AYARLA
-sat-set-dial-mode-link-no = Skalayı ve modu bu bağlantıya ayarlayın — kilit yok, düzeltme yok
 sat-locked = {" "}KİLİTLİ{" "}
 sat-lock = {" "}KİLİTLE{" "}
 sat-track-satellite-doppler-correction-rx = Bu uyduyu izleyin: RX ve TX'te Doppler düzeltmesi, transponder eşleşmeli yukarı bağlantı ve 3B görünüm onu izler
@@ -3509,7 +3505,6 @@ qo100-write-converter-lnb-offset-puts = Tıkladığınız yerdeki işareti 10489
 qo100-write-converter-lnb-offset-puts-2 = İzleyicinin tahminini 10489,750 MHz'e koyan dönüştürücü/LNB kaymasını yazın ve alıcıyı yeniden açın — Ayarlar ▸ Radyo ▸ Uygula'nın yaptığı aynı kısa kesinti
 qo100-waiting-second-crc-valid-frame = Bunu yazmayı önermeden önce CRC'si geçerli ikinci bir çerçeve bekleniyor — tek bir kilit bir tesadüfi eşleşme olabilir
 qo100-write-corrected-converter-lnb-offset = Düzeltilmiş dönüştürücü/LNB kaymasını yazın ve alıcıyı yeniden açın — kısa bir kesinti, Ayarlar ▸ Radyo ▸ Uygula'nın yaptığıyla aynı
-qo100-decoder-runs-receiving-station-readout = çözücü, alan istasyonda çalışır — okuması uzak istemcilere gönderilmez
 qo100-starting = başlatılıyor…
 qo100-searching-first-window-fills-after = aranıyor — ilk pencere yaklaşık 24 sn sonra dolar, sonra tekrarlanır
 
@@ -3892,21 +3887,25 @@ fsq-add = Ekle
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + SEKME
-publicsdr-open-receiver-new-radio-own = Bu alıcıyı kendi sekmesinde yeni bir radyo olarak açın
-publicsdr-point-radio-receiver-replacing-whatever = *Bu* radyoyu, şu an hangi arabirimde olursa olsun alıcıya yöneltin — bu bir radyonun tüm kurulumu olduğu için önce yeniden sorulur
 publicsdr-not-stated = belirtilmemiş
-publicsdr-replace = DEĞİŞTİR
-publicsdr-point-radio-you-are-receiver = Bulunduğunuz radyoyu bu alıcıya yöneltin
-publicsdr-tab-instead = + SEKME YERİNE
-publicsdr-open-receiver-another-radio-leave = Alıcıyı başka bir radyo olarak açın ve bunu olduğu gibi bırakın
-publicsdr-cancel = İPTAL
 publicsdr-public-sdrs = GENEL SDR'LER
 publicsdr-available = KULLANILABİLİR
 publicsdr-hide-receivers-are-full-ones = Dolu olan alıcıları ve operatörü tarayıcı dışındaki uygulamalara hiç kanal açmamış olanları gizleyin
 publicsdr-band = BANTTA
 publicsdr-only-receivers-cover-current-dial = Yalnızca geçerli skala frekansını kapsayan alıcılar
 publicsdr-low-bw = DÜŞÜK BW
+publicsdr-map-cities = ŞEHİRLER
+publicsdr-map-cities-tip = Bu haritada şehirler, açık veya kapalı.
+publicsdr-view-list = LİSTE
+publicsdr-view-map = HARİTA
+publicsdr-view-map-tip = Aynı alıcılar bir dünya haritasında. Bir noktaya tıklamak altındaki tüm alıcıları seçer.
+publicsdr-map-pick = Altındaki alıcıları seçmek için bir noktaya tıklayın.
+publicsdr-map-names = ADLAR
+publicsdr-map-names-tip = Alıcıların adlarını haritada göster. Kapalı: yalnızca seçilenlerin adı yazılır.
+publicsdr-check-online = ÇEVRİMİÇİ
+publicsdr-check-silent = SESSİZ
+publicsdr-check-waiting = DENENİYOR…
+publicsdr-check-no-answer = 20 saniye içinde yanıt yok.
 publicsdr-take-spyserver-low-bandwidth-shape = Bir SpyServer'ı düşük bant genişliği biçiminde alın: skalayı izleyen dar bir I/Q penceresi artı sunucunun kendi bant görünümü; megabit genişbant I/Q yerine. Yalnızca bir biçimi olan bir KiwiSDR'ı etkilemez.
 publicsdr-refresh = ⟳ YENİLE
 publicsdr-fetch-both-directories-again = İki dizini yeniden alın
@@ -3916,9 +3915,6 @@ publicsdr-fetching-receiver-lists = Alıcı listeleri alınıyor…
 publicsdr-machine-radio-attached-does-not = Bu radyonun bağlı olduğu makine aygıt sorularını yanıtlamıyor, bu yüzden listeleri de alamaz.
 publicsdr-no-match = eşleşme yok
 publicsdr-nothing-matches-try-turning-filter = Hiçbir şey eşleşmiyor — bir filtre çipini yeniden açmayı deneyin
-publicsdr-radio = bu radyo
-publicsdr-radio-s-configuration-has-not = Bu radyonun yapılandırması, bulunduğu makineden henüz gelmedi; bu yüzden alıcıya yöneltilecek bir şey yok — bunun yerine + SEKME ile alın.
-publicsdr-position-not-published-so-nothing = {" "}Konumu yayımlanmıyor, bu yüzden duyduğu hiçbir şey bildirilmeyecek.
 
 ## hd (src/app/hd.rs)
 
@@ -4725,14 +4721,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } alıcı · { $per_net } · { $age } önce alındı
 publicsdr-showing-search-narrow = { $n } içinden { $shown } gösteriliyor — daraltmak için arayın
 publicsdr-match = { $n } eşleşme
-publicsdr-replace-taking-receiver-points-same =
-    { $this } yerine { $entry } koyulsun mu?
-
-    { $this2 } is on { $iface }. Taking this receiver points the same tab at { $address } instead, renames it “{ $entry2 }”, and holds the dial to the { $range_label } the receiver publishes — nothing here transmits.
-
-    The { $iface2 } settings stay where they are, and so do the ranges stated for them: switching the interface back in Settings → Radio brings the radio back as it was.
-publicsdr-receptions-will-reported = {" "}Alımlar { $value } konumundan bildirilecek.
-publicsdr-pointing-radio = Bu radyo { $entry } alıcısına yöneltiliyor…{ $site }
+publicsdr-map-status = haritada { $shown } · konumsuz { $unplaced }
 publicsdr-opening-another-radio = { $entry } başka bir radyo olarak açılıyor…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5048,7 +5037,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (ağ)
 cat-family-flrig = flrig (ağ)
-publicsdr-its-interface = arayüzü
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Kapalı
@@ -5374,8 +5362,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = İkisi
 
-panels-sensitivity = Hassasiyet
-
 navtex-hunting = aranıyor
 
 navtex-hunting-hint =
@@ -5387,11 +5373,8 @@ navtex-hunting-hint =
 
     Ayrıca NAVTEX'in bir sohbet değil, bir tarife olduğunu unutmayın: bir kıyı istasyonu her dört saatte on dakika yayın yapar, bu yüzden çoğu zaman sessizlik normaldir. İstasyonunuzun sırası geldiğinde dinliyor olmalısınız. Ayrıca 518 kHz yalnızca geceleri canlanır — sessiz bir gündüz bandı bozuk bir çözücü anlamına gelmez.
 
-navtex-sensitivity-hint =
-    Hassasiyet — çözücünün bir sinyale ne kadar kolay kilitlenip onu ne kadar iyi tuttuğu.
-navtex-auto-hint = Referans eşiklere (0) döner. Etkinken vurgulanır.
 
-navtex-tune-dial-usb-below-channel = Kadranı buraya ayarlayın (USB, kanalın 1.710 kHz altı).
+navtex-tune-dial-usb-below-channel = Kadranı buraya ayarlayın (USB, kanalın 1.700 kHz altı).
 
 settings-audio-your-audio = Sesiniz
 
@@ -7656,7 +7639,6 @@ net-wavelog-no-station-location = indirilecek istasyon konumu yok — önce bağ
 
 publicsdr-could-not-connect = bu oturum bağlanamadı
 
-publicsdr-use-chip = KULLAN
 
 weather-title = HAVA RAPORLARI
 
@@ -9062,7 +9044,6 @@ publicsdr-mine = BENİM
 
 publicsdr-mine-hint = Yalnızca yıldızladığınız alıcılar
 
-publicsdr-mine-empty = Henüz yıldız yok — bir satırdaki ☆ o alıcıyı burada tutar.
 
 publicsdr-star-receiver = Bu alıcıyı BENİM içinde tut
 
@@ -9197,12 +9178,509 @@ sonde-col-temp = SÄ±c.
 
 sonde-col-humidity = Nem
 
-sonde-col-pressure = BasÄ±nÃ§
+sonde-col-pressure = Basınç
 
 settings-net-broadcast-import-needs-station = İçe aktarmak için bir istasyona bağlanın.
 
 
+sonde-online-why-signin = İstasyon önce oturum açılmasını istiyor.
 
+sonde-online-why-busy = İstasyon SondeHub'ı zaten izin verilen sıklıkta sorguluyor. Bir dakika sonra yeniden deneyin.
+
+sonde-online-why-upstream = İstasyon SondeHub'a ulaşamadı.
+
+sonde-online-why-unreadable = Yanıt bir sonda listesi değildi.
+
+sonde-online-why-no-station = Sorulacak istasyon yok ve bu sayfa SondeHub'a kendisi ulaşamıyor.
+
+sonde-online-why-http = Yanıt: HTTP { $n }.
+settings-general-band-plan = Bant planı
+
+settings-general-band-plan-built-in = Yerleşik IARU
+
+
+
+
+sonde-card-source = Kaynak
+
+sonde-card-source-radio = Bu telsiz
+
+sonde-card-source-hub = SondeHub (başka bir istasyon duydu)
+
+sonde-card-model = Model
+
+sonde-card-maker = Üretici
+
+sonde-card-variant = Varyant
+
+sonde-card-position = Konum
+
+sonde-card-from-you = Sizden
+
+sonde-card-heading = Yön
+
+sonde-card-satellites = Uydular
+
+sonde-card-snr = Sinyal/gürültü oranı
+
+sonde-card-station = Dinleyen
+
+sonde-card-station-position = İstasyon konumu
+
+sonde-card-antenna = Anten
+
+sonde-card-software = Yazılım
+
+sonde-card-frames = Alınan çerçeve
+
+sonde-card-open = { $site } sitesinde aç
+
+sonde-card-close = Kapat
+
+aircraft-mode-vor-hover = Radyonun ayarlı olduğu VOR yer istasyonunu oku: radyali ve Mors tanıtımı
+
+vor-audio-front = Bu alıcı demodüle edilmiş ses verir; VOR okuması ham I/Q akışını gerektirir.
+
+vor-outside-window = Ayarlanan kanal, alıcının verdiği aralığın dışında. Alıcıyı bu kanala ortalayın.
+
+vor-not-in-band = Radyalini okumak için bir VOR istasyonuna (108,00–117,95 MHz) ayarlayın.
+
+vor-locked = KİLİTLİ
+
+vor-no-lock = KİLİT YOK
+
+vor-no-lock-hover = 30 Hz değişken sinyal ya da 9960 Hz referans yok veya çok zayıf. Bu banttaki bir ILS lokalizeri hiçbir zaman kilitlenmez.
+
+vor-ident-heard = Duyulan tanıtım: { $ident }
+
+vor-ident-waiting = Tanıtım dinleniyor (yaklaşık 10 sn'de bir gönderilir)…
+
+vor-charted = Haritada: { $ident } — { $name }
+
+vor-var-depth = 30 Hz AM: taşıyıcının % { $pct }'si
+
+vor-ref-depth = 9960 Hz FM: taşıyıcının % { $pct }'si, sapma ±{ $dev } Hz
+
+vor-caveat = Radyal, alıcının istasyondan itibaren yönüdür ve istasyonun kendi manyetik kuzeyine göredir. Seyrüsefer için değildir.
+
+vor-nearby = İstasyonunuza en yakın VOR'lar
+
+vor-no-grid = En yakın VOR'ları listelemek için sayısal mod ayarlarına Maidenhead locator'unuzu girin.
+
+vor-tune-hover = Bu VOR'u AM'de ayarla
+
+tx-bands-power-hint = Drive en üstteyken bu bantta elde edilen en yüksek güç, watt cinsinden. Bilmiyorsanız — olarak bırakın.
+
+tx-bands-power-note = İsteğe bağlı. Güç ölçeri olmayan bir telsiz, S-metrede iletim gücünü watt olarak göstermek için bu değerleri kullanır; yoksa Drive ayarını yüzde olarak gösterir.
+
+band-plan-title = Bu telsizin bant planı
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = RX'i yalnızca bu telsizin dinlemesi gereken bantlarda EVET yapın. Telsiz HAYIR olan bir banda asla ayarlanmaz ve RX listesi onaylanana kadar hiç ayarlanmaz. TX ve RX birbirinden bağımsızdır: bir bant TX HAYIR ve RX EVET olabilir.
+
+rx-bands-title = Alış bantları
+
+rx-bands-check-again = RX'İ KONTROL ET
+
+rx-bands-check-again-hint = Alış listesini yeniden kontrol etmek için onayı geri alır. Herhangi bir bandı değiştirmek bunu zaten kendiliğinden yapar.
+
+rx-bands-confirmed = ✓ Bu telsiz için alış bantları onaylandı
+
+rx-bands-ack = Bu alış bantlarını telsizimle karşılaştırdım
+
+rx-bands-confirm = Bu alış bantlarını onayla
+
+rx-bands-confirm-hint = Önce kutuyu işaretleyin: onay her telsiz için bir kez verilir.
+
+rx-bands-notice = Alış bandı listesi onaylanmadı: alış bantlarını bir kez kontrol edip onaylayana kadar telsiz ayarlanmaz.
+
+rx-bands-out-of-range = Bu telsizin bildirilen aralığı bu banda ulaşmıyor.
+
+rx-bands-band-off = Bu telsizin bant planında (Ayarlar) bu bantta alış kapalı ya da alış listesi henüz onaylanmadı.
+
+settings-general-re-read-band-plan-file = Seçili planın dosyasını telsizin bağlı olduğu makinede yeniden okur ve uygular — bant sınırları, alt bölümler ve skimmer pencereleri — yeniden başlatmadan.
+
+settings-general-running-band-plan = Çalışan bant planı: “{ $name }”.
+
+settings-general-band-plan-choose-hint = İstasyonun kitaplığından bir bant planı seçin. Varsayılan, yerleşik IARU tablolarıdır. Başka bir plan kullanmak, TX ve RX bant listelerinin yeniden kontrol edilip onaylanmasını gerektirir.
+
+settings-general-band-plan-import = PLAN İÇE AKTAR
+
+settings-general-band-plan-import-hint = İstasyonun kitaplığına bir bant planı dosyası ekler. Basit bir bant listesi (ad, tür, hertz cinsinden başlangıç ve bitiş) önce dönüştürülür. Denetlenir ve yalnızca eklenir — kullanmak için listeden seçin.
+
+settings-general-band-plan-reset = YERLEŞİK IARU'YA DÖN
+
+settings-general-band-plan-reset-hint = Yerleşik IARU tablolarını yeniden kullanır. TX ve RX bant listelerinin ardından yeniden kontrol edilip onaylanması gerekir.
+
+settings-general-band-plan-folder = Planlar, telsizin bağlı olduğu makinedeki { $path } içindeki dosyalardır; ekleyip silebilirsiniz. Bir bandı lisansınıza daraltın, sdroxide dışında yayın yapmayı reddeder. Frekanslar MHz cinsindendir. Bu bölgesel tahsistir, lisansınız değil: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.
+
+settings-general-band-plan-station-folder = Planlar telsizin bağlı olduğu makinede saklanır. Bir bandı lisansınıza daraltın, sdroxide dışında yayın yapmayı reddeder. Bu bölgesel tahsistir, lisansınız değil: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.
+
+settings-general-band-plan-manager = Bant planı yöneticisi
+
+settings-general-band-plan-run = KULLAN
+
+settings-general-band-plan-run-hint = Bu planı kullan. TX ve RX bant listelerinin yeniden kontrol edilip onaylanması gerekir.
+
+settings-general-band-plan-download = İNDİR
+
+settings-general-band-plan-download-hint = Bu planın dosyasını bu bilgisayara kaydet.
+
+settings-general-band-plan-delete = SİL
+
+settings-general-band-plan-delete-confirm = SİLMEK İÇİN TEKRAR TIKLAYIN
+
+settings-general-band-plan-delete-hint = Bu planı istasyonun kitaplığından siler. Çalışan plan silinemez.
+
+settings-general-band-plan-running-tag = ÇALIŞIYOR
+
+settings-general-band-plan-shipped-tag = birlikte gelen
+
+settings-general-band-plan-save-current = GEÇERLİ PLANI ŞÖYLE KAYDET
+
+settings-general-band-plan-save-current-hint = Çalışan planı bu adla kitaplığa kaydeder. Aynı adlı plan değiştirilir, eski dosyası bir kez .bak olarak saklanır.
+
+settings-general-band-plan-name-hint = ad
+
+settings-general-band-plan-restore = BİRLİKTE GELEN PLANLARI GERİ YÜKLE
+
+settings-general-band-plan-restore-hint = Programla gelen planları, silinmiş ya da düzenlenmiş olsalar da geri koyar. Düzenlenmiş olan değiştirilir ve bir kez .bak olarak saklanır.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = Kitaplıkta plan yok.
+
+settings-general-band-plan-radio = Bu telsiz
+
+settings-general-band-plan-radio-follow = İstasyonu izler
+
+settings-general-band-plan-radio-hint = Bir planı yalnızca bu telsizde kullan. İstasyonun planına ve diğer telsizlere dokunulmaz. Bu telsizin TX ve RX bant listelerinin yeniden kontrol edilip onaylanması gerekir.
+
+settings-general-band-plan-run-radio = YALNIZ BU TELSİZ
+
+settings-general-band-plan-radio-tag = bu telsiz
+
+meter-view-auto = Otomatik
+
+meter-view-rx = Sinyal (RX)
+
+meter-view-power = Güç
+
+meter-view-swr = SWR
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = Önceki ölçüm: { $view }
+
+smeter-arrow-next-hover = Sonraki ölçüm: { $view }
+
+smeter-arrow-prev-face = Önceki kadran
+
+smeter-arrow-next-face = Sonraki kadran
+
+sonde-card-source-both = Telsiz + SondeHub (ikisi de alıyor)
+
+sonde-card-stale = Durum
+
+sonde-card-stale-value = Listede yok: bilinen son konum
+
+sonde-card-detach = Ayır
+
+sonde-card-attach = Yapıştır
+tx-bands-outside-note = Burada listelenen bantların dışında hiçbir şey yayınlanamaz. Bant dışı alım (ADS-B, DAB, AIS...) için satır gerekmez.
+
+tx-off-cb = 11 m (CB) üzerinde YAYIN YASAK — bant yayın listenizde, ancak "11 m (CB) üzerinde yayına izin ver" kapalı. Ayarlar → Genel bölümünden işaretleyin.
+
+settings-cb-allow-tx-needs-band = Önce bu telsizin TX bant listesinde 11M-CB'yi EVET yapın (Ayarlar → Radyo), sonra burada izin verin.
+
+settings-cb-allow-tx-order-note = İki kilit, bu sırayla: 1) telsizin TX bant listesinde 11M-CB EVET ve onaylı; 2) bu kutu. 11 m'de yayın için ikisi de gerekir. 11M-CB'yi listeden çıkarmak bu kutunun işaretini de kaldırır.
+
+settings-ui-publicsdr-under-waterfall = Şelalenin altına sabitlenmiş
+
+settings-ui-publicsdr-place-hint = Public SDRs'nin nerede açılacağı: orada hiçbir şeyi olmayan ses modlarında şelalenin altına sabitlenmiş ya da bir pencerede. Sayısal modlar, CW ve telefonlar zaten pencere kullanır.
+
+publicsdr-dock-hint = Bu listeyi şelalenin altına sabitle (orada paneli olmayan ses modları)
+
+publicsdr-undock-hint = Bu listeyi kendi penceresine geri koy
+
+publicsdr-close-hint = Public SDRs'yi kapat
+
+settings-net-hfcc-file-hint = HFCC programını kendi kaydettiğiniz bir paketten alın: HFCC'nin yayımladığı zip (örneğin b26allx2.zip), program ve iki tablosuyla birlikte.
+
+schedule-import = İçe aktar…
+wxsat-title = HAVA UYDULARI
+
+extras-wxsat-hint = HAVA UYDULARI — bir NOAA (APT) veya Meteor (LRPT) uydusunun 137 MHz'de gönderdiği görüntü, geldikçe çizilir, ayrılabilen bir pencerede
+
+wxsat-decode = Çöz
+
+wxsat-channel = Uydu
+
+wxsat-tune = Buraya ayarla
+
+wxsat-tune-hint = Çözücüyü açar ve kadranı bu kanala getirir; böylece sinyal örnekleme penceresinin içinde olur.
+
+wxsat-clear = Temizle
+
+wxsat-save = PNG olarak kaydet
+
+wxsat-flip = Çevir
+
+wxsat-flip-hint = Görüntüyü ters çevirir: güneye giden bir uydu baş aşağı çizilir.
+
+wxsat-state-off = Çözücü kapalı
+
+wxsat-level = Seviye { $db } dBFS
+
+wxsat-locked = Satır senkronu kilitli
+
+wxsat-searching = Satır senkronu aranıyor
+
+wxsat-lines = { $n } satır
+
+wxsat-outside-window = Kanal örnekleme penceresinin dışında ya da sinyalin tamamı için kenarına çok yakın. Buraya ayarla'yı kullanın veya daha geniş bir pencere seçin.
+
+wxsat-waiting = Henüz görüntü yok. Bir uydu ufkun üzerindeyken çözücüyü açın; bir geçiş yaklaşık on dakika sürer.
+
+wxsat-signal = Sinyal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Kanal { $n }
+
+wxsat-rows = { $n } sıra
+
+wxsat-frame-locked = Çerçeve senkronu kilitli
+
+wxsat-frames = { $n } iyi çerçeve
+
+wxsat-waiting-lrpt = Henüz görüntü yok. Meteor LRPT dijitaldir: görüntü uydu duyulduktan birkaç saniye sonra sıra sıra başlar ve her kanal ayrı bir görüntüdür.
+
+wxsat-searching-frame = Çerçeve senkronu aranıyor
+
+qrzcard-loading = QRZ sorgulanıyor…
+
+qrzcard-not-found = QRZ'de bulunamadı.
+
+qrzcard-years = { $n } yaşında
+
+qrzcard-class = Sınıf: { $class }
+
+qrzcard-qsl-paper = kâğıt
+
+qrzcard-qsl-via = { $mgr } aracılığıyla
+
+qrzcard-switch = İmleç bir çağrı işaretinin üzerinde durunca QRZ kartını göster
+
+qrzcard-switch-hint = QRZ.com'dan fotoğraf, ad, yaş, adres, lokatör ve QSL; şelalede, çözücülerde ve spot listelerinde. Fotoğraf, e-posta ve doğum tarihi için QRZ XML aboneliği gerekir.
+
+qrzcard-needs-login = Kartı etkinleştirmek için sağlayıcı olarak QRZ'yi seçin ve QRZ kullanıcı adı ile parolanızı girin.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Alım
+
+meshtastic-region = Bölge
+
+meshtastic-preset = Ön ayar
+
+meshtastic-channel = Kanal
+
+meshtastic-tune = Burayı dinle
+
+meshtastic-tune-hint = Alıcıyı açar ve radyoyu bu kanala getirir. Radyo menüsündeki alım bandı listesi burada dinlenip dinlenemeyeceğine karar verir. Kapattığınızda ya da çıktığınızda radyo eski yerine döner.
+
+meshtastic-keys = Anahtarlar
+
+meshtastic-keys-hint = Ad=anahtar, virgülle ayrılmış (hex:…, base64:…, simple1..10). Varsayılan anahtar her zaman denenir.
+
+meshtastic-state-off = Alıcı kapalı.
+
+meshtastic-level = Seviye { $db } dBFS
+
+meshtastic-counts = { $pre } öncül · { $ok } çerçeve · { $bad } hatalı CRC
+
+meshtastic-refused-band = ALIM YASAK — { $freq } MHz ({ $band }) onaylanmış bir alım bandı değil. Radyo menüsü, alım bantları bölümünde işaretleyip onaylayın.
+
+meshtastic-refused-unconfirmed = ALIM YASAK — bu radyonun alım bantları henüz onaylanmadı. Radyo menüsü, alım bantları bölümünde kontrol edip onaylayın.
+
+meshtastic-out-of-window = Kanal, radyonun yakaladığı örnek penceresinin dışında: daha yakına ayarlayın veya daha geniş bir örnekleme hızı kullanın.
+
+meshtastic-none-yet = Henüz bir şey duyulmadı.
+
+meshtastic-nodes = Düğümler ({ $n })
+
+meshtastic-log = Paketler ({ $n })
+
+meshtastic-col-id = Düğüm
+
+meshtastic-col-name = Ad
+
+meshtastic-col-heard = Duyuldu
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Atlama
+
+meshtastic-col-position = Konum
+
+meshtastic-col-battery = Pil
+
+meshtastic-encrypted = şifreli (anahtar yok)
+
+meshtastic-via-mqtt = MQTT üzerinden
+
+meshtastic-bench-hint = Meshtastic penceresini açar: tek bir kanalın LoRa ağ trafiği.
+
+extras-meshtastic-hint = Meshtastic: tek bir kanalın LoRa ağ trafiği, duyulan düğümler ve paketler.
+
+meshtastic-message = Mesaj
+
+meshtastic-message-hint = Kanaldaki herkes için metin (en fazla 200 bayt)
+
+meshtastic-send = Gönder…
+
+meshtastic-send-hint = Onayınızdan sonra bu metni kanalda yayınlar. Ayarlar, Radyo bölümündeki yayın bandı listesi burada yayın yapılıp yapılamayacağına karar verir; radyo kanalda olmalıdır (Burayı dinle).
+
+meshtastic-confirm = Şimdi { $freq } MHz üzerinde yayın yapılsın mı ({ $air } sn yayın süresi)? Menzildeki herkes duyacak ve bundan lisansınız ile bu bandın kuralları uyarınca siz sorumlusunuz.
+
+meshtastic-confirm-yes = Yayınla
+
+meshtastic-confirm-no = İptal
+
+meshtastic-transmitting = YAYINDA…
+
+meshtastic-tx-airtime = Bu saatte yayın süresi: { $used } sn / { $budget } sn
+
+meshtastic-tx-airtime-free = Bu saatte yayın süresi: { $used } sn (bu bölge için sınır tanımlı değil)
+
+meshtastic-tx-sent = { $n } gönderildi
+
+meshtastic-tx-band-off = YAYIN YASAK — { $freq } MHz ({ $band }) onaylanmış bir yayın bandı değil. Ayarlar → Radyo → Yayın bantları bölümünde işaretleyip onaylayın.
+
+meshtastic-tx-unconfirmed = YAYIN YASAK — bu radyonun yayın bantları henüz onaylanmadı. Ayarlar → Radyo → Yayın bantları bölümünde kontrol edip onaylayın.
+
+meshtastic-tx-duty = Bu bölge için görev döngüsü sınırına ulaşıldı: sonraki mesajdan önce { $s } sn bekleyin.
+
+meshtastic-tx-too-long = Bu mesaj tek başına bu bölge için bir saatlik yayın süresi bütçesinin tamamından uzun.
+
+meshtastic-tx-off-channel = Radyo kanalda değil: önce Burayı dinle düğmesine basın, böylece kadran kanala gelir.
+
+meshtastic-tx-no-transmitter = Bu radyo ham I/Q gönderemez (ses alan bir telsiz veya yalnızca alıcı bir cihaz).
+
+meshtastic-tx-bad-text = Metin boş ya da çok uzun (en fazla 200 bayt).
+
+meshtastic-tx-busy = Zaten bir yayın sürüyor.
+
+meshtastic-tx-rails = Verici yayına geçmeyi reddetti: nedeni yayın mesajında görün.
+rx-bands-swl-note = Bu telsiz için SWL modu açık: alma kilidi yok. Her banda ayarlanabilir.
+
+rx-bands-always-open = Dinleme bantları (ve SWL modu) alma için her zaman açıktır.
+
+sat-tune-link-both-vfos = Kadranı, diğer VFO'yu ve modu bu bağlantıya ayarlar — iniş hattı bu VFO'da, yükseliş hattı diğerinde; bu uydudaki kilit ona geçer
+
+sat-move-lock = {" "}KİLİDİ TAŞI{" "}
+
+sat-locked-other-link-move-lock = Bu uyduya başka bir bağlantıyla kilitli: kilidi buna taşı — yükseliş hattı, tonu ve Doppler'i ile
+
+sat-rig-rx = TELSİZ RX
+
+sat-rig-tx = TELSİZ TX
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Bir uyduya kilitli: kilit bitene kadar VFO A iniş hattı, VFO B yükseliş hattıdır
+
+qrzcard-photo-loading = Fotoğraf yükleniyor…
+
+qrzcard-no-photo = Fotoğrafsız kayıt
+
+sonde-card-listen-hover = Telsizi bu kanala ayarlamak için tıklayın: kadran oraya gider ve çözücü yalnızca onu dinler.
+
+sonde-card-decoding = Bu telsiz tarafından çözülüyor
+
+sonde-card-waiting = Bu kanalı dinliyor, henüz bir şey çözülmedi
+
+sonde-card-click-to-listen = Dinlemek için frekansa tıklayın
+
+sonde-type-all = Tüm türler
+
+sonde-type-hover = Tek bir sonda türünü ara: seçmek taramayı başlatır, tarama bu tür duyulana dek pencereyi bant boyunca kaydırır. Yalnızca bu tür listelenir ve çizilir.
+
+meshtastic-preset-auto = Otomatik
+
+meshtastic-preset-auto-hint = Tüm ön ayarları aynı anda dinler (ShortTurbo'dan LongSlow'a kadar). Ağın hangisini kullandığı bilinmiyorsa seçmeye gerek yoktur.
+
+meshtastic-freq-hint = Kanal frekansı, kilohertz hassasiyetinde. Bölgenin kendi kanal aralıklarını kullanmayan bir ağ için. Bıraktığınızda uygulanır.
+
+meshtastic-close-hint = Meshtastic panelini kapat. Alıcı siz kapatana kadar çalışmaya devam eder.
+
+meshtastic-float-hint = Paneli şelalenin üzerinde kayan bir pencereye çıkar.
+
+meshtastic-dock-hint = Paneli şelalenin altına geri yerleştir.
+
+meshtastic-tune-mode-hint = Telsiz ayrıca geniş FM'ye alınır; hoparlör ve kayıt cihazı kanalın sinyalini alır. Çıkınca mod geri gelir.
+
+wefax-revert-auto-slant = Eğimi geri al
+
+wefax-revert-auto-slant-hint = Bu haritadaki otomatik eğim düzeltmesini geri alır: saat ayarı burada girilen değere döner ve otomatik düzeltme sonraki haritaya kadar kapalı kalır. Daha önce alınan satırlar değişmez.
+
+qrzcard-no-account = Kayıtlı QRZ.com hesabı yok -
+
+qrzcard-account-link = hesap durumuna bak
+
+navtex-other-frequencies = NAVTEX VE KIYI İSTASYONU FREKANSLARI
+
+navtex-other-frequencies-hint = Yayımlanan NAVTEX listesindeki tüm frekanslar, bölgeye göre. Birini seçmek kadranı üst yan bant için ayarlar. CW işaretli girişler Mors hava bültenleridir; bu çözücü onları okumaz.
+
+navtex-freq-cw = CW modu
+
+navtex-freq-international = uluslararası, İngilizce
+
+navtex-freq-national = ulusal, yerel dilde
+
+publicsdr-near-kiwi = YAKIN KIWI
+
+publicsdr-near-kiwi-tip = Locator'ınıza en yakın, boş kanalı olan { $n } KiwiSDR alıcısı, en yakın olan önce. Birini bir CAT telsizinin bant görünümü olarak kullanın.
+
+publicsdr-near-kiwi-no-grid = YAKIN KIWI için locator'ınız gerekir: alıcıları mesafeye göre sıralamak için istasyon ayarlarında girin.
+
+sstv-add-clock = ＋ Tarih/saat
+
+sstv-add-clock-hint = Görselin gönderildiği tarih ve saati yazdıran bir satır ekle — UTC veya kendi saatinizle
+
+sstv-clock-date-time = Tarih ve saat
+
+sstv-clock-time = Saat
+
+sstv-clock-date = Tarih
+
+sstv-clock-freeze-hint = Bu satırı, gösterdiği saate sabitlenmiş sıradan metne çevir
+
+sstv-clock-hint = Görselin gönderildiği andaki tarih ve saati yazar — hazırlandığı saati değil.
+
+sstv-clock-local = Yerel saat
+
+sstv-clock-local-hint = UTC yerine istasyonun yerel saatini yazdır — yaz saati dahil
+
+test-tci-connect-refused = { $address } adresine bağlantı: { $detail } — o portta TCI sunan hiçbir şey yok. TCI, telsizin kendisinden değil SDR programından — ExpertSDR3, Thetis — gelir; bu yüzden programın çalışıyor ve ayarlarında TCI'nin açık olması gerekir. MB1 gibi tek başına çalışan bir cihazda bu, telsizin içinde çalışan kopyadır
+
+test-tci-connect-timed-out = { $address } adresine bağlantı: { $detail } — bu adresten yanıt yok. Ana bilgisayarı ve bir güvenlik duvarının engellemediğini kontrol edin. TCI sunan SDR programı (ExpertSDR3, Thetis) TCI açık olarak çalışmıyorsa, kapalı bir port Windows'ta böyle görünebilir
+
+test-connect-failed = { $address } adresine bağlantı: { $detail }
+
+settings-ui-graphics = Grafik sürücüsü
+
+settings-ui-graphics-auto = Otomatik
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Bir sonraki başlatmada geçerli olur. Otomatik, DirectX 12 kullanır; şelaleyi düz yatay bantlar olarak çizen eski AMD sürücülerinde ise OpenGL kullanır. Şelaleniz yalnızca yatay çizgiler gösteriyorsa OpenGL'i deneyin.
 
 settings-controls-desktop-mic = Masa veya harici mikrofon
 settings-controls-desktop-mic-note = Seri (veya USB-seri) portun el sikisma hatlarina bagli mikrofon veya ayak anahtarindan PTT.
@@ -9215,7 +9693,6 @@ settings-controls-active-low = Dusuk
 settings-controls-debounce = Debounce (ms)
 serial-ptt-output-rts = RTS
 serial-ptt-output-dtr = DTR
-
 settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
 settings-controls-choose-serial-port = Choose serial port
 settings-controls-serial-port-chosen = Serial port chosen.

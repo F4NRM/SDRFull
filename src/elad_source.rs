@@ -820,7 +820,8 @@ impl IqSource for EladSource {
                 | sdroxide_cat::CatUpdate::RflW(_)
                 | sdroxide_cat::CatUpdate::Squelch(_)
                 | sdroxide_cat::CatUpdate::RxAntenna(_)
-                | sdroxide_cat::CatUpdate::Signal(_) => {}
+                | sdroxide_cat::CatUpdate::Signal(_)
+                | sdroxide_cat::CatUpdate::Split(_) => {}
             }
         }
         out
@@ -1018,10 +1019,6 @@ impl IqSource for EladSource {
             self.last_signal = Some((std::time::Instant::now(), dbm));
         }
         self.last_signal.filter(|(at, _)| at.elapsed() < self.signal_max_age).map(|(_, dbm)| dbm)
-    }
-
-    fn smeter_during_tx(&self) -> bool {
-        true
     }
 
     // ── Lifecycle ────────────────────────────────────────────────────────────

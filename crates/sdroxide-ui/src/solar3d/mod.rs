@@ -49,6 +49,7 @@ use crate::view::Solar3dView;
 pub use app::SolarApp;
 #[cfg(not(target_arch = "wasm32"))]
 use state::SolarUi;
+#[cfg_attr(target_arch = "wasm32", allow(unused_imports))]
 pub use state::{DigiTraffic, QsoInfo};
 
 /// Stable id of the child viewport, distinct per radio: a split view can

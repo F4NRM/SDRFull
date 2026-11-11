@@ -1442,6 +1442,131 @@ pub enum Command {
     ///
     /// Appended for the usual reason — postcard numbers variants by position.
     SetSondeConfig(crate::SondeSettings),
+
+    /// Whether the weather-satellite (NOAA APT) decoder runs, and which
+    /// downlink channel it centres on. Kept in `wxsat.json`, echoed back in
+    /// [`crate::RadioState::wxsat`]. Appended for the usual reason.
+    SetWxsatConfig(crate::WxsatSettings),
+
+    /// Add a band plan to the station's `bandplans` folder under `name`, from
+    /// the text of a plan file. The screen reads the file wherever the operator
+    /// is — a browser has no folder of the station's to write to — and the
+    /// engine checks it and writes it, so a native, a remote and a web client
+    /// all take the same road.
+    ///
+    /// A file in another layout (a flat list of bands in hertz) is converted
+    /// first. A plan that does not pass the check is refused with a
+    /// [`crate::RadioEvent::Notice`] and nothing is written; a name already in
+    /// the folder is replaced, the old file kept once as `<name>.json.bak`.
+    /// Adding a plan does not run it: see [`Command::SelectBandPlan`].
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    ImportBandPlan { name: String, json: String },
+
+    /// Run the plan called `name` from the `bandplans` folder, or the built-in
+    /// IARU tables when it is `None` — the one-click way back to the default.
+    /// Persisted in `config.toml` and echoed in
+    /// [`crate::StationConfig::band_plan_name`].
+    ///
+    /// A plan that is not the one already running **withdraws the confirmation
+    /// of every radio's transmit and receive band lists**: the operator checks
+    /// them again against the new plan, as if they never had. Choosing the plan
+    /// that is already running changes nothing.
+    ///
+    /// Appended for the usual reason.
+    SelectBandPlan { name: Option<String> },
+
+    /// Delete the plan called `name` from the `bandplans` folder. The plan
+    /// running now cannot be deleted: choose another first.
+    ///
+    /// Appended for the usual reason.
+    DeleteBandPlan { name: String },
+
+    /// Keep the band plan the station runs right now in the `bandplans` folder
+    /// under `name` — how the built-in IARU tables, or an edited plan, becomes a
+    /// file that can be chosen, downloaded and shared. A name already in the
+    /// folder is replaced, the old file kept once as `<name>.json.bak`. Does not
+    /// change what runs.
+    ///
+    /// Appended for the usual reason.
+    SaveCurrentBandPlan { name: String },
+
+    /// Send the file of the plan called `name` back as a
+    /// [`crate::RadioEvent::BandPlanExport`], for the screen that asked to save
+    /// it on its own computer — the way a browser, which has no access to the
+    /// station's folder, gets a plan out.
+    ///
+    /// Appended for the usual reason.
+    ExportBandPlan { name: String },
+
+    /// Put back the plans that come with the program: one that was deleted is
+    /// written again, one that was edited is replaced (the edited file kept once
+    /// as `<name>.json.bak`). The plan that is running is re-read afterwards, so
+    /// restoring the one in use applies at once — and, being a change of plan,
+    /// withdraws the band confirmations like any other.
+    ///
+    /// Appended for the usual reason.
+    RestoreShippedBandPlans,
+
+    /// Run the plan called `name` on **this radio only** (`None`: follow the
+    /// station's plan again). Kept in this radio's `radio.json`
+    /// ([`crate::RadioConfig::band_plan`]) and echoed in
+    /// [`crate::RadioEvent::RadioConfig`].
+    ///
+    /// Every other radio at the station keeps the plan it had, and its band
+    /// confirmations. This radio's TX and RX confirmations are withdrawn when the
+    /// plan it runs changes, as for [`Command::SelectBandPlan`]; choosing what it
+    /// already runs changes nothing.
+    ///
+    /// Appended for the usual reason.
+    SelectRadioBandPlan { name: Option<String> },
+
+    /// Whether the Meshtastic receiver runs, and which channel, preset and keys
+    /// it uses. Kept in `meshtastic.json`, echoed back in
+    /// [`crate::RadioState::meshtastic`]. Turning it on records where the radio
+    /// was (`restore`); turning it off, or quitting, puts the dial and the mode
+    /// back. It never moves the dial to a band the receive list refuses: the
+    /// panel tunes with the ordinary tune command and the lane reports the
+    /// refusal. Appended for the usual reason.
+    SetMeshtasticConfig(crate::MeshtasticSettings),
+
+    /// Send a text message on the Meshtastic channel: raw I/Q through the
+    /// ordinary transmit path, so every lock that applies to a key-down applies
+    /// here (the transmit band list first). The engine adds the region's duty
+    /// cycle, and answers in [`crate::MeshtasticStatus::tx_refused`]. The panel
+    /// asks the operator to confirm before it sends this. Appended for the
+    /// usual reason.
+    SendMeshtastic(crate::MeshtasticSend),
+
+    /// [`Command::ImportMemories`] for a list that names folders (issue #623):
+    /// each channel comes with the **name** of the folder it was filed under,
+    /// `None` for the top level.
+    ///
+    /// A folder id means something only on the station that made it, so the
+    /// file carries the name and the engine finds the folder of that name
+    /// (compared without regard to case), or creates it, and files the channel
+    /// there. Everything else is as for `ImportMemories`: ids are the engine's,
+    /// a channel already stored (same frequency and mode) is skipped and left
+    /// where it is.
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    ImportMemoriesFiled(Vec<(crate::MemoryChannel, Option<String>)>),
+
+    /// Weather fax: undo the auto-slant on the picture in progress. The line
+    /// clock goes back to the operator's own trim and the auto-slant stays off
+    /// until the next page; lines already drawn are not touched.
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    WefaxRevertSlant,
+
+    /// Scroll the full-band strip's window to centre on this frequency (Hz, on
+    /// the dial's scale) without tuning, or `None` to give it back to the dial.
+    /// Only a front end whose strip is narrower than what it can see acts on it
+    /// (a KiwiSDR's zoomed waterfall); the others ignore it. The window stays
+    /// where it was put until the dial moves.
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    SetWideWindow(Option<f64>),
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

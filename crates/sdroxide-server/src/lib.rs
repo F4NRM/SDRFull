@@ -23,6 +23,8 @@ mod session;
 mod session_cookie;
 mod signin;
 mod solar;
+mod sonde_online;
+mod broadcast_schedule;
 mod programs_state;
 mod watchlist;
 
@@ -284,6 +286,20 @@ pub(crate) struct Latest {
     /// every three minutes, so a client that attached without the table would
     /// show an empty sea for minutes in front of a working decoder.
     pub ais_status: Option<Box<sdroxide_types::AisStatus>>,
+    /// The VOR read-out. Replayed on connect: a beacon's lock and ident are a
+    /// standing condition, and a client that attached without them would show
+    /// the puce empty in front of a working lane for up to half a second, or
+    /// for ever when the lane only speaks on a change.
+    pub vor_status: Option<Box<sdroxide_types::VorStatus>>,
+    /// The QO-100 tracker, the HFDL log and the radiosonde tracks: standing
+    /// conditions like the VOR read-out, replayed on connect so a client that
+    /// attached late is not blank until the decoder next speaks.
+    pub qo100_status: Option<sdroxide_types::Qo100Status>,
+    pub hfdl_status: Option<sdroxide_types::HfdlStatus>,
+    pub sonde_status: Option<Box<sdroxide_types::SondeStatus>>,
+    /// The Meshtastic receiver's nodes and packet log: a whole snapshot, kept
+    /// and replayed on connect like the sonde tracks.
+    pub meshtastic_status: Option<Box<sdroxide_types::MeshtasticStatus>>,
     /// What the DRM decoder has made of the broadcast currently tuned. Replayed
     /// on connect for the same reason as `rds`: a station's label and the
     /// transmission's parameters are standing conditions, and a client that
@@ -318,6 +334,8 @@ pub(crate) struct Station {
     pub auth: Arc<auth::AuthGate>,
     /// The relay behind `/aircraft-info`, switched on or off for the life of the process.
     pub aircraft: Arc<aircraft::AircraftHub>,
+    /// The relay behind `/sonde-online`: SondeHub's list, asked once for all clients.
+    pub(crate) sonde: Arc<sonde_online::SondeRelay>,
     /// What the station remembers of each aircraft for a day, fed by every
     /// radio and served on `/aircraft-history`. Off unless the operator
     /// switched it on.
@@ -674,6 +692,7 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         solar: Arc::new(solar::SolarHub::default()),
         auth: Arc::new(auth::AuthGate::new(params.access)),
         aircraft: Arc::new(aircraft::AircraftHub::start(params.aircraft_online)),
+        sonde: Arc::new(sonde_online::SondeRelay::default()),
         history: Arc::new(history::HistoryHub::start()),
         watch: Arc::new(watchlist::WatchHub::start()),
         programs: Arc::new(programs_state::ProgramsHub::start()),
@@ -723,6 +742,8 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         .route("/ws/{id}", get(session::ws_route_for))
         .route("/radios", get(radios_route))
         .route("/solar-ws", get(solar::ws_route))
+        .route("/sonde-online", get(sonde_online::route))
+        .route("/sonde-track", get(sonde_online::track_route))
         .route("/aircraft-info/{icao}", get(aircraft::info_route))
         .route("/aircraft-photo", axum::routing::delete(aircraft::photo_release))
         .route(
@@ -740,6 +761,16 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         .route("/aircraft-export", get(history::export_route))
         .route("/aircraft-watch", get(watchlist::get_route).post(watchlist::post_route))
         .route("/programs-state", get(programs_state::get_route).post(programs_state::post_route))
+.route(
+    "/broadcast-schedule",
+    get(broadcast_schedule::get_route).post(broadcast_schedule::post_import_route)
+        .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
+)
+.route(
+    "/broadcast-schedule/import",
+    axum::routing::post(broadcast_schedule::post_import_route)
+        .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
+)
         // Where a browser trades its password for a signed cookie, and gives
         // it back. Both are plain HTTP because a cookie is a response header
         // and the socket handshake's headers are spent before the sign-in
@@ -786,6 +817,10 @@ fn is_root_route(path: &str) -> bool {
     match path {
         "/ws" | "/solar-ws" | "/radios" | "/aircraft-history" | "/aircraft-export"
         | "/aircraft-online" | "/aircraft-photo" | "/aircraft-watch" => true,
+        // The schedule and the browser's import of a file. The second has a
+        // directory in it, so without being named here it read as a file under
+        // a prefix and was answered with the web page (`/import`).
+        "/broadcast-schedule" | "/broadcast-schedule/import" => true,
         // Whatever follows is the question, and a bad one is the endpoint's to
         // refuse with a 400, not the static handler's to answer with a page.
         _ if path
@@ -913,6 +948,23 @@ async fn radios_route(
     }
 }
 
+/// Drop the full-band frame held for late-joining clients.
+///
+/// The `watch` keeps the last frame so that a session opened afterwards sees
+/// the strip at once. Nothing ever emptied it, so after a front end that had a
+/// full-band lane (a KiwiSDR, an RX-888) was swapped for one without — a
+/// panadapter receiver detached, a radio reopened on another interface — every
+/// client that connected afterwards was sent the old band, frozen, for good.
+/// Anything the engine had queued before the swap is discarded too, or it
+/// would put the old frame straight back.
+fn forget_wide_lane(
+    out: &mut triple_buffer::Output<SpectrumFrame>,
+    watch: &watch::Sender<Option<SpectrumFrame>>,
+) {
+    let _ = out.update();
+    watch.send_replace(None);
+}
+
 /// Bridge thread: engine endpoints → session lanes + latest-state cache.
 fn pump(
     shared: Arc<Shared>,
@@ -945,8 +997,13 @@ fn pump(
         // Events: block briefly so the loop runs ~200 Hz even when idle.
         match event_rx.recv_timeout(Duration::from_millis(5)) {
             Ok(ev) => {
-                handle_event(&shared, ev);
-                while let Ok(ev) = event_rx.try_recv() {
+                for ev in std::iter::once(ev).chain(event_rx.try_iter()) {
+                    // A new front end: the full-band picture of the old one is
+                    // not a picture of anything now, and a client connecting
+                    // later would be handed it as if it were current.
+                    if matches!(ev, RadioEvent::Capabilities(_)) {
+                        forget_wide_lane(&mut wide_spectrum_out, &wide_watch);
+                    }
                     handle_event(&shared, ev);
                 }
             }
@@ -1187,6 +1244,11 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
                 Some(ServerMsg::DyndnsAnswer { at_unix, ok, text })
             }
+            // A plan's file for the screen that asked to save it: broadcast, the
+            // asking screen is the one that keeps it.
+            RadioEvent::BandPlanExport { file, json } => {
+                Some(ServerMsg::BandPlanExport { file, json })
+            }
             RadioEvent::Ft8Decodes(d) => Some(ServerMsg::Ft8Decodes(d)),
             RadioEvent::Ft8Status(s) => {
                 latest.digi = Some(s.clone());
@@ -1238,15 +1300,30 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
                 Some(ServerMsg::AisStatus(st))
             }
             RadioEvent::DabStatus(st) => Some(ServerMsg::DabStatus(st)),
-            // Native-only for now: every station this shipped for runs its
-            // own hardware locally, so there is no `ServerMsg` variant for
-            // this yet — see `RadioEvent::Qo100Status`'s own doc.
-            RadioEvent::Qo100Status(_) => None,
-            // Native-only for the same reason as QO-100 above — the live HFDL
-            // decode log is engine-internal, bridged nowhere yet.
-            RadioEvent::HfdlStatus(_) => None,
-            // ...and the radiosonde tracks, for the same reason.
-            RadioEvent::SondeStatus(_) => None,
+            RadioEvent::Qo100Status(st) => {
+                latest.qo100_status = Some(st.clone());
+                Some(ServerMsg::Qo100Status(st))
+            }
+            RadioEvent::HfdlStatus(st) => {
+                latest.hfdl_status = Some(st.clone());
+                Some(ServerMsg::HfdlStatus(st))
+            }
+            RadioEvent::SondeStatus(st) => {
+                latest.sonde_status = Some(st.clone());
+                Some(ServerMsg::SondeStatus(st))
+            }
+            RadioEvent::MeshtasticStatus(st) => {
+                latest.meshtastic_status = Some(st.clone());
+                Some(ServerMsg::MeshtasticStatus(st))
+            }
+            // Not kept for replay: each carries only the lines new since the
+            // last, so a client that attaches late picks the picture up from
+            // the next ones.
+            RadioEvent::WxsatStatus(st) => Some(ServerMsg::WxsatStatus(st)),
+            RadioEvent::VorStatus(st) => {
+                latest.vor_status = Some(st.clone());
+                Some(ServerMsg::VorStatus(st))
+            }
             RadioEvent::SstvLine { image_id, y, rgb } => {
                 Some(ServerMsg::SstvLine { image_id, y, rgb })
             }
@@ -1369,7 +1446,7 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             // whichever screen, but only the station connects, so a remote
             // screen has no other way to learn whether they work.
             RadioEvent::PictureUpload(st) => Some(ServerMsg::PictureUpload(st)),
-            // Native-only, like `Qo100Status`: the ATS Mini's memory table is
+            // Native-only: the ATS Mini's memory table is
             // answered on the machine the radio is attached to and is not on
             // the wire.
             RadioEvent::AtsMiniMemories(_) => None,
@@ -1398,6 +1475,7 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             // has no other way to draw a meter that follows it.
             RadioEvent::AudioLevel(l) => Some(ServerMsg::AudioLevel(l)),
             RadioEvent::TxRefused(why, hz) => Some(ServerMsg::TxRefused(why, hz)),
+            RadioEvent::ModeRefused(mode, band) => Some(ServerMsg::ModeRefused { mode, band }),
             // Found where the sound reaches the speakers, so a remote client
             // finds its own from the audio it is sent.
             RadioEvent::HeardFrame(_) => None,
@@ -1663,6 +1741,19 @@ mod proxy_prefix_tests {
         assert_eq!(strip_proxy_prefix("/ws/ws/3"), Some("/ws/3".to_string()));
     }
 
+    /// The browser's file import posts to a two-level path. It is an endpoint,
+    /// not "a file called `import` under a prefix": it was rewritten to
+    /// `/import` and answered with the station's own web page.
+    #[test]
+    fn the_schedule_import_is_an_endpoint_not_a_file() {
+        assert_eq!(strip_proxy_prefix("/broadcast-schedule"), None);
+        assert_eq!(strip_proxy_prefix("/broadcast-schedule/import"), None);
+        assert_eq!(
+            strip_proxy_prefix("/sdroxide/broadcast-schedule/import"),
+            Some("/broadcast-schedule/import".to_string())
+        );
+    }
+
     /// The picture of the open card is an endpoint too, behind any prefix.
     #[test]
     fn the_aircraft_photo_survives_a_proxy_prefix() {
@@ -1794,5 +1885,45 @@ mod asset_name_tests {
         assert_eq!(asset_name("/index.html"), "index.html");
         assert_eq!(asset_name("/audio_bridge.js"), "audio_bridge.js");
         assert_eq!(asset_name("/sdroxide-web-abc_bg.wasm"), "sdroxide-web-abc_bg.wasm");
+    }
+}
+
+#[cfg(test)]
+mod wide_lane_tests {
+    use super::forget_wide_lane;
+    use sdroxide_types::SpectrumFrame;
+    use tokio::sync::watch;
+
+    fn frame(seq: u32) -> SpectrumFrame {
+        SpectrumFrame {
+            seq,
+            center_hz: 7_074_000.0,
+            span_hz: 1_875_000.0,
+            db_floor: -100.0,
+            db_ceil: -20.0,
+            bins: vec![10; 16],
+            rows: Vec::new(),
+            rows_clocked: false,
+        }
+    }
+
+    /// A KiwiSDR's strip was kept for late joiners and never emptied: after the
+    /// Kiwi was detached, every client that connected got its frozen band back.
+    #[test]
+    fn a_swapped_front_end_leaves_no_full_band_frame_for_late_clients() {
+        let (mut input, mut out) = triple_buffer::triple_buffer(&frame(0));
+        let (tx, rx) = watch::channel(None);
+
+        // The old front end's last frame, as `pump` stores it.
+        input.write(frame(7));
+        assert!(out.update());
+        tx.send_replace(Some(out.output_buffer().clone()));
+        // A second one still queued in the engine's buffer when the swap came.
+        input.write(frame(8));
+
+        forget_wide_lane(&mut out, &tx);
+
+        assert!(rx.borrow().is_none(), "a client joining now must be sent no strip");
+        assert!(!out.update(), "the queued frame of the old front end must not come back");
     }
 }

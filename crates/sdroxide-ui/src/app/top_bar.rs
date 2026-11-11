@@ -189,6 +189,7 @@ const PTT_TEXT: f32 = 15.0;
 /// only a mouse has. See [`SdroxideApp::held_ptt`].
 /// The on-screen name of a module's window (the types crate carries the English
 /// one, which is also what logs and tests read).
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 fn module_window_name(m: sdroxide_types::DetachableModule) -> String {
     use sdroxide_types::DetachableModule as M;
     match m {
@@ -1051,7 +1052,7 @@ impl SdroxideApp {
         let chip_h = crate::chrome::chip_height(ui, None);
         let fit = ReadoutFit::measure(ui, self.readout_digits());
 
-        let active = self.state.active_vfo;
+        let active = self.shown_vfo();
         let tag = match active {
             Vfo::A => "A",
             Vfo::B => "B",
@@ -1119,7 +1120,7 @@ impl SdroxideApp {
                         ink,
                         self.readout_digits(),
                     ) {
-                        cmds.push(Command::SetVfo { vfo: active, hz: hz - map });
+                        cmds.push(Command::SetVfo { vfo: self.state.active_vfo, hz: hz - map });
                     }
                     // The dial is what is shown, because a typed or turned
                     // frequency has to map back to it. When the mode works the
@@ -1162,11 +1163,15 @@ impl SdroxideApp {
                                 reading = smeter::hover_text(self.meters.as_ref(), self.meter_is_audio()),
                                 faces = tr!("topbar-bar-trace")
                             );
-                            let resp =
-                                smeter::show(ui, self.meters.as_ref(), style.compact(), true)
-                                    .on_hover_text(hover);
+                            let view = self.ui_settings.smeter_view;
+                            let (resp, turned) =
+                                smeter::show(ui, self.meters.as_ref(), style.compact(), view, true);
+                            let resp = resp.on_hover_text(hover);
                             if resp.clicked() {
                                 self.set_smeter_style(style.next_compact());
+                            }
+                            if let Some(t) = turned {
+                                self.apply_smeter_turn(t, style, true);
                             }
                         },
                     );
@@ -1450,9 +1455,10 @@ impl SdroxideApp {
             self.link_menu_row(ui);
             if selector {
                 crate::chrome::menu_caption(ui, "VFO");
-                let active = self.state.active_vfo;
+                let active = self.shown_vfo();
+                let sat_locked = self.sat_vfos_held();
                 ui.horizontal(|ui| {
-                    vfo_ab_chips(ui, active, cmds);
+                    vfo_ab_chips(ui, active, sat_locked, cmds);
                     ui.label(
                         RichText::new(self.inactive_vfo_label())
                             .monospace()
@@ -2060,7 +2066,8 @@ impl SdroxideApp {
         let &FreqBoxPlan { size, ab_w, right_w, readout_w, readout_h, box_w } = plan;
         crate::chrome::module_chromed(ui, box_w, crate::chrome::MODULE_TALL_H, boxed, |ui| {
             ui.spacing_mut().item_spacing.x = 0.0; // control every gap explicitly
-            let active = self.state.active_vfo;
+            let active = self.shown_vfo();
+            let sat_locked = self.sat_vfos_held();
             let full_h = ui.available_height();
 
             // VFO A/B selector, vertically centred in the full box height —
@@ -2088,7 +2095,7 @@ impl SdroxideApp {
                         ui.add_space(LINK_GAP);
                         ui.horizontal(|ui| {
                             ui.spacing_mut().item_spacing.x = 6.0;
-                            vfo_ab_chips(ui, active, cmds);
+                            vfo_ab_chips(ui, active, sat_locked, cmds);
                         });
                     },
                 );
@@ -2098,7 +2105,7 @@ impl SdroxideApp {
                     egui::Layout::left_to_right(egui::Align::Center),
                     |ui| {
                         ui.spacing_mut().item_spacing.x = 6.0;
-                        vfo_ab_chips(ui, active, cmds);
+                        vfo_ab_chips(ui, active, sat_locked, cmds);
                     },
                 );
             }
@@ -2161,7 +2168,7 @@ impl SdroxideApp {
                 );
             }
             if let Some(hz) = new_hz {
-                cmds.push(Command::SetVfo { vfo: active, hz: hz - map });
+                cmds.push(Command::SetVfo { vfo: self.state.active_vfo, hz: hz - map });
             }
             ui.add_space(12.0);
 
@@ -2260,7 +2267,7 @@ impl SdroxideApp {
         cmds: &mut Vec<Command>,
         fit: &ReadoutFit,
     ) -> bool {
-        let active = self.state.active_vfo;
+        let active = self.shown_vfo();
         let tag = match active {
             Vfo::A => "A",
             Vfo::B => "B",
@@ -2315,7 +2322,7 @@ impl SdroxideApp {
                 self.readout_digits(),
             );
             if let Some(hz) = new_hz {
-                cmds.push(Command::SetVfo { vfo: active, hz: hz - map });
+                cmds.push(Command::SetVfo { vfo: self.state.active_vfo, hz: hz - map });
             }
             if band_mode {
                 ui.add_space(8.0);
@@ -2347,6 +2354,9 @@ impl SdroxideApp {
     /// alone: split has always left this readout on the dial, and this is not
     /// the place to change that.
     fn readout(&self) -> (f64, Option<Color32>, f64) {
+        if let Some((hz, tx)) = self.sat_readout() {
+            return (hz, tx.then(crate::theme::ALERT), 0.0);
+        }
         let (shown, ink, _map, note) = readout_for_audio(
             &self.state,
             self.tab_tx_on(),
@@ -2362,6 +2372,9 @@ impl SdroxideApp {
     /// Separate from [`Self::readout`]'s note because they differ for a digital
     /// mode: the readout is the dial there, so an edit maps one to one.
     fn readout_map_back(&self) -> f64 {
+        if let Some((hz, _)) = self.sat_readout() {
+            return hz - self.state.active_freq_hz();
+        }
         readout_for_audio(
             &self.state,
             self.tab_tx_on(),
@@ -2401,11 +2414,55 @@ impl SdroxideApp {
 
     /// The VFO that is *not* being tuned, as a MHz label.
     fn inactive_vfo_label(&self) -> String {
-        let hz = match self.state.active_vfo {
+        let mut hz = match self.state.active_vfo {
             Vfo::A => self.state.vfo_b_hz,
             Vfo::B => self.state.vfo_a_hz,
         };
+        // Under a satellite lock the other VFO is the other side of the link,
+        // as the radio has it: the corrected uplink while receiving, and the
+        // corrected downlink while the readout has gone over to the uplink.
+        if let Some(t) = self.sat_track.as_ref().filter(|t| t.corrections_active) {
+            match self.sat_readout() {
+                Some((_, true)) => hz = self.state.active_freq_hz() + t.doppler_rx_hz,
+                _ => {
+                    if let Some(up) = t.uplink_hz {
+                        hz = up + t.doppler_tx_hz;
+                    }
+                }
+            }
+        }
         format!("{hz:.6} MHz", hz = hz / 1e6)
+    }
+
+    /// Under a satellite lock with the corrections on, the frequency the radio
+    /// itself is on — the receive frequency with its correction, or, while it
+    /// transmits (from sdroxide or its own microphone), the corrected uplink —
+    /// and whether it is the uplink. The dial underneath stays on the published
+    /// frequency; this is what is *shown*. `None` otherwise.
+    fn sat_readout(&self) -> Option<(f64, bool)> {
+        let t = self.sat_track.as_ref().filter(|t| t.corrections_active)?;
+        let on_air = self.state.tx.ptt || self.state.tx.tune || self.state.tx.rig_keyed;
+        match (on_air, t.uplink_hz) {
+            (true, Some(up)) => Some((up + t.doppler_tx_hz, true)),
+            _ => Some((self.state.active_freq_hz() + t.doppler_rx_hz, false)),
+        }
+    }
+
+    /// Whether a satellite lock holds both VFOs (A the downlink, B the uplink),
+    /// which is when the engine ignores a VFO selection: a lock with an uplink
+    /// and SPLIT on, as the lock leaves it on a CAT rig. A downlink-only lock,
+    /// or a front end with no split of its own, leaves the chips free.
+    fn sat_vfos_held(&self) -> bool {
+        self.state.split && self.sat_track.as_ref().is_some_and(|t| t.uplink_hz.is_some())
+    }
+
+    /// The VFO the A/B chips light: B while a satellite lock's readout has
+    /// gone over to the uplink, as the radio's own display does in split.
+    fn shown_vfo(&self) -> Vfo {
+        match self.sat_readout() {
+            Some((_, true)) => Vfo::B,
+            _ => self.state.active_vfo,
+        }
     }
 
     /// Take the face a click asked for and write it out.
@@ -2417,6 +2474,34 @@ impl SdroxideApp {
     fn set_smeter_style(&mut self, style: sdroxide_types::SmeterStyle) {
         if self.ui_settings.smeter_style != style {
             self.ui_settings.smeter_style = style;
+            crate::app::persist::persist_ui_settings(&self.ui_settings);
+        }
+    }
+
+    /// What an arrow on the meter asked for: a reading while transmitting, the
+    /// next or previous face on receive (the click's cycle, either way round).
+    fn apply_smeter_turn(
+        &mut self,
+        turn: smeter::Turn,
+        style: sdroxide_types::SmeterStyle,
+        compact: bool,
+    ) {
+        match turn {
+            smeter::Turn::View(v) => self.set_smeter_view(v),
+            smeter::Turn::Face { forward } => self.set_smeter_style(match (forward, compact) {
+                (true, true) => style.next_compact(),
+                (true, false) => style.next(),
+                (false, true) => style.prev_compact(),
+                (false, false) => style.prev(),
+            }),
+        }
+    }
+
+    /// Take the view an arrow on the meter turned to and write it out, for the
+    /// same reasons as [`Self::set_smeter_style`].
+    fn set_smeter_view(&mut self, view: sdroxide_types::MeterView) {
+        if self.ui_settings.smeter_view != view {
+            self.ui_settings.smeter_view = view;
             crate::app::persist::persist_ui_settings(&self.ui_settings);
         }
     }
@@ -2443,20 +2528,27 @@ impl SdroxideApp {
     fn smeter_box(&mut self, ui: &mut egui::Ui, w: f32, h: f32, compact: bool, outline: bool) {
         let style = self.ui_settings.smeter_style;
         let shown = if compact { style.compact() } else { style };
+        let view = self.ui_settings.smeter_view;
         let mut picked = None;
+        let mut turned = None;
         crate::chrome::module_bare_flush_h(ui, w, h, |ui| {
             let hover = tr!(
                 "topbar-smeter-hover",
                 reading = smeter::hover_text(self.meters.as_ref(), self.meter_is_audio()),
                 faces = if compact { tr!("topbar-bar-trace") } else { tr!("topbar-needle-bar-trace") }
             );
-            let resp = smeter::show(ui, self.meters.as_ref(), shown, outline).on_hover_text(hover);
+            let (resp, turn) = smeter::show(ui, self.meters.as_ref(), shown, view, outline);
+            turned = turn;
+            let resp = resp.on_hover_text(hover);
             if resp.clicked() {
                 picked = Some(if compact { style.next_compact() } else { style.next() });
             }
         });
         if let Some(style) = picked {
             self.set_smeter_style(style);
+        }
+        if let Some(t) = turned {
+            self.apply_smeter_turn(t, style, compact);
         }
     }
 
@@ -3378,6 +3470,8 @@ impl SdroxideApp {
         if crate::chrome::chip(ui, now > 1, label).on_hover_text(hint).clicked() {
             let next = if now * 2 > max { 1 } else { now * 2 };
             cmds.push(Command::SetDecimation(next));
+            // Ours: the view keeps its zoom when this one lands.
+            self.decim_asks.push(next, ui.ctx().input(|i| i.time));
         }
     }
 
@@ -6605,7 +6699,7 @@ impl SdroxideApp {
         // off this button. "FFT" not "VIEW": the box has to fit the desktop
         // strip — "VIEW" measures ten points wider and was what pushed the
         // display box, and with it the strip, onto a third row.
-        let fft_btn = chip_stretched(ui, false, view, extra)
+        let fft_btn = chip_stretched(ui, self.view.fft_size != 4096, view, extra)
             .on_hover_text(tr!("topbar-fft-chip-hint"));
         let fft_id = egui::Popup::default_response_id(&fft_btn);
         let now = ui.input(|i| i.time);
@@ -9067,6 +9161,36 @@ fn atsmini_band_menu(ui: &mut egui::Ui, state: &RadioState, cmds: &mut Vec<Comma
     );
 }
 
+/// What the top bar needs of the radio's receive band list, published once per
+/// frame by [`publish_rx_plan`]: whether it is confirmed, and the bands ticked.
+type RxPlan = Option<(bool, bool, Vec<Band>)>;
+
+fn rx_plan_id() -> egui::Id {
+    egui::Id::new("rx-band-plan")
+}
+
+/// Publish this radio's receive band list for the band buttons drawn this frame.
+pub(in crate::app) fn publish_rx_plan(ctx: &egui::Context, cfg: Option<&sdroxide_types::RadioConfig>) {
+    let plan: RxPlan =
+        cfg.map(|c| (c.rx_lock_active(), c.rx_bands_confirmed, c.rx_band_enable.clone().unwrap_or_default()));
+    ctx.data_mut(|d| d.insert_temp(rx_plan_id(), plan));
+}
+
+/// Whether the band's button is offered under the receive band list. Nothing
+/// published (no configuration yet) offers everything.
+fn rx_plan_allows(ctx: &egui::Context, band: Band) -> bool {
+    match ctx.data(|d| d.get_temp::<RxPlan>(rx_plan_id())).flatten() {
+        // SWL mode has no lock, listening bands are always open, and the gaps
+        // between bands ("ALL") open with a confirmed list.
+        Some((lock, confirmed, bands)) => {
+            !lock
+                || band.rx_always_open()
+                || (confirmed && (band == Band::Gen || bands.contains(&band)))
+        }
+        None => true,
+    }
+}
+
 /// One band chip, from the menu's state — the same chip the band pad and
 /// the wrapped rows draw, so the two cannot drift.
 #[allow(clippy::too_many_arguments)]
@@ -9098,7 +9222,11 @@ fn band_chip(
     // offering a band the radio turns out not to reach. Any *overlap*
     // is enough — a receiver that reaches into the band without
     // reaching either end of it still has the band (issue #272).
-    let enabled = caps.is_none_or(|c| b.edges().is_none_or(|(lo, hi)| c.may_rx_span(lo, hi)));
+    let reachable = caps.is_none_or(|c| b.edges().is_none_or(|(lo, hi)| c.may_rx_span(lo, hi)));
+    // And the operator's own receive band list: a band that is NO there, or a
+    // list nobody confirmed, is not offered (the engine would refuse it anyway).
+    let planned = rx_plan_allows(ui.ctx(), b);
+    let enabled = reachable && planned;
     let active = match std_hz {
         Some(hz) => (state.active_freq_hz() - hz).abs() < 500.0,
         None => state.band == b,
@@ -9144,7 +9272,11 @@ fn band_chip(
     let resp = if enabled {
         resp
     } else {
-        resp.on_disabled_hover_text(disabled_band_reason(b, caps, ranges_stated))
+        resp.on_disabled_hover_text(if reachable {
+            tr!("rx-bands-band-off")
+        } else {
+            disabled_band_reason(b, caps, ranges_stated)
+        })
     };
     if resp.clicked() {
         match digi_hz {
@@ -9437,8 +9569,9 @@ pub(in crate::app) fn band_keypad(
                     // why, for the same reason the list's chip does. In **MHz**
                     // the key is never grey: the digit is only a digit there, so
                     // an unreachable band has nothing to say about typing one.
-                    let reachable = caps
+                    let hardware = caps
                         .is_none_or(|c| band.edges().is_none_or(|(lo, hi)| c.may_rx_span(lo, hi)));
+                    let reachable = hardware && rx_plan_allows(ui.ctx(), band);
                     let enabled = pad.mode == KeypadMode::Mhz || reachable;
                     let label = egui::RichText::new(keypad_label(digit, band)).monospace();
                     let mut resp = ui
@@ -9455,11 +9588,11 @@ pub(in crate::app) fn band_keypad(
                         })
                         .inner;
                     if !reachable && pad.mode == KeypadMode::Bands {
-                        resp = resp.on_disabled_hover_text(disabled_band_reason(
-                            band,
-                            caps,
-                            ranges_stated,
-                        ));
+                        resp = resp.on_disabled_hover_text(if hardware {
+                            tr!("rx-bands-band-off")
+                        } else {
+                            disabled_band_reason(band, caps, ranges_stated)
+                        });
                     } else {
                         resp = resp.on_hover_text(match target {
                             Some(hz) => tr!(
@@ -9752,6 +9885,7 @@ pub(in crate::app) fn band_mode_menu(
             // failure here is a known state rather than something they broke.
             crate::chrome::menu_caption(ui, &tr!("topbar-caption-experimental"));
             mode_chip_grid(ui, mode, &Mode::EXPERIMENTAL, band, state, false, cmds);
+            super::meshtastic::bench_chip(ui);
         }
         BandMenuTab::Listen => {
             ui.add_space(6.0);
@@ -9777,15 +9911,26 @@ pub(in crate::app) fn band_mode_menu(
             ui.add_space(6.0);
             crate::chrome::menu_caption(ui, &tr!("topbar-caption-experimental"));
             mode_chip_grid(ui, mode, &Mode::EXPERIMENTAL, band, state, true, cmds);
+            super::meshtastic::bench_chip(ui);
         }
     }
 }
 
 /// The VFO A/B selector chips. In the frequency box on a desktop, in the VFO
 /// menu on a phone — one definition either way.
-fn vfo_ab_chips(ui: &mut egui::Ui, active: Vfo, cmds: &mut Vec<Command>) {
+///
+/// Greyed out under a satellite lock: VFO A is the downlink and VFO B the
+/// uplink for the whole lock, and switching would put the downlink's Doppler
+/// writes onto the transmitter.
+fn vfo_ab_chips(ui: &mut egui::Ui, active: Vfo, sat_locked: bool, cmds: &mut Vec<Command>) {
     for (v, label) in [(Vfo::A, "A"), (Vfo::B, "B")] {
-        if crate::chrome::chip(ui, active == v, RichText::new(label).size(15.0)).clicked() {
+        let chip = ui
+            .add_enabled_ui(!sat_locked, |ui| {
+                crate::chrome::chip(ui, active == v, RichText::new(label).size(15.0))
+            })
+            .inner
+            .on_disabled_hover_text(tr!("topbar-sat-locked-vfo-a-downlink-b-uplink"));
+        if chip.clicked() {
             cmds.push(Command::SelectVfo(v));
         }
     }
@@ -11057,7 +11202,7 @@ mod tests {
                             ui.horizontal(|ui| {
                                 for label in row {
                                     let right = chip_stretched(ui, false, label, 0.0).rect.right();
-                                    chips.push((label.clone(), right - left));
+                                    chips.push((*label, right - left));
                                 }
                             });
                         }

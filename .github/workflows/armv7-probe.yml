@@ -58,7 +58,7 @@ on:
 jobs:
   armv7:
     name: linux-armv7 (cat)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7

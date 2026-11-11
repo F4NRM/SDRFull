@@ -456,6 +456,7 @@ settings-radio-n = radio { $n }
 settings-on-station = Sur { $station }
 settings-add-radio-on-station = Ajouter une radio sur { $station } — la station la sert immédiatement
 settings-panadapter-receiver-for = Récepteur du panoramique pour { $radio }
+settings-panadapter-kiwi-zoom-note = Avec un KiwiSDR comme récepteur, sa cascade s'ouvre zoomée sur environ 2 MHz autour du dial. Modifiez-la dans les réglages de cette radio, sous Largeur de la vue de bande.
 settings-hang-up-stays-on = Raccrocher. La radio reste sur { $station }.
 settings-close-on-station = Fermer { $radio } sur { $station } ? Sa configuration reste sur cette machine ; l'onglet ici se ferme avec elle, et aussi celui de tous les autres.
 settings-close-it-on = La fermer sur { $station }
@@ -566,8 +567,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Montez par paliers de 6 dB. Trop fort écrête — l'audio est limité à la pleine échelle au lieu de déborder, donc en exagérer sonne dur plutôt que fort. Les enregistrements sont pris en amont de ce gain et ne sont pas affectés.
 settings-general-reload-band-plan = RECHARGER LE PLAN DE BANDE
-settings-general-re-read-bandplan-json-machine = Relire bandplan.json sur la machine à laquelle la radio est reliée et l'appliquer — limites de bandes, sous-segments et fenêtres des skimmers — sans redémarrer.
-settings-general-running-station-s-own-band = Fonctionne avec le plan de bande propre à la station.
 settings-general-running-built-iaru-tables = Fonctionne avec les tables UIR intégrées.
 settings-general-settings-file = Fichier de réglages
 settings-general-settings-are-machine-radio-attached = Les réglages se trouvent sur la machine à laquelle la radio est reliée. Exportez-les depuis là.
@@ -630,7 +629,6 @@ settings-net-checking = vérification…
 
 settings-amp-connected-to = Connecté au { $model }
 settings-controls-last-midi = Dernier message : { $message }  valeur { $value }
-settings-general-band-plan-file = Chaque limite de bande et chaque sous-segment viennent de { $path }, écrit à partir des tables UIR intégrées la première fois, et qui vous appartient à modifier ensuite — resserrez une bande à votre licence et sdroxide refusera d'émettre en dehors. Les fréquences sont en MHz ; supprimez le fichier pour obtenir une copie neuve des valeurs par défaut. Il s'agit de l'attribution régionale, pas de votre licence : vos propres conditions peuvent être plus étroites, et les plans nationaux diffèrent à l'intérieur d'une région.
 settings-general-exported = { $note } exporté — choisissez où l'enregistrer.
 settings-general-export-failed = Échec de l'export : { $error }
 settings-general-import-failed = Échec de l'import : { $error }
@@ -653,7 +651,6 @@ settings-add-radio-here-station-you = Ajouter une radio — ici, ou sur une stat
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Chaque limite de bande et chaque sous-segment viennent de bandplan.json sur la machine à laquelle la radio est reliée. Il s'agit de l'attribution régionale, pas de votre licence : vos propres conditions peuvent être plus étroites, et les plans nationaux diffèrent à l'intérieur d'une région.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -3184,7 +3181,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = MODE
 sat-tune = ACCORD
-sat-set-dial-mode-link-no = Régler le cadran et le mode sur cette liaison — ni verrouillage, ni correction
 sat-locked = {" "}VERROUILLÉ{" "}
 sat-lock = {" "}VERROUILLER{" "}
 sat-track-satellite-doppler-correction-rx = Suivre ce satellite : correction Doppler en RX et TX, liaison montante selon le répéteur, et la vue 3D le suit
@@ -3507,7 +3503,6 @@ qo100-write-converter-lnb-offset-puts = Écrire le décalage du convertisseur/LN
 qo100-write-converter-lnb-offset-puts-2 = Écrire le décalage du convertisseur/LNB qui amène l'estimation du suiveur sur 10489,750 MHz, et rouvrir le récepteur — la même brève interruption que fait Réglages ▸ Radio ▸ Appliquer
 qo100-waiting-second-crc-valid-frame = En attente d'une seconde trame au CRC valide avant de proposer d'écrire ceci — un seul verrouillage pourrait être une coïncidence
 qo100-write-corrected-converter-lnb-offset = Écrire le décalage corrigé du convertisseur/LNB et rouvrir le récepteur — une brève interruption, la même que fait Réglages ▸ Radio ▸ Appliquer
-qo100-decoder-runs-receiving-station-readout = le décodeur tourne sur la station réceptrice — son affichage n'est pas envoyé aux clients distants
 qo100-starting = démarrage…
 qo100-searching-first-window-fills-after = recherche — la première fenêtre se remplit après environ 24 s, puis se répète
 
@@ -3889,21 +3884,25 @@ fsq-add = Ajouter
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + ONGLET
-publicsdr-open-receiver-new-radio-own = Ouvrir ce récepteur comme une nouvelle radio, dans son propre onglet
-publicsdr-point-radio-receiver-replacing-whatever = Diriger *cette* radio vers le récepteur, en remplaçant l'interface sur laquelle elle se trouve actuellement — demandé à nouveau d'abord, car c'est une configuration complète de radio
 publicsdr-not-stated = non indiqué
-publicsdr-replace = REMPLACER
-publicsdr-point-radio-you-are-receiver = Diriger la radio sur laquelle vous êtes vers ce récepteur
-publicsdr-tab-instead = + ONGLET À LA PLACE
-publicsdr-open-receiver-another-radio-leave = Ouvrir le récepteur comme une autre radio et laisser celle-ci tranquille
-publicsdr-cancel = ANNULER
 publicsdr-public-sdrs = SDR PUBLICS
 publicsdr-available = DISPONIBLES
 publicsdr-hide-receivers-are-full-ones = Masquer les récepteurs complets, et ceux dont l'opérateur n'a ouvert aucun canal à des applications autres qu'un navigateur
 publicsdr-band = DANS LA BANDE
 publicsdr-only-receivers-cover-current-dial = Seulement les récepteurs qui couvrent la fréquence actuelle du cadran
 publicsdr-low-bw = FAIBLE DÉBIT
+publicsdr-map-cities = VILLES
+publicsdr-map-cities-tip = Villes sur cette carte, oui ou non.
+publicsdr-view-list = LISTE
+publicsdr-view-map = CARTE
+publicsdr-view-map-tip = Les mêmes récepteurs sur une carte du monde. Cliquez sur un point pour choisir tous les récepteurs dessous.
+publicsdr-map-pick = Cliquez sur un point pour choisir les récepteurs dessous.
+publicsdr-map-names = NOMS
+publicsdr-map-names-tip = Afficher les noms des récepteurs sur la carte. Désactivé : seuls les récepteurs choisis sont nommés.
+publicsdr-check-online = EN LIGNE
+publicsdr-check-silent = MUET
+publicsdr-check-waiting = TEST…
+publicsdr-check-no-answer = Aucune réponse en 20 secondes.
 publicsdr-take-spyserver-low-bandwidth-shape = Prendre un SpyServer dans sa forme à faible débit : une fenêtre I/Q étroite qui suit le cadran, plus la vue de bande propre au serveur, au lieu de mégabits d'I/Q large bande. Sans effet sur un KiwiSDR, qui n'a que cette forme.
 publicsdr-refresh = ⟳ ACTUALISER
 publicsdr-fetch-both-directories-again = Récupérer à nouveau les deux annuaires
@@ -3913,9 +3912,6 @@ publicsdr-fetching-receiver-lists = Récupération des listes de récepteurs…
 publicsdr-machine-radio-attached-does-not = La machine à laquelle cette radio est reliée ne répond pas aux questions sur les périphériques, donc elle ne peut pas récupérer les listes non plus.
 publicsdr-no-match = aucune correspondance
 publicsdr-nothing-matches-try-turning-filter = rien ne correspond — essayez de réactiver une puce de filtre
-publicsdr-radio = cette radio
-publicsdr-radio-s-configuration-has-not = La configuration de cette radio n'est pas encore arrivée depuis la machine où elle se trouve, donc il n'y a rien à diriger vers le récepteur — prenez-le avec + ONGLET à la place.
-publicsdr-position-not-published-so-nothing = {" "}Sa position n'est pas publiée, donc rien de ce qu'elle entend ne sera transmis.
 
 ## hd (src/app/hd.rs)
 
@@ -4722,14 +4718,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } récepteurs · { $per_net } · récupéré il y a { $age }
 publicsdr-showing-search-narrow = affichage de { $shown } sur { $n } — recherchez pour affiner
 publicsdr-match = { $n } correspondance
-publicsdr-replace-taking-receiver-points-same =
-    Remplacer { $this } par { $entry } ?
-
-    { $this2 } est sur { $iface }. Prendre ce récepteur fait pointer le même onglet sur { $address } à la place, le renomme « { $entry2 } », et maintient le cadran sur la { $range_label } que publie le récepteur — rien ici n'émet.
-
-    Les réglages de { $iface2 } restent en place, ainsi que les plages qui leur sont attribuées : repasser l'interface dans Réglages → Radio rétablit la radio comme elle était.
-publicsdr-receptions-will-reported = {" "}Les réceptions seront transmises depuis { $value }.
-publicsdr-pointing-radio = Diriger cette radio vers { $entry }…{ $site }
+publicsdr-map-status = { $shown } sur la carte · { $unplaced } sans position
 publicsdr-opening-another-radio = Ouverture de { $entry } comme une autre radio…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5045,7 +5034,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (réseau)
 cat-family-flrig = flrig (réseau)
-publicsdr-its-interface = son interface
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Arrêt
@@ -5371,8 +5359,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Les deux
 
-panels-sensitivity = Sensibilité
-
 navtex-hunting = recherche
 
 navtex-hunting-hint =
@@ -5384,19 +5370,8 @@ navtex-hunting-hint =
     
     N'oubliez pas non plus que NAVTEX suit un horaire, ce n'est pas une conversation : une station côtière émet dix minutes toutes les quatre heures, le silence est donc normal la plupart du temps. Il faut écouter au moment où votre station doit émettre. Et le 518 kHz ne s'anime que la nuit — une bande silencieuse de jour n'est pas un décodeur en panne.
 
-navtex-sensitivity-hint =
-    Sensibilité — la facilité avec laquelle le décodeur s'accroche à un signal et le garde.
-    
-    Auto utilise les seuils de référence (0), le comportement livré d'origine.
-    
-    + accepte un signal plus faible ou plus bruité ; − attend un signal plus propre avant de déclarer la synchronisation, ce qui évite de lire du bruit comme des caractères.
-    
-    Ce n'est pas le volume : NAVTEX est de la FSK, les gris viennent des tons et non de la force du signal.
 
-
-navtex-auto-hint = Revient aux seuils de référence (0). Mis en évidence quand actif.
-
-navtex-tune-dial-usb-below-channel = Accorde le cadran ici (USB, 1,710 kHz sous le canal).
+navtex-tune-dial-usb-below-channel = Accorde le cadran ici (USB, 1,700 kHz sous le canal).
 
 settings-audio-your-audio = Votre audio
 
@@ -7665,7 +7640,6 @@ net-wavelog-no-station-location = aucun emplacement de station à télécharger 
 
 publicsdr-could-not-connect = connexion impossible pendant cette session
 
-publicsdr-use-chip = UTILISER
 
 weather-title = BULLETINS MÉTÉO
 
@@ -9073,7 +9047,6 @@ publicsdr-mine = LES MIENS
 
 publicsdr-mine-hint = Seulement les récepteurs que vous avez marqués
 
-publicsdr-mine-empty = Rien de marqué — l'☆ d'une ligne garde ce récepteur ici.
 
 publicsdr-star-receiver = Garder ce récepteur dans LES MIENS
 
@@ -9206,14 +9179,511 @@ sonde-export-none = Aucune position conservée pour cette sonde.
 
 sonde-col-temp = Temp.
 
-sonde-col-humidity = HumiditÃ©
+sonde-col-humidity = Humidité
 
 sonde-col-pressure = Pression
 
 settings-net-broadcast-import-needs-station = Connectez-vous à une station pour importer.
 
 
+sonde-online-why-signin = La station veut d'abord une connexion.
 
+sonde-online-why-busy = La station interroge déjà SondeHub aussi souvent qu'elle le peut. Réessayez dans une minute.
+
+sonde-online-why-upstream = La station n'a pas pu joindre SondeHub.
+
+sonde-online-why-unreadable = La réponse n'était pas une liste de sondes.
+
+sonde-online-why-no-station = Aucune station à interroger, et cette page ne peut pas joindre SondeHub elle-même.
+
+sonde-online-why-http = Réponse : HTTP { $n }.
+settings-general-band-plan = Plan de bandes
+
+settings-general-band-plan-built-in = IARU intégré
+
+
+
+
+sonde-card-source = Source
+
+sonde-card-source-radio = Cette radio
+
+sonde-card-source-hub = SondeHub (entendue par une autre station)
+
+sonde-card-model = Modèle
+
+sonde-card-maker = Constructeur
+
+sonde-card-variant = Variante
+
+sonde-card-position = Position
+
+sonde-card-from-you = Depuis vous
+
+sonde-card-heading = Cap
+
+sonde-card-satellites = Satellites
+
+sonde-card-snr = Rapport signal/bruit
+
+sonde-card-station = Entendue par
+
+sonde-card-station-position = Position de la station
+
+sonde-card-antenna = Antenne
+
+sonde-card-software = Logiciel
+
+sonde-card-frames = Trames reçues
+
+sonde-card-open = Ouvrir sur { $site }
+
+sonde-card-close = Fermer
+
+aircraft-mode-vor-hover = Lire la balise VOR sur laquelle la radio est accordée : sa radiale et son indicatif Morse
+
+vor-audio-front = Ce récepteur fournit de l'audio démodulé ; la lecture VOR a besoin du flux I/Q brut.
+
+vor-outside-window = Le canal accordé est hors de la plage fournie par le récepteur. Centrez le récepteur dessus.
+
+vor-not-in-band = Accordez une balise VOR (108,00–117,95 MHz) pour lire sa radiale.
+
+vor-locked = VERROUILLÉ
+
+vor-no-lock = PAS DE VERROU
+
+vor-no-lock-hover = Le signal variable à 30 Hz ou la référence à 9960 Hz manque ou est trop faible. Un radiophare ILS de cette bande ne verrouille jamais.
+
+vor-ident-heard = Indicatif entendu : { $ident }
+
+vor-ident-waiting = Écoute de l'indicatif (émis toutes les 10 s environ)…
+
+vor-charted = Carte : { $ident } — { $name }
+
+vor-var-depth = AM 30 Hz : { $pct } % de la porteuse
+
+vor-ref-depth = FM 9960 Hz : { $pct } % de la porteuse, excursion ±{ $dev } Hz
+
+vor-caveat = La radiale est le relèvement du récepteur depuis la balise, dans le nord magnétique de la balise. Pas pour naviguer.
+
+vor-nearby = VOR les plus proches de votre station
+
+vor-no-grid = Indiquez votre locator dans les réglages des modes numériques pour lister les VOR les plus proches.
+
+vor-tune-hover = Accorder ce VOR en AM
+
+tx-bands-power-hint = La puissance maximale sur cette bande avec le Drive au maximum, en watts. Laissez à — si vous l'ignorez.
+
+tx-bands-power-note = Facultatif. Une radio sans wattmètre s'en sert pour afficher sa puissance d'émission en watts sur le S-mètre ; sans ces valeurs, elle affiche le réglage Drive en pourcentage.
+
+band-plan-title = Plan de bandes de cette radio
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = Mettez RX sur OUI uniquement pour les bandes que cette radio doit écouter. La radio ne s'accorde jamais sur une bande à NON, et ne s'accorde plus du tout tant que la liste RX n'est pas validée. TX et RX sont indépendants : une bande peut être TX NON et RX OUI.
+
+rx-bands-title = Bandes de réception
+
+rx-bands-check-again = VÉRIFIER RX
+
+rx-bands-check-again-hint = Retire la validation pour revoir la liste de réception. Changer une bande le fait déjà tout seul.
+
+rx-bands-confirmed = ✓ Bandes de réception validées pour cette radio
+
+rx-bands-ack = J'ai vérifié ces bandes de réception par rapport à ma radio
+
+rx-bands-confirm = Valider ces bandes de réception
+
+rx-bands-confirm-hint = Cochez d'abord la case : la validation se fait une fois par radio.
+
+rx-bands-notice = Liste des bandes de réception non validée : la radio ne s'accorde plus tant que vous n'avez pas vérifié et validé une fois les bandes de réception.
+
+rx-bands-out-of-range = La plage publiée de cette radio n'atteint pas cette bande.
+
+rx-bands-band-off = La réception est coupée sur cette bande dans le plan de bandes de cette radio (Réglages), ou la liste de réception n'est pas encore validée.
+
+settings-general-re-read-band-plan-file = Relire le fichier du plan choisi sur la machine à laquelle la radio est reliée et l'appliquer — limites de bande, sous-segments et fenêtres des skimmers — sans redémarrer.
+
+settings-general-running-band-plan = Plan de bandes en service : « { $name } ».
+
+settings-general-band-plan-choose-hint = Choisissez un plan de bandes dans la bibliothèque de la station. Les tables IARU intégrées sont le défaut. Changer de plan oblige à revérifier et reconfirmer les listes de bandes TX et RX.
+
+settings-general-band-plan-import = IMPORTER UN PLAN
+
+settings-general-band-plan-import-hint = Ajoute un fichier de plan de bandes à la bibliothèque de la station. Une simple liste de bandes (nom, type, début et fin en hertz) est d'abord convertie. Il est vérifié et seulement ajouté — choisissez-le dans la liste pour l'utiliser.
+
+settings-general-band-plan-reset = RETOUR À L'IARU INTÉGRÉ
+
+settings-general-band-plan-reset-hint = Remet en service les tables IARU intégrées. Les listes de bandes TX et RX devront alors être revérifiées et reconfirmées.
+
+settings-general-band-plan-folder = Les plans sont les fichiers de { $path } sur la machine à laquelle la radio est reliée ; vous pouvez en ajouter et en supprimer. Réduisez une bande à votre licence et sdroxide refusera d'émettre en dehors. Fréquences en MHz. C'est l'allocation régionale, pas votre licence : vos conditions peuvent être plus étroites, et les plans nationaux diffèrent au sein d'une région.
+
+settings-general-band-plan-station-folder = Les plans sont conservés sur la machine à laquelle la radio est reliée. Réduisez une bande à votre licence et sdroxide refusera d'émettre en dehors. C'est l'allocation régionale, pas votre licence : vos conditions peuvent être plus étroites, et les plans nationaux diffèrent au sein d'une région.
+
+settings-general-band-plan-manager = Gestionnaire de plans de bandes
+
+settings-general-band-plan-run = UTILISER
+
+settings-general-band-plan-run-hint = Utiliser ce plan. Les listes de bandes TX et RX devront être revérifiées et reconfirmées.
+
+settings-general-band-plan-download = TÉLÉCHARGER
+
+settings-general-band-plan-download-hint = Enregistrer le fichier de ce plan sur cet ordinateur.
+
+settings-general-band-plan-delete = SUPPRIMER
+
+settings-general-band-plan-delete-confirm = CLIQUEZ À NOUVEAU POUR SUPPRIMER
+
+settings-general-band-plan-delete-hint = Supprimer ce plan de la bibliothèque de la station. Le plan en service ne peut pas être supprimé.
+
+settings-general-band-plan-running-tag = EN SERVICE
+
+settings-general-band-plan-shipped-tag = livré
+
+settings-general-band-plan-save-current = ENREGISTRER LE PLAN ACTUEL SOUS
+
+settings-general-band-plan-save-current-hint = Conserver le plan en service dans la bibliothèque sous ce nom. Un plan du même nom est remplacé et son ancien fichier gardé une fois en .bak.
+
+settings-general-band-plan-name-hint = nom
+
+settings-general-band-plan-restore = RESTAURER LES PLANS LIVRÉS
+
+settings-general-band-plan-restore-hint = Remettre les plans livrés avec le programme, supprimés ou modifiés. Un plan modifié est remplacé et gardé une fois en .bak.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = Aucun plan dans la bibliothèque.
+
+settings-general-band-plan-radio = Cette radio
+
+settings-general-band-plan-radio-follow = Suit la station
+
+settings-general-band-plan-radio-hint = Utiliser un plan sur cette radio seulement. Le plan de la station et les autres radios ne sont pas touchés. Les listes de bandes TX et RX de cette radio devront être revérifiées et reconfirmées.
+
+settings-general-band-plan-run-radio = CETTE RADIO SEULE
+
+settings-general-band-plan-radio-tag = cette radio
+
+meter-view-auto = Auto
+
+meter-view-rx = Signal (RX)
+
+meter-view-power = Puissance
+
+meter-view-swr = TOS
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = Mesure précédente : { $view }
+
+smeter-arrow-next-hover = Mesure suivante : { $view }
+
+smeter-arrow-prev-face = Cadran précédent
+
+smeter-arrow-next-face = Cadran suivant
+
+sonde-card-source-both = Radio + SondeHub (reçue par les deux)
+
+sonde-card-stale = État
+
+sonde-card-stale-value = Plus dans la liste : dernière position connue
+
+sonde-card-detach = Détacher
+
+sonde-card-attach = Rattacher
+tx-bands-outside-note = Hors des bandes listées ici, aucune émission n'est possible. La réception hors bandes (ADS-B, DAB, AIS...) n'a pas besoin de ligne.
+
+tx-off-cb = ÉMISSION INTERDITE en 11 m (CB) — la bande est dans votre liste d'émission, mais « Autoriser l'émission en 11 m (CB) » est décoché. Cochez-le dans Réglages → Général.
+
+settings-cb-allow-tx-needs-band = Mettez d'abord 11M-CB sur OUI dans la liste TX de cette radio (Réglages → Radio), puis autorisez-le ici.
+
+settings-cb-allow-tx-order-note = Deux verrous, dans cet ordre : 1) 11M-CB sur OUI dans la liste de bandes TX de la radio, confirmée ; 2) cette case. Les deux sont nécessaires pour émettre en 11 m. Retirer 11M-CB de la liste décoche aussi cette case.
+
+settings-ui-publicsdr-under-waterfall = Ancré sous le waterfall
+
+settings-ui-publicsdr-place-hint = Où s'ouvre Public SDRs : ancré sous le waterfall dans les modes voix qui n'y ont rien, ou dans une fenêtre. Les modes numériques, le CW et les téléphones utilisent de toute façon une fenêtre.
+
+publicsdr-dock-hint = Ancrer cette liste sous le waterfall (modes voix qui n'y ont rien)
+
+publicsdr-undock-hint = Remettre cette liste dans une fenêtre à part
+
+publicsdr-close-hint = Fermer Public SDRs
+
+settings-net-hfcc-file-hint = Prendre l'horaire HFCC dans un paquet que vous avez enregistré : le zip publié par HFCC (par exemple b26allx2.zip), avec son horaire et ses deux tables.
+
+schedule-import = Importer…
+wxsat-title = SATELLITES MÉTÉO
+
+extras-wxsat-hint = SATELLITES MÉTÉO — l'image qu'un satellite NOAA (APT) ou Meteor (LRPT) envoie sur 137 MHz, dessinée au fur et à mesure, dans une fenêtre détachable
+
+wxsat-decode = Décoder
+
+wxsat-channel = Satellite
+
+wxsat-tune = Accorder ici
+
+wxsat-tune-hint = Active le décodeur et amène la fréquence sur ce canal, pour que le signal soit dans la fenêtre d'échantillonnage.
+
+wxsat-clear = Effacer
+
+wxsat-save = Enregistrer en PNG
+
+wxsat-flip = Retourner
+
+wxsat-flip-hint = Retourne l'image : un satellite qui vole vers le sud est dessiné à l'envers.
+
+wxsat-state-off = Décodeur arrêté
+
+wxsat-level = Niveau { $db } dBFS
+
+wxsat-locked = Synchro ligne verrouillée
+
+wxsat-searching = Recherche de la synchro ligne
+
+wxsat-lines = { $n } lignes
+
+wxsat-outside-window = Le canal est hors de la fenêtre d'échantillonnage, ou trop près de son bord pour tout le signal. Utilisez Accorder ici, ou une fenêtre plus large.
+
+wxsat-waiting = Pas encore d'image. Activez le décodeur quand un satellite est au-dessus de l'horizon ; un passage dure environ dix minutes.
+
+wxsat-signal = Signal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Canal { $n }
+
+wxsat-rows = { $n } rangées
+
+wxsat-frame-locked = Synchro trame verrouillée
+
+wxsat-frames = { $n } trames bonnes
+
+wxsat-waiting-lrpt = Pas encore d'image. Le LRPT de Meteor est numérique : l'image commence quelques secondes après la réception du satellite, rangée par rangée, et chaque canal est une image séparée.
+
+wxsat-searching-frame = Recherche de la synchro trame
+
+qrzcard-loading = Recherche QRZ…
+
+qrzcard-not-found = Introuvable sur QRZ.
+
+qrzcard-years = { $n } ans
+
+qrzcard-class = Classe : { $class }
+
+qrzcard-qsl-paper = papier
+
+qrzcard-qsl-via = via { $mgr }
+
+qrzcard-switch = Afficher la fiche QRZ au survol d'un indicatif
+
+qrzcard-switch-hint = Photo, nom, âge, adresse, locator et QSL depuis QRZ.com, dans le waterfall, les décodeurs et les listes de spots. La photo, l'e-mail et la date de naissance demandent un abonnement QRZ XML.
+
+qrzcard-needs-login = Choisissez QRZ comme fournisseur et renseignez votre identifiant et votre mot de passe QRZ pour activer la fiche.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Réception
+
+meshtastic-region = Région
+
+meshtastic-preset = Préréglage
+
+meshtastic-channel = Canal
+
+meshtastic-tune = Écouter ici
+
+meshtastic-tune-hint = Active le récepteur et amène la radio sur ce canal. La liste des bandes de réception du menu Radio décide si la radio peut écouter ici. Quand vous coupez, ou quittez, la radio revient là où elle était.
+
+meshtastic-keys = Clés
+
+meshtastic-keys-hint = Nom=clé, séparés par des virgules (hex:…, base64:…, simple1..10). La clé par défaut est toujours essayée.
+
+meshtastic-state-off = Récepteur coupé.
+
+meshtastic-level = Niveau { $db } dBFS
+
+meshtastic-counts = { $pre } préambules · { $ok } trames · { $bad } CRC faux
+
+meshtastic-refused-band = RÉCEPTION INTERDITE — { $freq } MHz ({ $band }) n'est pas une bande de réception validée. Cochez-la et validez-la dans le menu Radio, bandes de réception.
+
+meshtastic-refused-unconfirmed = RÉCEPTION INTERDITE — les bandes de réception de cette radio ne sont pas encore validées. Vérifiez-les et confirmez dans le menu Radio, bandes de réception.
+
+meshtastic-out-of-window = Le canal est hors de la fenêtre d'échantillons que la radio capte : rapprochez l'accord ou prenez un débit d'échantillonnage plus large.
+
+meshtastic-none-yet = Rien entendu pour l'instant.
+
+meshtastic-nodes = Nœuds ({ $n })
+
+meshtastic-log = Paquets ({ $n })
+
+meshtastic-col-id = Nœud
+
+meshtastic-col-name = Nom
+
+meshtastic-col-heard = Entendu
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Sauts
+
+meshtastic-col-position = Position
+
+meshtastic-col-battery = Batterie
+
+meshtastic-encrypted = chiffré (pas de clé)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Ouvre la fenêtre Meshtastic : le trafic du réseau maillé LoRa d'un canal.
+
+extras-meshtastic-hint = Meshtastic : le trafic du réseau maillé LoRa d'un canal, les nœuds entendus et les paquets.
+
+meshtastic-message = Message
+
+meshtastic-message-hint = Texte pour tous sur le canal (200 octets au plus)
+
+meshtastic-send = Envoyer…
+
+meshtastic-send-hint = Émet ce texte sur le canal, après votre confirmation. La liste des bandes d'émission des Réglages, Radio décide si la radio peut émettre ici ; la radio doit être sur le canal (Écouter ici).
+
+meshtastic-confirm = Émettre maintenant sur { $freq } MHz ({ $air } s d'antenne) ? Tous ceux à portée l'entendront, et vous en répondez selon votre licence et les règles de cette bande.
+
+meshtastic-confirm-yes = Émettre
+
+meshtastic-confirm-no = Annuler
+
+meshtastic-transmitting = ÉMISSION…
+
+meshtastic-tx-airtime = Temps d'antenne cette heure : { $used } s sur { $budget } s
+
+meshtastic-tx-airtime-free = Temps d'antenne cette heure : { $used } s (aucune limite fixée pour cette région)
+
+meshtastic-tx-sent = { $n } envoyé(s)
+
+meshtastic-tx-band-off = ÉMISSION INTERDITE — { $freq } MHz ({ $band }) n'est pas une bande d'émission validée. Cochez-la et validez-la dans Réglages → Radio → Bandes d'émission.
+
+meshtastic-tx-unconfirmed = ÉMISSION INTERDITE — les bandes d'émission de cette radio ne sont pas encore validées. Vérifiez-les et confirmez dans Réglages → Radio → Bandes d'émission.
+
+meshtastic-tx-duty = Cycle d'utilisation atteint pour cette région : attendez { $s } s avant le message suivant.
+
+meshtastic-tx-too-long = Ce message est à lui seul plus long que tout le budget de temps d'antenne d'une heure pour cette région.
+
+meshtastic-tx-off-channel = La radio n'est pas sur le canal : appuyez d'abord sur Écouter ici, pour que le cadran soit dessus.
+
+meshtastic-tx-no-transmitter = Cette radio ne peut pas émettre en I/Q brut (un transceiver qui prend de l'audio, ou un récepteur seul).
+
+meshtastic-tx-bad-text = Le texte est vide ou trop long (200 octets au plus).
+
+meshtastic-tx-busy = Une émission est déjà en cours.
+
+meshtastic-tx-rails = L'émetteur a refusé de passer en émission : voyez le message d'émission pour la raison.
+rx-bands-swl-note = Le mode SWL est actif pour cette radio : il n'y a pas de verrou en réception. Toutes les bandes peuvent être écoutées.
+
+rx-bands-always-open = Les bandes d'écoute (et le mode SWL) sont toujours ouvertes en réception.
+
+sat-tune-link-both-vfos = Règle le cadran, l'autre VFO et le mode sur ce lien — la descente sur ce VFO, la montée sur l'autre ; un verrouillage sur ce satellite le suit
+
+sat-move-lock = {" "}DÉPLACER{" "}
+
+sat-locked-other-link-move-lock = Verrouillé sur ce satellite par un autre lien : déplace le verrouillage sur celui-ci — sa montée, sa tonalité et son Doppler
+
+sat-rig-rx = RX RADIO
+
+sat-rig-tx = TX RADIO
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Verrouillé sur un satellite : le VFO A est la descente et le VFO B la montée jusqu'à la fin du verrouillage
+
+qrzcard-photo-loading = Photo en cours…
+
+qrzcard-no-photo = Fiche sans photo
+
+sonde-card-listen-hover = Cliquez pour régler la radio sur ce canal : le cadran s'y place et le décodeur l'écoute seul.
+
+sonde-card-decoding = Décodée par cette radio
+
+sonde-card-waiting = À l'écoute sur ce canal, rien de décodé pour l'instant
+
+sonde-card-click-to-listen = Cliquez sur la fréquence pour écouter
+
+sonde-type-all = Tous les types
+
+sonde-type-hover = Chercher un type de sonde : en choisir un lance le scan, qui déplace la fenêtre sur la bande jusqu'à entendre ce type. Seul ce type est listé et dessiné.
+
+meshtastic-preset-auto = Auto
+
+meshtastic-preset-auto-hint = Écoute tous les préréglages à la fois (de ShortTurbo à LongSlow). Rien à choisir quand on ne sait pas lequel utilise le réseau.
+
+meshtastic-freq-hint = Fréquence du canal, au kilohertz près. Pour un réseau qui n'utilise pas les créneaux de la région. Appliquée quand vous relâchez.
+
+meshtastic-close-hint = Fermer le panneau Meshtastic. Le récepteur continue jusqu'à ce que vous l'arrêtiez.
+
+meshtastic-float-hint = Sortir le panneau dans une fenêtre flottante au-dessus du waterfall.
+
+meshtastic-dock-hint = Remettre le panneau sous le waterfall.
+
+meshtastic-tune-mode-hint = La radio passe aussi en FM large, pour que le haut-parleur et l'enregistreur aient le signal du canal ; en quittant, le mode revient.
+
+wefax-revert-auto-slant = Annuler l'inclinaison
+
+wefax-revert-auto-slant-hint = Annule la correction automatique d'inclinaison sur cette carte : le réglage d'horloge revient à la valeur saisie ici et la correction automatique reste coupée jusqu'à la carte suivante. Les lignes déjà reçues ne changent pas.
+
+qrzcard-no-account = Pas de compte QRZ.com enregistré -
+
+qrzcard-account-link = voir l'état du compte
+
+navtex-other-frequencies = FRÉQUENCES NAVTEX ET STATIONS CÔTIÈRES
+
+navtex-other-frequencies-hint = Toutes les fréquences de la liste NAVTEX publiée, par région. En choisir une accorde le cadran pour la bande latérale supérieure. Les entrées marquées CW sont des bulletins météo en Morse, que ce décodeur ne lit pas.
+
+navtex-freq-cw = mode CW
+
+navtex-freq-international = international, en anglais
+
+navtex-freq-national = national, dans la langue du pays
+
+publicsdr-near-kiwi = KIWI PROCHE
+
+publicsdr-near-kiwi-tip = Seulement les { $n } récepteurs KiwiSDR les plus proches de votre locator qui ont un canal libre, le plus proche d'abord. Utilisez-en un comme vue de bande d'une radio CAT.
+
+publicsdr-near-kiwi-no-grid = KIWI PROCHE a besoin de votre locator : renseignez-le dans les réglages de la station pour classer les récepteurs par distance.
+
+sstv-add-clock = ＋ Date/heure
+
+sstv-add-clock-hint = Ajouter une ligne qui imprime la date et l'heure d'envoi de l'image — en UTC ou à votre heure
+
+sstv-clock-date-time = Date et heure
+
+sstv-clock-time = Heure
+
+sstv-clock-date = Date
+
+sstv-clock-freeze-hint = Transforme cette ligne en texte ordinaire, figé à l'heure affichée
+
+sstv-clock-hint = Imprime la date et l'heure au moment où l'image est envoyée, et non celle de sa préparation.
+
+sstv-clock-local = Heure locale
+
+sstv-clock-local-hint = Imprimer l'heure locale de la station au lieu de l'UTC — heure d'été comprise
+
+test-tci-connect-refused = connexion à { $address } : { $detail } — rien ne sert TCI sur ce port. TCI vient du programme SDR — ExpertSDR3, Thetis — et non de la radio elle-même : il doit être lancé, avec TCI activé dans ses réglages. Sur un poste autonome comme un MB1, c'est la copie qui tourne à l'intérieur de la radio
+
+test-tci-connect-timed-out = connexion à { $address } : { $detail } — pas de réponse à cette adresse. Vérifiez l'hôte, et qu'un pare-feu ne bloque pas. Si le programme SDR qui sert TCI (ExpertSDR3, Thetis) n'est pas lancé avec TCI activé, un port fermé peut se présenter ainsi sous Windows
+
+test-connect-failed = connexion à { $address } : { $detail }
+
+settings-ui-graphics = Pilote graphique
+
+settings-ui-graphics-auto = Automatique
+
+settings-ui-graphics-dx12 = DirectX 12
+
+settings-ui-graphics-gl = OpenGL
+
+settings-ui-graphics-note = Pris en compte au prochain démarrage. Automatique utilise DirectX 12, et OpenGL avec les anciens pilotes AMD qui dessinent la cascade en bandes horizontales plates. Essayez OpenGL si votre cascade n'affiche que des lignes horizontales.
 
 settings-controls-desktop-mic = Micro de table ou externe
 settings-controls-desktop-mic-note = PTT depuis un micro ou pedale branche sur les lignes de handshake d'un port serie (ou USB-serie).
@@ -9226,7 +9696,6 @@ settings-controls-active-low = Bas
 settings-controls-debounce = Anti-rebond (ms)
 serial-ptt-output-rts = RTS
 serial-ptt-output-dtr = DTR
-
 settings-controls-web-serial-needs-chromium = Web Serial requires a Chromium-based browser (Chrome/Edge) over HTTPS or localhost.
 settings-controls-choose-serial-port = Choose serial port
 settings-controls-serial-port-chosen = Serial port chosen.

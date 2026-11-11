@@ -631,6 +631,9 @@ impl RemoteController {
             ServerMsg::TxRefused(why, hz) => {
                 self.pending.push_back(RadioEvent::TxRefused(why, hz));
             }
+            ServerMsg::ModeRefused { mode, band } => {
+                self.pending.push_back(RadioEvent::ModeRefused(mode, band));
+            }
             ServerMsg::ClientAcks(a) => self.pending.push_back(RadioEvent::ClientAcks(a)),
             // Dropped rather than decoded while another tab holds the page's
             // single output: the work saved is the point on a browser tab
@@ -677,6 +680,9 @@ impl RemoteController {
             ServerMsg::DyndnsAnswer { at_unix, ok, text } => self
                 .pending
                 .push_back(RadioEvent::DyndnsAnswer { at_unix, ok, text }),
+            ServerMsg::BandPlanExport { file, json } => {
+                self.pending.push_back(RadioEvent::BandPlanExport { file, json })
+            }
             ServerMsg::Ft8Decodes(d) => self.pending.push_back(RadioEvent::Ft8Decodes(d)),
             ServerMsg::WsprSpots(s) => self.pending.push_back(RadioEvent::WsprSpots(s)),
             ServerMsg::Pi4Spots(s) => self.pending.push_back(RadioEvent::Pi4Spots(s)),
@@ -706,6 +712,14 @@ impl RemoteController {
             ServerMsg::AdsbStatus(s) => self.pending.push_back(RadioEvent::AdsbStatus(s)),
             ServerMsg::Vdl2Status(s) => self.pending.push_back(RadioEvent::Vdl2Status(s)),
             ServerMsg::AisStatus(s) => self.pending.push_back(RadioEvent::AisStatus(s)),
+            ServerMsg::VorStatus(s) => self.pending.push_back(RadioEvent::VorStatus(s)),
+            ServerMsg::Qo100Status(s) => self.pending.push_back(RadioEvent::Qo100Status(s)),
+            ServerMsg::HfdlStatus(s) => self.pending.push_back(RadioEvent::HfdlStatus(s)),
+            ServerMsg::SondeStatus(s) => self.pending.push_back(RadioEvent::SondeStatus(s)),
+            ServerMsg::WxsatStatus(s) => self.pending.push_back(RadioEvent::WxsatStatus(s)),
+            ServerMsg::MeshtasticStatus(s) => {
+                self.pending.push_back(RadioEvent::MeshtasticStatus(s))
+            }
             ServerMsg::DabStatus(s) => self.pending.push_back(RadioEvent::DabStatus(s)),
             ServerMsg::RifpRows { image_id, y, w, h, rows } => {
                 self.pending.push_back(RadioEvent::RifpRows { image_id, y, w, h, rows })

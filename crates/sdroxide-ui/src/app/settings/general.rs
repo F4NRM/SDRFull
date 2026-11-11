@@ -11,7 +11,7 @@ use sdroxide_types::{
 };
 
 use crate::app::SdroxideApp;
-use crate::app::persist::band_plan_path;
+use crate::app::persist::band_plans_dir;
 use crate::chrome::StyledCombo;
 
 /// The IARU region dropdown: the number the band plans are published under,
@@ -313,60 +313,379 @@ pub(in crate::app) fn settings_rx_audio_gain(
     );
 }
 
+/// What the band plan manager remembers between frames.
+#[derive(Default)]
+pub(in crate::app) struct BandPlanUi {
+    /// The plan whose DELETE has been clicked once and is waiting for the second.
+    pub(in crate::app) delete_arm: Option<String>,
+    /// The name typed beside SAVE CURRENT PLAN AS.
+    pub(in crate::app) save_name: String,
+}
+
 impl SdroxideApp {
-    /// The band-plan file: where it is, whether the station is on it, and the
-    /// button that re-reads it.
+    /// Hand a band plan file the operator picked to the station.
     ///
-    /// No editor here on purpose. A band plan is forty rows of numbers that
-    /// exist to be pasted from a published table and compared against one; a
-    /// text editor does that far better than any grid this dialog could hold,
-    /// and the file is written to be readable. What the dialog owes the
-    /// operator is the path, and a way to apply an edit without restarting.
+    /// The text goes as it is; the station checks it, converts it if it is in
+    /// another layout, and keeps it — this side has no folder of the station's
+    /// to write to and judges nothing, so a plan it would have refused cannot be
+    /// accepted here and refused there.
+    pub(in crate::app) fn poll_band_plan_import(&mut self, cmds: &mut Vec<sdroxide_types::Command>) {
+        let loaded = self.band_plan_import_inbox.lock().ok().and_then(|mut g| g.take());
+        match loaded {
+            None => {}
+            Some(Ok(l)) => cmds.push(sdroxide_types::Command::ImportBandPlan {
+                name: l.name.unwrap_or_else(|| "imported-plan".to_string()),
+                json: l.text,
+            }),
+            Some(Err(e)) => self.show_notice(e),
+        }
+    }
+
+    /// The station's band plans: the list to choose from, IMPORT to add one, the
+    /// way back to the built-in tables, and the button that re-reads the chosen
+    /// file.
+    ///
+    /// The same on a native screen, a remote one and a browser, because none of
+    /// it touches the screen's own disk: the list is what the station announced,
+    /// a plan is added by sending its *text* to the station
+    /// ([`sdroxide_types::Command::ImportBandPlan`]), and choosing one is a
+    /// command too. No editor here on purpose — a band plan is forty rows of
+    /// numbers pasted from a published table, and a text editor does that far
+    /// better than any grid this dialog could hold.
+    ///
+    /// Choosing a plan other than the one running withdraws the confirmation of
+    /// every radio's TX and RX band lists, so the hover text says so before the
+    /// click rather than after.
     pub(in crate::app) fn settings_band_plan_file(
         &self,
         ui: &mut egui::Ui,
         cmds: &mut Vec<sdroxide_types::Command>,
     ) {
-        let custom = !sdroxide_types::band_plan().is_default();
+        let running = self.band_plan_name.clone();
+        let shown = |file: &Option<String>| -> String {
+            match file {
+                None => tr!("settings-general-band-plan-built-in"),
+                Some(f) => self
+                    .band_plans
+                    .iter()
+                    .find(|p| p.file == *f)
+                    .map_or_else(|| f.clone(), |p| p.name.clone()),
+            }
+        };
+        let mut choice = running.clone();
         ui.horizontal_wrapped(|ui| {
+            ui.label(RichText::new(tr!("settings-general-band-plan")).size(10.5).weak());
+            ComboBox::from_id_salt("band-plan-choice")
+                .selected_text(shown(&running))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(
+                        &mut choice,
+                        None,
+                        tr!("settings-general-band-plan-built-in"),
+                    );
+                    for p in &self.band_plans {
+                        let label = if p.country.is_empty() {
+                            p.name.clone()
+                        } else {
+                            format!("{} — {}", p.name, p.country)
+                        };
+                        ui.selectable_value(&mut choice, Some(p.file.clone()), label);
+                    }
+                });
+        })
+        .response
+        .on_hover_text(tr!("settings-general-band-plan-choose-hint"));
+        if choice != running {
+            cmds.push(sdroxide_types::Command::SelectBandPlan { name: choice });
+            self.follow_station_plan(cmds);
+        }
+
+        // This radio's own plan, beside the station's: one radio on a national
+        // plan and another on the built-in tables is an ordinary station. Shown
+        // once this radio's configuration has been announced.
+        let radio_plan = self.radio_cfg.as_ref().map(|c| c.band_plan.clone());
+        if let Some(radio_plan) = radio_plan {
+            let radio_shown = |file: &Option<String>| -> String {
+                match file {
+                    None => tr!("settings-general-band-plan-radio-follow"),
+                    Some(f) => self
+                        .band_plans
+                        .iter()
+                        .find(|p| p.file == *f)
+                        .map_or_else(|| f.clone(), |p| p.name.clone()),
+                }
+            };
+            let mut radio_choice = radio_plan.clone();
+            ui.horizontal_wrapped(|ui| {
+                ui.label(RichText::new(tr!("settings-general-band-plan-radio")).size(10.5).weak());
+                ComboBox::from_id_salt("band-plan-radio-choice")
+                    .selected_text(radio_shown(&radio_plan))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut radio_choice,
+                            None,
+                            tr!("settings-general-band-plan-radio-follow"),
+                        );
+                        for p in &self.band_plans {
+                            ui.selectable_value(&mut radio_choice, Some(p.file.clone()), p.name.clone());
+                        }
+                    });
+            })
+            .response
+            .on_hover_text(tr!("settings-general-band-plan-radio-hint"));
+            if radio_choice != radio_plan {
+                cmds.push(sdroxide_types::Command::SelectRadioBandPlan { name: radio_choice });
+            }
+        }
+
+        ui.horizontal_wrapped(|ui| {
+            if crate::chrome::chip(
+                ui,
+                false,
+                RichText::new(tr!("settings-general-band-plan-import")).size(10.5),
+            )
+            .on_hover_text(tr!("settings-general-band-plan-import-hint"))
+            .clicked()
+            {
+                crate::download::load_text(
+                    "Band plan",
+                    &["json"],
+                    self.band_plan_import_inbox.clone(),
+                );
+            }
+            // One click back to the default, only when there is somewhere to go
+            // back from.
+            if running.is_some()
+                && crate::chrome::chip(
+                    ui,
+                    false,
+                    RichText::new(tr!("settings-general-band-plan-reset")).size(10.5),
+                )
+                .on_hover_text(tr!("settings-general-band-plan-reset-hint"))
+                .clicked()
+            {
+                cmds.push(sdroxide_types::Command::SelectBandPlan { name: None });
+            }
             if crate::chrome::chip(
                 ui,
                 false,
                 RichText::new(tr!("settings-general-reload-band-plan")).size(10.5),
             )
-            .on_hover_text(tr!("settings-general-re-read-bandplan-json-machine"))
+            .on_hover_text(tr!("settings-general-re-read-band-plan-file"))
             .clicked()
             {
                 cmds.push(sdroxide_types::Command::ReloadBandPlan);
             }
-            ui.add(
-                egui::Label::new(
-                    RichText::new(if custom {
-                        tr!("settings-general-running-station-s-own-band")
-                    } else {
-                        tr!("settings-general-running-built-iaru-tables")
-                    })
-                    .size(10.5)
-                    .weak(),
-                )
-                .wrap(),
-            );
         });
+        ui.add(
+            egui::Label::new(
+                RichText::new(match &running {
+                    Some(_) => tr!("settings-general-running-band-plan", name = shown(&running)),
+                    None => tr!("settings-general-running-built-iaru-tables"),
+                })
+                .size(10.5)
+                .weak(),
+            )
+            .wrap(),
+        );
         ui.add_space(4.0);
-        // Only where the file is actually on this machine. A remote client
+        // Only where the folder is actually on this machine. A remote client
         // showing its own config path would be pointing at the wrong computer.
-        let path = (!self.ctrl.engine_is_remote())
-            .then(band_plan_path)
+        let dir = (!self.ctrl.engine_is_remote())
+            .then(band_plans_dir)
             .flatten()
             .map(|p| p.display().to_string());
         ui.label(
-            RichText::new(match &path {
-                Some(p) => tr!("settings-general-band-plan-file", path = p.as_str()),
-                None => tr!("settings-general-every-band-edge-sub-segment"),
+            RichText::new(match &dir {
+                Some(p) => tr!("settings-general-band-plan-folder", path = p.as_str()),
+                None => tr!("settings-general-band-plan-station-folder"),
             })
             .size(10.5)
             .color(crate::theme::gray(140)),
         );
+        ui.add_space(4.0);
+        self.settings_band_plan_manager(ui, cmds);
+    }
+
+    /// After a plan is chosen for the station, put this radio back on it: a radio
+    /// that kept a plan of its own would otherwise ignore the choice. A radio
+    /// that already follows the station needs nothing.
+    fn follow_station_plan(&self, cmds: &mut Vec<sdroxide_types::Command>) {
+        if self.radio_cfg.as_ref().is_some_and(|c| c.band_plan.is_some()) {
+            cmds.push(sdroxide_types::Command::SelectRadioBandPlan { name: None });
+        }
+    }
+
+    /// The plans the station holds, one row each, with what can be done to
+    /// them: run, download, delete — and, below, keep the plan that runs under a
+    /// name and put the shipped plans back.
+    ///
+    /// Everything here is a command to the station or a file this screen saves
+    /// on its own computer (a download, which a browser does as readily as a
+    /// native screen); none of it touches a folder on this machine. A delete
+    /// asks for a second click, and the plan that is running can be neither
+    /// deleted nor run again.
+    fn settings_band_plan_manager(&self, ui: &mut egui::Ui, cmds: &mut Vec<sdroxide_types::Command>) {
+        use sdroxide_types::Command;
+        let running = self.band_plan_name.clone();
+        let radio_plan = self.radio_cfg.as_ref().and_then(|c| c.band_plan.clone());
+        let weak = |t: String| RichText::new(t).size(10.5).color(crate::theme::gray(140));
+        egui::CollapsingHeader::new(
+            RichText::new(tr!("settings-general-band-plan-manager")).size(10.5),
+        )
+        .id_salt("band-plan-manager")
+        .show(ui, |ui| {
+            if self.band_plans.is_empty() {
+                ui.label(weak(tr!("settings-general-band-plan-empty")));
+            }
+            egui::Grid::new("band-plan-manager-grid")
+                .num_columns(5)
+                .spacing([10.0, 3.0])
+                .striped(true)
+                .show(ui, |ui| {
+                    for p in &self.band_plans {
+                        let is_running = running.as_deref() == Some(p.file.as_str());
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(&p.name).size(10.5).strong());
+                            if is_running {
+                                ui.label(
+                                    RichText::new(tr!("settings-general-band-plan-running-tag"))
+                                        .size(9.0)
+                                        .color(crate::theme::gray(190)),
+                                );
+                            }
+                            if radio_plan.as_deref() == Some(p.file.as_str()) {
+                                ui.label(
+                                    RichText::new(tr!("settings-general-band-plan-radio-tag"))
+                                        .size(9.0)
+                                        .color(crate::theme::gray(190)),
+                                );
+                            }
+                            if p.shipped {
+                                ui.label(weak(tr!("settings-general-band-plan-shipped-tag")));
+                            }
+                        });
+                        ui.label(weak(p.country.clone()));
+                        ui.label(weak(p.author.clone()));
+                        let (y, m, d, ..) = sdroxide_types::utc_ymd_hms(p.modified as i64);
+                        let when = if p.modified == 0 {
+                            String::new()
+                        } else {
+                            format!("{y:04}-{m:02}-{d:02}")
+                        };
+                        ui.label(weak(format!(
+                            "{when}  {}",
+                            tr!("settings-general-band-plan-size", kb = p.bytes.div_ceil(1024))
+                        )));
+                        ui.horizontal(|ui| {
+                            let run = ui
+                                .add_enabled_ui(!is_running, |ui| {
+                                    crate::chrome::chip(
+                                        ui,
+                                        false,
+                                        RichText::new(tr!("settings-general-band-plan-run"))
+                                            .size(10.0),
+                                    )
+                                })
+                                .inner
+                                .on_hover_text(tr!("settings-general-band-plan-run-hint"));
+                            if run.clicked() {
+                                cmds.push(Command::SelectBandPlan { name: Some(p.file.clone()) });
+                                self.follow_station_plan(cmds);
+                            }
+                            // Only on this radio: shown once its configuration is
+                            // known, and not for the plan it already runs.
+                            if self.radio_cfg.is_some() {
+                                let own = radio_plan.as_deref() == Some(p.file.as_str());
+                                if ui
+                                    .add_enabled_ui(!own, |ui| {
+                                        crate::chrome::chip(
+                                            ui,
+                                            false,
+                                            RichText::new(tr!("settings-general-band-plan-run-radio"))
+                                                .size(10.0),
+                                        )
+                                    })
+                                    .inner
+                                    .on_hover_text(tr!("settings-general-band-plan-radio-hint"))
+                                    .clicked()
+                                {
+                                    cmds.push(Command::SelectRadioBandPlan {
+                                        name: Some(p.file.clone()),
+                                    });
+                                }
+                            }
+                            if crate::chrome::chip(
+                                ui,
+                                false,
+                                RichText::new(tr!("settings-general-band-plan-download"))
+                                    .size(10.0),
+                            )
+                            .on_hover_text(tr!("settings-general-band-plan-download-hint"))
+                            .clicked()
+                            {
+                                *self.band_plan_export_wanted.borrow_mut() = Some(p.file.clone());
+                                cmds.push(Command::ExportBandPlan { name: p.file.clone() });
+                            }
+                            let armed =
+                                self.band_plan_ui.borrow().delete_arm.as_deref() == Some(&p.file);
+                            let del = ui
+                                .add_enabled_ui(!is_running, |ui| {
+                                    crate::chrome::chip(
+                                        ui,
+                                        armed,
+                                        RichText::new(if armed {
+                                            tr!("settings-general-band-plan-delete-confirm")
+                                        } else {
+                                            tr!("settings-general-band-plan-delete")
+                                        })
+                                        .size(10.0),
+                                    )
+                                })
+                                .inner
+                                .on_hover_text(tr!("settings-general-band-plan-delete-hint"));
+                            if del.clicked() {
+                                if armed {
+                                    self.band_plan_ui.borrow_mut().delete_arm = None;
+                                    cmds.push(Command::DeleteBandPlan { name: p.file.clone() });
+                                } else {
+                                    self.band_plan_ui.borrow_mut().delete_arm =
+                                        Some(p.file.clone());
+                                }
+                            }
+                        });
+                        ui.end_row();
+                    }
+                });
+            ui.add_space(4.0);
+            ui.horizontal_wrapped(|ui| {
+                let mut st = self.band_plan_ui.borrow_mut();
+                ui.add(
+                    egui::TextEdit::singleline(&mut st.save_name)
+                        .hint_text(tr!("settings-general-band-plan-name-hint"))
+                        .desired_width(150.0),
+                );
+                let save = crate::chrome::chip(
+                    ui,
+                    false,
+                    RichText::new(tr!("settings-general-band-plan-save-current")).size(10.5),
+                )
+                .on_hover_text(tr!("settings-general-band-plan-save-current-hint"));
+                if save.clicked() && !st.save_name.trim().is_empty() {
+                    cmds.push(Command::SaveCurrentBandPlan { name: st.save_name.trim().to_string() });
+                }
+                if crate::chrome::chip(
+                    ui,
+                    false,
+                    RichText::new(tr!("settings-general-band-plan-restore")).size(10.5),
+                )
+                .on_hover_text(tr!("settings-general-band-plan-restore-hint"))
+                .clicked()
+                {
+                    cmds.push(Command::RestoreShippedBandPlans);
+                }
+            });
+        });
     }
 
     /// Take this station's settings away as one file, and put one back.
@@ -550,6 +869,10 @@ impl SdroxideApp {
     #[cfg(not(target_arch = "wasm32"))]
     pub(in crate::app) fn handle_recordings_dir(&mut self, choose: bool, reset: bool) {
         if !choose && !reset {
+            return;
+        }
+        // A test must never open a native dialog (see `download::save_as`).
+        if cfg!(test) && choose {
             return;
         }
         let saved = if choose {

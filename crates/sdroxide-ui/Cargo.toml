@@ -26,6 +26,10 @@ tracing.workspace = true
 # operator whether their digipeater path is a reasonable one. Pure parsing with
 # no I/O and no clock, so it builds for wasm32 alongside everything else here.
 sdroxide-aprs = { path = "../sdroxide-aprs" }
+# The Meshtastic region and preset tables and the port names for its panel,
+# without the `engine` feature (no thread, no channel): pure data, builds for
+# wasm32 as well.
+sdroxide-meshtastic = { path = "../sdroxide-meshtastic" }
 serde.workspace = true
 # The relay's reply is JSON. Pure Rust, so it builds for wasm32 as well.
 serde_json.workspace = true
@@ -123,8 +127,6 @@ sdroxide-dsp = { path = "../sdroxide-dsp" }
 # MIDI control surfaces (VFO knob, PTT button, faders). Native-only: it links
 # the host MIDI stack, so it must never reach the wasm dependency path.
 sdroxide-midi = { path = "../sdroxide-midi" }
-# Serial (and USB-serial) ports for the "desktop or external microphone" PTT
-# input. Native-only: links the host serial stack.
 serialport = { version = "4.10", default-features = false }
 # Drives the one-shot adapter probe in `wgpu_options` to completion. wgpu's
 # enumeration is a future for the browser's sake only, and this is the executor
