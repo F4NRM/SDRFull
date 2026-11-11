@@ -278,6 +278,88 @@ const LANE_WORKERS: usize = 2;
 /// loss.
 const LANE_POOL_MIN_CORES: usize = 4;
 
+/// Seconds between two reports of the IQ rate meter.
+const IQ_RATE_REPORT_S: f64 = 10.0;
+/// Seconds of block arrivals the rate is fitted over.
+const IQ_RATE_SPAN_S: f64 = 60.0;
+/// The least span, in seconds, a fit is reported for.
+const IQ_RATE_MIN_SPAN_S: f64 = 30.0;
+
+/// The IQ stream's real rate against the PC's monotonic clock — a diagnostic
+/// for a slant that follows the front-end gain (WEFAX pages whose lines drift
+/// when the gain is moved).
+///
+/// The samples delivered so far are fitted against the instant each block
+/// arrived, over the last [`IQ_RATE_SPAN_S`] seconds, by least squares. A rate
+/// taken between two single arrivals is wrong by a block's worth of samples
+/// whenever one of them came early or late (a USB packet burst is worth about
+/// ±1500 ppm over ten seconds); a fit through every arrival averages that
+/// out. The PC clock's own offset is a constant, so the *change* of the figure
+/// over time is what means something. Reported at `debug` under
+/// `sdroxide_radio::iq_rate`, so nothing is printed by default:
+/// `RUST_LOG=info,sdroxide_radio::iq_rate=debug`.
+#[derive(Default)]
+struct IqRateMeter {
+    start: Option<std::time::Instant>,
+    delivered: u64,
+    /// (seconds since the first block, samples delivered by then).
+    points: std::collections::VecDeque<(f64, f64)>,
+    next_report_s: f64,
+    last_ppm: Option<f64>,
+}
+
+impl IqRateMeter {
+    fn feed(&mut self, n: usize, nominal_hz: f64) {
+        let now = std::time::Instant::now();
+        let start = *self.start.get_or_insert(now);
+        let t = now.duration_since(start).as_secs_f64();
+        self.delivered += n as u64;
+        self.points.push_back((t, self.delivered as f64));
+        while self.points.front().is_some_and(|&(t0, _)| t - t0 > IQ_RATE_SPAN_S) {
+            self.points.pop_front();
+        }
+        if t < self.next_report_s {
+            return;
+        }
+        let Some(&(t_first, _)) = self.points.front() else { return };
+        if t - t_first < IQ_RATE_MIN_SPAN_S {
+            return;
+        }
+        self.next_report_s = t + IQ_RATE_REPORT_S;
+        let k = self.points.len() as f64;
+        let (mt, mc) = self
+            .points
+            .iter()
+            .fold((0.0, 0.0), |(a, b), &(t, c)| (a + t / k, b + c / k));
+        let (num, den) = self.points.iter().fold((0.0, 0.0), |(num, den), &(t, c)| {
+            (num + (t - mt) * (c - mc), den + (t - mt) * (t - mt))
+        });
+        if den <= 0.0 {
+            return;
+        }
+        let rate = num / den;
+        let ppm = (rate / nominal_hz - 1.0) * 1e6;
+        let step = self.last_ppm.map_or(0.0, |p| ppm - p);
+        tracing::debug!(
+            target: "sdroxide_radio::iq_rate",
+            "IQ rate {rate:.2} Hz, {ppm:+.1} ppm against the PC clock ({step:+.1} since the last report, fit over {:.0} s)",
+            t - t_first
+        );
+        self.last_ppm = Some(ppm);
+    }
+}
+
+thread_local! {
+    static IQ_RATE: std::cell::RefCell<IqRateMeter> = std::cell::RefCell::new(IqRateMeter::default());
+}
+
+/// Count one IQ block into the rate meter of the engine thread.
+fn iq_rate_meter(n: usize, nominal_hz: f64) {
+    if nominal_hz > 0.0 {
+        IQ_RATE.with(|m| m.borrow_mut().feed(n, nominal_hz));
+    }
+}
+
 /// The pool the block loop forks onto, or `None` on a machine that should stay
 /// on one thread — see [`LANE_WORKERS`].
 fn lane_pool() -> Option<rayon::ThreadPool> {
@@ -6741,6 +6823,7 @@ impl Engine {
     /// fifteenth one); on a slow one it is most of them, and there is nothing
     /// there to win anyway.
     fn process_block(&mut self, iq: &[Complex32], pool: Option<&rayon::ThreadPool>) {
+        iq_rate_meter(iq.len(), self.radio_fs);
         self.capture_iq(iq);
         // Read while the chain is certainly in hand, and on both paths: the
         // frame builder asks for it and must never be answered with the
