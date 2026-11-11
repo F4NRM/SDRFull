@@ -19970,6 +19970,12 @@ impl Engine {
         self.caps.commands_rig_power = self.source.commands_rig_power();
         self.caps.has_rx_antenna = self.source.rx_antenna().is_some();
         self.caps.wide_span_hz = self.source.wide_span_hz();
+        // The old front end's full-band lane went with it. Left in place, its
+        // last sweep stayed the window the strip was drawn against.
+        self.wide_bins.clear();
+        self.wide_window = None;
+        self.wide_fresh = false;
+        self.wide_levels = None;
         self.audio_mode = self.caps.audio_mode;
         self.radio_fs = self.source.sample_rate();
         self.audio_bw = self.source.display_bandwidth().unwrap_or(self.radio_fs / 2.0);

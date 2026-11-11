@@ -948,6 +948,23 @@ async fn radios_route(
     }
 }
 
+/// Drop the full-band frame held for late-joining clients.
+///
+/// The `watch` keeps the last frame so that a session opened afterwards sees
+/// the strip at once. Nothing ever emptied it, so after a front end that had a
+/// full-band lane (a KiwiSDR, an RX-888) was swapped for one without — a
+/// panadapter receiver detached, a radio reopened on another interface — every
+/// client that connected afterwards was sent the old band, frozen, for good.
+/// Anything the engine had queued before the swap is discarded too, or it
+/// would put the old frame straight back.
+fn forget_wide_lane(
+    out: &mut triple_buffer::Output<SpectrumFrame>,
+    watch: &watch::Sender<Option<SpectrumFrame>>,
+) {
+    let _ = out.update();
+    watch.send_replace(None);
+}
+
 /// Bridge thread: engine endpoints → session lanes + latest-state cache.
 fn pump(
     shared: Arc<Shared>,
@@ -980,8 +997,13 @@ fn pump(
         // Events: block briefly so the loop runs ~200 Hz even when idle.
         match event_rx.recv_timeout(Duration::from_millis(5)) {
             Ok(ev) => {
-                handle_event(&shared, ev);
-                while let Ok(ev) = event_rx.try_recv() {
+                for ev in std::iter::once(ev).chain(event_rx.try_iter()) {
+                    // A new front end: the full-band picture of the old one is
+                    // not a picture of anything now, and a client connecting
+                    // later would be handed it as if it were current.
+                    if matches!(ev, RadioEvent::Capabilities(_)) {
+                        forget_wide_lane(&mut wide_spectrum_out, &wide_watch);
+                    }
                     handle_event(&shared, ev);
                 }
             }
@@ -1863,5 +1885,45 @@ mod asset_name_tests {
         assert_eq!(asset_name("/index.html"), "index.html");
         assert_eq!(asset_name("/audio_bridge.js"), "audio_bridge.js");
         assert_eq!(asset_name("/sdroxide-web-abc_bg.wasm"), "sdroxide-web-abc_bg.wasm");
+    }
+}
+
+#[cfg(test)]
+mod wide_lane_tests {
+    use super::forget_wide_lane;
+    use sdroxide_types::SpectrumFrame;
+    use tokio::sync::watch;
+
+    fn frame(seq: u32) -> SpectrumFrame {
+        SpectrumFrame {
+            seq,
+            center_hz: 7_074_000.0,
+            span_hz: 1_875_000.0,
+            db_floor: -100.0,
+            db_ceil: -20.0,
+            bins: vec![10; 16],
+            rows: Vec::new(),
+            rows_clocked: false,
+        }
+    }
+
+    /// A KiwiSDR's strip was kept for late joiners and never emptied: after the
+    /// Kiwi was detached, every client that connected got its frozen band back.
+    #[test]
+    fn a_swapped_front_end_leaves_no_full_band_frame_for_late_clients() {
+        let (mut input, mut out) = triple_buffer::triple_buffer(&frame(0));
+        let (tx, rx) = watch::channel(None);
+
+        // The old front end's last frame, as `pump` stores it.
+        input.write(frame(7));
+        assert!(out.update());
+        tx.send_replace(Some(out.output_buffer().clone()));
+        // A second one still queued in the engine's buffer when the swap came.
+        input.write(frame(8));
+
+        forget_wide_lane(&mut out, &tx);
+
+        assert!(rx.borrow().is_none(), "a client joining now must be sent no strip");
+        assert!(!out.update(), "the queued frame of the old front end must not come back");
     }
 }
