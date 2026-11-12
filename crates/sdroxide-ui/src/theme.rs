@@ -17,11 +17,57 @@ use eframe::egui::{
     self, Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Stroke, TextStyle,
 };
 use sdroxide_types::{BandplanKind, ChromeStyle, FontSize, SpotKind, UiTheme};
+use serde::{Deserialize, Serialize};
+
+/// A colour as a theme file writes it: `"#2d353b"`, or `"#2d353bff"` with an
+/// alpha. Human hands edit these files, so a hex string is the form they get;
+/// serde needs the two halves, which is all this module is.
+mod hexcolour {
+    use eframe::egui::Color32;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S: Serializer>(c: &Color32, s: S) -> Result<S::Ok, S::Error> {
+        // **Unmultiplied**, which is what a person writes: `#ffffff5a` is a
+        // white wash at 35%, not the premultiplied 90-grey egui stores.
+        let [r, g, b, a] = c.to_srgba_unmultiplied();
+        if a == 255 {
+            s.serialize_str(&format!("#{r:02x}{g:02x}{b:02x}"))
+        } else {
+            s.serialize_str(&format!("#{r:02x}{g:02x}{b:02x}{a:02x}"))
+        }
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Color32, D::Error> {
+        let text = String::deserialize(d)?;
+        parse(&text).map_err(serde::de::Error::custom)
+    }
+
+    /// `#rgb`, `#rrggbb` or `#rrggbbaa`, with or without the `#`.
+    pub fn parse(text: &str) -> Result<Color32, String> {
+        let t = text.trim().trim_start_matches('#');
+        let pair = |i: usize| -> Result<u8, String> {
+            u8::from_str_radix(&t[i..i + 2], 16).map_err(|_| format!("`{text}` is not a colour"))
+        };
+        match t.len() {
+            3 => {
+                let one = |i: usize| -> Result<u8, String> {
+                    let v = u8::from_str_radix(&t[i..i + 1], 16)
+                        .map_err(|_| format!("`{text}` is not a colour"))?;
+                    Ok(v * 17)
+                };
+                Ok(Color32::from_rgb(one(0)?, one(1)?, one(2)?))
+            }
+            6 => Ok(Color32::from_rgb(pair(0)?, pair(2)?, pair(4)?)),
+            8 => Ok(Color32::from_rgba_unmultiplied(pair(0)?, pair(2)?, pair(4)?, pair(6)?)),
+            _ => Err(format!("`{text}` is not a colour: expected #rrggbb or #rrggbbaa")),
+        }
+    }
+}
 
 /// Every colour role the chrome wears. A theme is one full assignment of
 /// these; the field names keep the historic constant names (`cyan` is "the
 /// primary accent", whatever hue a theme gives it).
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Palette {
     /// True where the chrome sits on a bright ground. Everything that has to
     /// pick a shade by hand — [`gray`], [`continent_color`], the few widgets
@@ -31,65 +77,96 @@ pub struct Palette {
     /// [`gray`] lifts the hand-written grey scale up to meet the ink instead
     /// of reproducing it.
     pub no_dim: bool,
+    #[serde(with = "hexcolour")]
     pub bg_deep: Color32,
+    #[serde(with = "hexcolour")]
     pub panel: Color32,
+    #[serde(with = "hexcolour")]
     pub input_bg: Color32,
+    #[serde(with = "hexcolour")]
     pub fill: Color32,
+    #[serde(with = "hexcolour")]
     pub fill_hover: Color32,
+    #[serde(with = "hexcolour")]
     pub fill_active: Color32,
+    #[serde(with = "hexcolour")]
     pub line: Color32,
+    #[serde(with = "hexcolour")]
     pub line_lit: Color32,
+    #[serde(with = "hexcolour")]
     pub text: Color32,
+    #[serde(with = "hexcolour")]
     pub text_strong: Color32,
     /// Primary accent: selection fills, headings, links.
+    #[serde(with = "hexcolour")]
     pub cyan: Color32,
     /// Secondary accent: captions, dimmed highlights.
+    #[serde(with = "hexcolour")]
     pub cyan_dim: Color32,
     /// Chrome accent: window borders, decorative strokes.
+    #[serde(with = "hexcolour")]
     pub pink: Color32,
+    #[serde(with = "hexcolour")]
     pub yellow: Color32,
+    #[serde(with = "hexcolour")]
     pub green: Color32,
     /// Dark ink used on top of accent fills.
+    #[serde(with = "hexcolour")]
     pub ink_on_cyan: Color32,
     /// Ink for the chips whose fill is one of the *bright* accents — the
     /// yellow tone-squelch chip, the green satellite/scan chips. Black
     /// everywhere the accents are bright; on a light ground those accents are
     /// dark enough to read as text on white, so their chips take white ink
     /// instead.
+    #[serde(with = "hexcolour")]
     pub ink_on_bright: Color32,
     /// Red-accent chrome (cyberpunk box borders / list rows).
+    #[serde(with = "hexcolour")]
     pub red_deep: Color32,
+    #[serde(with = "hexcolour")]
     pub cq_bg: Color32,
     /// Background for a decode addressed to our own station (warm gold,
     /// stands out).
+    #[serde(with = "hexcolour")]
     pub tome_bg: Color32,
     /// Background for the QSO-complete line in a transcript whose received
     /// messages are already green — the band is what makes it read as an
     /// event, not a message.
+    #[serde(with = "hexcolour")]
     pub done_bg: Color32,
+    #[serde(with = "hexcolour")]
     pub row_bg: Color32,
+    #[serde(with = "hexcolour")]
     pub row_hover: Color32,
     /// Scrollbars: an accent handle riding in a recessed gutter. The gutter is
     /// a touch lighter than every panel/list background it sits on, so the
     /// full scroll range stays readable even when the handle is at the far
     /// end.
+    #[serde(with = "hexcolour")]
     pub scroll_track: Color32,
+    #[serde(with = "hexcolour")]
     pub scroll_handle: Color32,
+    #[serde(with = "hexcolour")]
     pub scroll_handle_hover: Color32,
+    #[serde(with = "hexcolour")]
     pub scroll_handle_drag: Color32,
     /// egui's `faint_bg_color` (striped table rows and the like).
+    #[serde(with = "hexcolour")]
     pub faint_bg: Color32,
     /// TX / SWR / error indications. Red in *every* theme — the phosphor
     /// themes are monochrome everywhere else, but whether RF is leaving the
     /// antenna is never left to a shade of green.
+    #[serde(with = "hexcolour")]
     pub alert: Color32,
     /// The bright stripe of the yellow/black hazard bars ([manual section
     /// rules, the CME arrival banner](crate::chrome::hazard_stripes)). Its own
     /// role rather than [`Self::yellow`] because a hazard bar is a *fill* next
     /// to a dark stripe, not ink on the panel: it stays bright amber even
     /// where the warning text has had to go dark to survive a white ground.
+    #[serde(with = "hexcolour")]
     pub hazard: Color32,
     /// The dark stripe those bars alternate with.
+    #[serde(with = "hexcolour")]
     pub hazard_dark: Color32,
 }
 
@@ -1048,7 +1125,7 @@ static PALETTES: [Palette; 21] = [
 /// this, not just its shades: which way a lit edge shades, whether the needle
 /// blooms, and which of the three reds the over-the-red-line half is printed
 /// in. See `widgets::smeter`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MeterFace {
     /// Lit glass over a near-black dial — the historic instrument.
     Glass,
@@ -1059,37 +1136,58 @@ pub enum MeterFace {
     Contrast,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct MeterPalette {
     pub face: MeterFace,
     /// The needle: the blade's root, its length, and the last tenth at the
     /// point, plus the halo it throws. Three stops rather than two because
     /// the flare at the tip is what makes a lit blade read as lit.
+    #[serde(with = "hexcolour")]
     pub needle_root: Color32,
+    #[serde(with = "hexcolour")]
     pub needle_mid: Color32,
+    #[serde(with = "hexcolour")]
     pub needle_tip: Color32,
+    #[serde(with = "hexcolour")]
     pub needle_glow: Color32,
+    #[serde(with = "hexcolour")]
     pub face_top: Color32,
+    #[serde(with = "hexcolour")]
     pub face_bot: Color32,
     /// Specular hairline along the top of the glass.
+    #[serde(with = "hexcolour")]
     pub glass: Color32,
     /// Backlight bloom behind the scale on receive (transmit's stays red).
+    #[serde(with = "hexcolour")]
     pub backlight: Color32,
     /// Readout text: the headline value and the sub-reading beside it.
+    #[serde(with = "hexcolour")]
     pub readout: Color32,
+    #[serde(with = "hexcolour")]
     pub subdued: Color32,
+    #[serde(with = "hexcolour")]
     pub tick_minor: Color32,
+    #[serde(with = "hexcolour")]
     pub tick_major: Color32,
+    #[serde(with = "hexcolour")]
     pub label: Color32,
+    #[serde(with = "hexcolour")]
     pub grid_line: Color32,
+    #[serde(with = "hexcolour")]
     pub grid_label: Color32,
     /// The bar face's recessed trough (top/bottom of its wash) and its edge.
+    #[serde(with = "hexcolour")]
     pub rail_top: Color32,
+    #[serde(with = "hexcolour")]
     pub rail_bot: Color32,
+    #[serde(with = "hexcolour")]
     pub rail_edge: Color32,
     /// The cool half of the S and ALC ramps: floor → mid → ice at S9.
+    #[serde(with = "hexcolour")]
     pub ramp_lo: Color32,
+    #[serde(with = "hexcolour")]
     pub ramp_mid: Color32,
+    #[serde(with = "hexcolour")]
     pub ramp_hi: Color32,
 }
 
@@ -1368,6 +1466,9 @@ static METER_PALETTES: [MeterPalette; 21] = [
 /// The current theme's S-meter instrument colours.
 #[inline]
 pub fn meter_palette() -> &'static MeterPalette {
+    if let Some(t) = file_theme() {
+        return &t.meter;
+    }
     &METER_PALETTES[THEME.load(Ordering::Relaxed) as usize]
 }
 
@@ -1384,27 +1485,37 @@ pub fn meter_palette() -> &'static MeterPalette {
 /// For the five dark themes each field is that theme's own role, unchanged —
 /// see [`scope_from`]. Only [`SCOPE_LIGHT`] differs, and only because the
 /// main palette's accents went dark to survive a white panel.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct ScopePalette {
     /// Canvas behind an instrument that has no image of its own to fill it —
     /// the world map's ocean.
+    #[serde(with = "hexcolour")]
     pub ground: Color32,
     /// The ground *outside* an instrument's cut-corner border, used to mask
     /// its square fill corners.
+    #[serde(with = "hexcolour")]
     pub shell: Color32,
     /// Labels and readouts painted straight onto the glass.
+    #[serde(with = "hexcolour")]
     pub ink: Color32,
     /// The same, for the one under the pointer.
+    #[serde(with = "hexcolour")]
     pub ink_strong: Color32,
     /// Rules and dividers drawn on it — the band-plan strip's inner edge.
+    #[serde(with = "hexcolour")]
     pub line: Color32,
+    #[serde(with = "hexcolour")]
     pub accent: Color32,
+    #[serde(with = "hexcolour")]
     pub accent_dim: Color32,
     /// Worked/heard/good markers.
+    #[serde(with = "hexcolour")]
     pub good: Color32,
     /// Measurement and warning marks.
+    #[serde(with = "hexcolour")]
     pub warn: Color32,
     /// The instrument's own frame and corner brackets.
+    #[serde(with = "hexcolour")]
     pub chrome: Color32,
 }
 
@@ -1493,6 +1604,9 @@ static SCOPE_PALETTES: [ScopePalette; 21] = [
 /// The current theme's instrument inks — see [`ScopePalette`].
 #[inline]
 pub fn scope() -> &'static ScopePalette {
+    if let Some(t) = file_theme() {
+        return &t.scope;
+    }
     &SCOPE_PALETTES[THEME.load(Ordering::Relaxed) as usize]
 }
 
@@ -1504,10 +1618,12 @@ pub fn scope() -> &'static ScopePalette {
 /// its colour maps start at black — but a map plainly does: pale sea, land
 /// picked out on it, dark markers. So on the Light theme the panadapter stays
 /// glass and the map turns into an atlas, and the two need separate sets.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct MapPalette {
+    #[serde(with = "hexcolour")]
     pub sea: Color32,
     /// The dot matrix the continents are stippled in.
+    #[serde(with = "hexcolour")]
     pub land: Color32,
     /// International borders and rivers, stippled into the same grid as the
     /// land and so necessarily brighter than it: they are marks *on* the
@@ -1515,31 +1631,45 @@ pub struct MapPalette {
     /// stays neutral and the river stays blue, because that is the one pair
     /// the eye separates without a legend — and the two run together often
     /// enough (a border drawn down a river) that they have to.
+    #[serde(with = "hexcolour")]
     pub border: Color32,
+    #[serde(with = "hexcolour")]
     pub river: Color32,
     /// A populated place: the dot, and the name beside it. The name is dimmer
     /// — it is there to be read once, not to compete with the stations.
+    #[serde(with = "hexcolour")]
     pub city: Color32,
+    #[serde(with = "hexcolour")]
     pub city_label: Color32,
     /// A decoded station with a known grid: a neutral dot, faded by age. Also
     /// the head of the transmit comet — the one mark that has to out-read
     /// every coloured one around it.
+    #[serde(with = "hexcolour")]
     pub station: Color32,
     /// The great-circle path to the current DX, and the comet that runs along
     /// it while transmitting.
+    #[serde(with = "hexcolour")]
     pub trail: Color32,
+    #[serde(with = "hexcolour")]
     pub comet: Color32,
     /// Home, the worked DX, the row under the pointer, and a decode clicked
     /// but not yet answered. Each is drawn as a core in this colour with a
     /// low-alpha halo of it behind.
+    #[serde(with = "hexcolour")]
     pub home: Color32,
+    #[serde(with = "hexcolour")]
     pub dx: Color32,
+    #[serde(with = "hexcolour")]
     pub hover: Color32,
+    #[serde(with = "hexcolour")]
     pub preview: Color32,
     /// The "double-click to reframe" hint — carries its own alpha.
+    #[serde(with = "hexcolour")]
     pub hint: Color32,
     /// The map's frame, and the colour behind it that masks the cut corners.
+    #[serde(with = "hexcolour")]
     pub frame: Color32,
+    #[serde(with = "hexcolour")]
     pub shell: Color32,
     /// The darkest the grey line shades this map, as an alpha. A dark map
     /// takes the texture's full [`sdroxide_solar::NIGHT_MAX_ALPHA`]: its
@@ -1681,6 +1811,9 @@ static MAP_PALETTES: [MapPalette; 21] = [
 /// The current theme's world-map inks — see [`MapPalette`].
 #[inline]
 pub fn map() -> &'static MapPalette {
+    if let Some(t) = file_theme() {
+        return &t.map;
+    }
     &MAP_PALETTES[THEME.load(Ordering::Relaxed) as usize]
 }
 
@@ -1805,6 +1938,163 @@ static THEME: AtomicU8 = AtomicU8::new(0);
 static BUTTON_STYLE: AtomicU8 = AtomicU8::new(0);
 static WINDOW_STYLE: AtomicU8 = AtomicU8::new(0);
 
+/// **One theme from a file**: the same four palettes a built-in theme carries,
+/// under a name the operator chose.
+///
+/// A theme is not one table but four — the chrome, the meter face, the scope
+/// inks and the map inks — because the instruments are composed by hand and
+/// are not derivable from the chrome's roles. A file therefore carries all
+/// four; one that is missing a section, or a role within it, is refused by
+/// name rather than drawn half-lit.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThemeFile {
+    /// What the picker shows and what the settings store. Defaults to the
+    /// file's own name when the file does not say.
+    #[serde(default)]
+    pub name: String,
+    pub palette: Palette,
+    pub meter: MeterPalette,
+    pub scope: ScopePalette,
+    pub map: MapPalette,
+}
+
+/// One theme that came from a file, with the text it was read from.
+pub struct FileTheme {
+    /// The four palettes, under the name the picker shows.
+    pub theme: ThemeFile,
+    /// The file's own text. Kept because **the look travels as this text**: a
+    /// browser client has no `themes/` directory to read it from, and the same
+    /// text on both ends means the same palettes and the same refusal of a
+    /// broken one.
+    text: String,
+}
+
+impl FileTheme {
+    /// The name the picker shows and the settings store.
+    pub fn name(&self) -> &str {
+        &self.theme.name
+    }
+
+    /// The text that puts this look on another screen.
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+}
+
+/// The themes read from `themes/*.toml` in the config directory, by name.
+static FILE_THEMES: std::sync::OnceLock<Vec<FileTheme>> = std::sync::OnceLock::new();
+/// The one in force — `None` for the built-in chosen in [`set_look`].
+///
+/// Holds a `'static` reference: either into [`FILE_THEMES`], which never moves
+/// once set, or to a `FileTheme` leaked by [`install_theme_file`] for one that
+/// arrived as text. A theme arrives from the wire when a client adopts a stored
+/// look, so this cannot be a plain index into the list.
+static ACTIVE_FILE: std::sync::Mutex<Option<&'static FileTheme>> = std::sync::Mutex::new(None);
+/// Whether any file theme is in force — read on every [`palette`] call, so the
+/// lock below is only taken on a screen that actually wears one.
+static ANY_FILE: AtomicBool = AtomicBool::new(false);
+/// Whether the directory has been read, so a second call costs nothing.
+static FILES_READ: AtomicBool = AtomicBool::new(false);
+
+/// Read `dir` into the file-theme list. Returns one message per file that
+/// would not load — a theme the operator can see the reason for.
+///
+/// Called once, from the app's start-up; the second call returns nothing
+/// because the list is already in place.
+pub fn load_theme_files(dir: &std::path::Path) -> Vec<String> {
+    if FILES_READ.swap(true, Ordering::Relaxed) {
+        return Vec::new();
+    }
+    let mut loaded: Vec<FileTheme> = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => {
+            let _ = FILE_THEMES.set(loaded);
+            return errors;
+        }
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("toml") {
+            continue;
+        }
+        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("theme").to_string();
+        match std::fs::read_to_string(&path) {
+            Ok(text) => match toml::from_str::<ThemeFile>(&text) {
+                Ok(mut theme) => {
+                    if theme.name.trim().is_empty() {
+                        theme.name = stem;
+                    }
+                    loaded.push(FileTheme { theme, text: text.clone() });
+                }
+                // serde names the missing role or the colour it could not read,
+                // which is the whole of what an operator needs to fix it.
+                Err(e) => errors.push(format!("{}: {e}", path.display())),
+            },
+            Err(e) => errors.push(format!("{}: {e}", path.display())),
+        }
+    }
+    loaded.sort_by(|a, b| a.theme.name.cmp(&b.theme.name));
+    let _ = FILE_THEMES.set(loaded);
+    errors
+}
+
+/// The themes from files, sorted by name.
+pub fn theme_files() -> &'static [FileTheme] {
+    FILE_THEMES.get().map(|v| v.as_slice()).unwrap_or(&[])
+}
+
+/// Put a look in force.
+///
+/// `wire` is a theme that arrived as text from the server and wins where it is
+/// set; otherwise `name` picks one of the files on this machine, and anything
+/// unknown — a file deleted since it was chosen, a name this screen has never
+/// had — leaves the built-in chosen in [`set_look`] in force. Falling back is
+/// one call, and never a blank interface.
+pub fn install_theme_file(wire: Option<&str>, name: Option<&str>) {
+    let chosen = match wire {
+        Some(text) => theme_from_text(text),
+        None => name.and_then(|wanted| theme_files().iter().find(|t| t.name() == wanted)),
+    };
+    if let Ok(mut active) = ACTIVE_FILE.lock() {
+        *active = chosen;
+    }
+    ANY_FILE.store(chosen.is_some(), Ordering::Relaxed);
+}
+
+/// The file theme in force, if there is one.
+pub fn active_theme_file() -> Option<&'static FileTheme> {
+    ACTIVE_FILE.lock().ok().and_then(|active| *active)
+}
+
+/// Parse a theme that arrived as text, and keep it for the life of the process.
+///
+/// A leaked copy rather than a lock held for the whole of a frame: the same
+/// theme text arrives again on every screen the server sends, so the text
+/// already in force is handed back rather than copied a second time. A text
+/// that will not parse is `None`, which is the built-in — the same refusal a
+/// broken file gets, for the same reason.
+fn theme_from_text(text: &str) -> Option<&'static FileTheme> {
+    let parsed: ThemeFile = toml::from_str(text).ok()?;
+    if let Some(active) = active_theme_file()
+        && active.theme == parsed
+    {
+        return Some(active);
+    }
+    Some(Box::leak(Box::new(FileTheme { theme: parsed, text: text.to_string() })))
+}
+
+/// The file theme in force, if there is one. The colour accessors go through
+/// here, so the common case — every screen with a built-in theme — is one
+/// relaxed load and no lock.
+fn file_theme() -> Option<&'static ThemeFile> {
+    if !ANY_FILE.load(Ordering::Relaxed) {
+        return None;
+    }
+    active_theme_file().map(|f| &f.theme)
+}
+
 /// Select the process-wide look. Takes effect on whatever is painted next; the
 /// egui `Visuals` derived from it need a separate [`apply_visuals`] call.
 pub fn set_look(theme: UiTheme, buttons: ChromeStyle, windows: ChromeStyle) {
@@ -1822,6 +2112,9 @@ pub fn list_len() -> usize {
 }
 
 pub fn palette() -> &'static Palette {
+    if let Some(t) = file_theme() {
+        return &t.palette;
+    }
     &PALETTES[THEME.load(Ordering::Relaxed) as usize]
 }
 
@@ -3336,10 +3629,188 @@ mod programs_colour_tests {
         assert_eq!(programs_colour("PROGRAMS-TEST-OTHER"), Some((9, 8, 7)));
         assert_eq!(spot_color_for(&spot(SpotKind::Broadcast, "PROGRAMS-TEST-ONE")), (1, 2, 3));
         let pota = spot(SpotKind::Pota, "PROGRAMS-TEST-ONE");
-        assert_eq!(spot_color_for(&pota), spot_color(SpotKind::Pota), "a POTA spot is not a station");
+        assert_eq!(
+            spot_color_for(&pota),
+            spot_color(SpotKind::Pota),
+            "a POTA spot is not a station"
+        );
         set_programs_colours(None, &Default::default());
         assert_eq!(programs_colour("PROGRAMS-TEST-ONE"), None);
         let bc = spot(SpotKind::Broadcast, "PROGRAMS-TEST-ONE");
         assert_eq!(spot_color_for(&bc), spot_color(SpotKind::Broadcast));
+    }
+}
+
+#[cfg(test)]
+mod theme_file_tests {
+    use super::*;
+    use std::sync::{Mutex, OnceLock};
+
+    /// The process-wide theme statics are one register, so the tests that
+    /// switch it take turns.
+    static SWITCH: Mutex<()> = Mutex::new(());
+
+    fn builtin_file(index: usize) -> ThemeFile {
+        ThemeFile {
+            name: format!("{:?}", UiTheme::ALL[index]),
+            palette: PALETTES[index],
+            meter: METER_PALETTES[index],
+            scope: SCOPE_PALETTES[index],
+            map: MAP_PALETTES[index],
+        }
+    }
+
+    /// The fixture directory: one good theme file and two that will not load,
+    /// written once and read by [`load_theme_files`] once.
+    fn fixtures() -> &'static std::path::Path {
+        static DIR: OnceLock<std::path::PathBuf> = OnceLock::new();
+        DIR.get_or_init(|| {
+            let dir = std::env::temp_dir().join(format!("sdroxide-themes-{}", std::process::id()));
+            std::fs::create_dir_all(&dir).unwrap();
+
+            let mut good = builtin_file(1);
+            good.name = "Fixture Theme".to_string();
+            std::fs::write(dir.join("good.toml"), toml::to_string_pretty(&good).unwrap()).unwrap();
+
+            // A role taken out: the file must be refused, naming the role,
+            // rather than drawn with one colour missing.
+            let text = toml::to_string_pretty(&builtin_file(1)).unwrap();
+            let text: String = text
+                .lines()
+                .filter(|l| !l.trim_start().starts_with("panel ="))
+                .map(|l| format!("{l}\n"))
+                .collect();
+            std::fs::write(dir.join("broken-role.toml"), text).unwrap();
+
+            // A colour that is not one.
+            let text = toml::to_string_pretty(&builtin_file(1))
+                .unwrap()
+                .replace("bg_deep = \"#", "bg_deep = \"zz");
+            std::fs::write(dir.join("broken-colour.toml"), text).unwrap();
+
+            dir
+        })
+    }
+
+    /// The fixture directory read once, whoever asks first: the loader reads its
+    /// directory exactly once per process, so every test has to share the one
+    /// read and the one set of refusals.
+    fn fixtures_loaded() -> &'static [String] {
+        static ERRORS: OnceLock<Vec<String>> = OnceLock::new();
+        ERRORS.get_or_init(|| load_theme_files(fixtures()))
+    }
+
+    /// `SDROXIDE_THEME_DUMP=<dir> cargo test -p sdroxide-ui --lib theme_file`
+    /// writes every built-in out as a theme file: how a new one is started.
+    #[test]
+    fn a_builtin_theme_can_be_written_out_as_a_theme_file() {
+        let Ok(dir) = std::env::var("SDROXIDE_THEME_DUMP") else {
+            return;
+        };
+        let dir = std::path::PathBuf::from(dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for i in 0..UiTheme::ALL.len() {
+            let file = builtin_file(i);
+            let text = toml::to_string_pretty(&file).unwrap();
+            std::fs::write(dir.join(format!("{}.toml", file.name)), &text).unwrap();
+            // What is written is what loads back.
+            let back: ThemeFile = toml::from_str(&text).unwrap();
+            assert_eq!(back.palette, file.palette, "{}", file.name);
+            assert_eq!(back.meter, file.meter, "{}", file.name);
+            assert_eq!(back.scope, file.scope, "{}", file.name);
+            assert_eq!(back.map, file.map, "{}", file.name);
+        }
+    }
+
+    #[test]
+    fn a_missing_role_is_refused_by_name() {
+        let text = std::fs::read_to_string(fixtures().join("broken-role.toml")).unwrap();
+        let err = toml::from_str::<ThemeFile>(&text).unwrap_err().to_string();
+        assert!(err.contains("panel"), "the message names the role: {err}");
+    }
+
+    #[test]
+    fn a_colour_that_is_not_one_is_refused() {
+        let text = std::fs::read_to_string(fixtures().join("broken-colour.toml")).unwrap();
+        let err = toml::from_str::<ThemeFile>(&text).unwrap_err().to_string();
+        assert!(err.contains("zz"), "the message shows the value: {err}");
+    }
+
+    #[test]
+    fn only_the_good_file_loads_and_the_bad_ones_say_why() {
+        let _turn = SWITCH.lock().unwrap();
+        let errors = fixtures_loaded();
+        assert_eq!(errors.len(), 2, "two files refused: {errors:?}");
+        assert!(errors.iter().any(|e| e.contains("broken-role.toml") && e.contains("panel")));
+        assert!(errors.iter().any(|e| e.contains("broken-colour.toml")));
+        let names: Vec<&str> = theme_files().iter().map(|t| t.name()).collect();
+        assert_eq!(names, ["Fixture Theme"], "sorted, and only what loaded");
+    }
+
+    #[test]
+    fn the_file_theme_wins_where_it_is_chosen_and_falls_back_when_it_is_not() {
+        let _turn = SWITCH.lock().unwrap();
+        let _ = fixtures_loaded();
+        let built_in = PALETTES[THEME.load(Ordering::Relaxed) as usize];
+
+        install_theme_file(None, Some("Fixture Theme"));
+        let fixture = &theme_files()[0].theme;
+        assert_eq!(palette().bg_deep, fixture.palette.bg_deep);
+        assert_eq!(meter_palette().face, fixture.meter.face);
+        assert_eq!(scope().ink, fixture.scope.ink);
+
+        // A name that is not there — a file deleted since it was chosen — is
+        // the built-in, not a blank interface.
+        install_theme_file(None, Some("A Theme That Went Away"));
+        assert_eq!(palette(), &built_in);
+
+        install_theme_file(None, None);
+        assert_eq!(palette(), &built_in);
+    }
+
+    /// The look a stored profile carries travels as its text, and the same text
+    /// arriving again is the same theme rather than another copy: a server sends
+    /// the screen on every change.
+    #[test]
+    fn a_theme_from_text_is_the_look_and_its_text_comes_back() {
+        let _turn = SWITCH.lock().unwrap();
+        let _ = fixtures_loaded();
+        let text = std::fs::read_to_string(fixtures().join("good.toml")).unwrap();
+
+        install_theme_file(Some(&text), None);
+        let active = active_theme_file().expect("the text is a theme");
+        assert_eq!(active.name(), "Fixture Theme");
+        assert_eq!(palette().bg_deep, active.theme.palette.bg_deep);
+        assert_eq!(active.text(), text, "the text a profile would be given");
+
+        install_theme_file(Some(&text), None);
+        assert!(
+            std::ptr::eq(active, active_theme_file().unwrap()),
+            "the text already in force is handed back, not copied again"
+        );
+    }
+
+    #[test]
+    fn a_text_that_will_not_parse_leaves_the_built_in() {
+        let _turn = SWITCH.lock().unwrap();
+        let _ = fixtures_loaded();
+        let built_in = PALETTES[THEME.load(Ordering::Relaxed) as usize];
+        install_theme_file(Some("name = \"Broken\"\n[palette]\npanel = \"zz\"\n"), None);
+        assert_eq!(palette(), &built_in, "refused, so the built-in stands");
+        assert!(active_theme_file().is_none());
+    }
+
+    /// A profile's look wins over the name this screen has: the text is what the
+    /// server was wearing, and the name may not even be a file here.
+    #[test]
+    fn the_profiles_theme_wins_over_the_local_name() {
+        let _turn = SWITCH.lock().unwrap();
+        let _ = fixtures_loaded();
+        let mut text = std::fs::read_to_string(fixtures().join("good.toml")).unwrap();
+        text = text.replace("name = \"Fixture Theme\"", "name = \"From the Profile\"");
+        install_theme_file(Some(&text), Some("Fixture Theme"));
+        let active = active_theme_file().unwrap();
+        assert_eq!(active.name(), "From the Profile");
+        assert_eq!(palette().bg_deep, active.theme.palette.bg_deep);
     }
 }

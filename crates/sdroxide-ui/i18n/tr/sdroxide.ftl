@@ -9685,3 +9685,9 @@ settings-ui-graphics-note = Bir sonraki başlatmada geçerli olur. Otomatik, Dir
 wefax-auto-slant = OTOMATİK EĞİM
 
 wefax-auto-slant-hint = Eğik bir haritayı önce kendi faz sinyalinden, sonra görüntünün kendisinden düzeltir. Kapalıyken yalnızca aşağıdaki ayar geçerlidir ve onu hiçbir şey değiştirmez. Ayar ve bu anahtar sunucuda her telsiz için ayrı saklanır.
+
+settings-ui-theme-file = Dosyadan tema
+
+settings-ui-theme-file-builtin = Yerleşik tema
+
+settings-ui-theme-file-hint = Dosyalar yapılandırma dizinindeki themes/ klasöründen okunur.

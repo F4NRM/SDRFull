@@ -501,6 +501,20 @@ pub struct SdroxideApp {
     /// the settings dialog changes any of them — no restart.
     applied_look:
         (sdroxide_types::UiTheme, sdroxide_types::ChromeStyle, sdroxide_types::ChromeStyle),
+    /// The file theme last put in force, so a change is noticed exactly once.
+    applied_theme_file: Option<String>,
+    /// **A look that came with a stored profile**, as the server sent it: the
+    /// theme file's name and its text. The text is the only way a browser —
+    /// which has no `themes/` directory — can wear a theme from a file, and it
+    /// wins over the local name while it is set. Moving either theme control
+    /// clears it, so the picker is never a control that quietly does nothing.
+    wire_theme: Option<sdroxide_types::ScreenThemeFile>,
+    /// The theme text last put in force — the wire theme's, empty for a local
+    /// file — so a new one is noticed exactly once.
+    applied_theme_text: Option<String>,
+    /// A look adopted from a profile, to be put in force at the top of the next
+    /// frame — with the rest of the visuals, and away from the settings window.
+    look_pending: bool,
     /// **Classic UI**: the column is folded away. Session-only, and separate
     /// from the setting, because folding a column to see the picture is a thing
     /// done for a minute rather than a preference — SDR++'s ☰ is the same
@@ -2144,6 +2158,25 @@ impl SdroxideApp {
         if crate::app::frame::repair_mode_panel_windows(&mut ui_settings) {
             crate::app::persist::persist_ui_settings(&ui_settings);
         }
+        // **Themes from files** (the config directory's `themes/*.toml`), read
+        // once and listed beside the built-ins. A file that will not parse is
+        // reported by name and skipped — the built-in stays in force for it.
+        //
+        // Skipped in a unit-test build: a test that constructs the app must not
+        // read the operator's configuration, and the one-shot read is what the
+        // theme-file tests drive themselves.
+        #[cfg(not(target_arch = "wasm32"))]
+        if cfg!(not(test))
+            && let Ok(dir) = sdroxide_config::config_dir()
+        {
+            // Made even when empty: a folder to drop a file into is the
+            // difference between a setting and a setting you can find.
+            let themes = dir.join("themes");
+            let _ = std::fs::create_dir_all(&themes);
+            for problem in crate::theme::load_theme_files(&themes) {
+                eprintln!("sdroxide: theme not loaded: {problem}");
+            }
+        }
         // Start in SWL mode when asked: either the stored preference or this
         // run's `--swl`. The per-radio switch can still turn it off for a
         // session (which clears this seed), but the next start honours the
@@ -2153,6 +2186,9 @@ impl SdroxideApp {
             ui_settings.button_style,
             ui_settings.window_style,
         );
+        // The file theme is a second layer over that built-in choice, and a
+        // stored profile's own theme is not in the picture yet at start-up.
+        crate::theme::install_theme_file(None, ui_settings.theme_file.as_deref());
         crate::theme::set_font_sizes(
             ui_settings.skimmer_font_size,
             ui_settings.waterfall_font_size,
@@ -2290,6 +2326,10 @@ impl SdroxideApp {
             // that persists now.
             swl_start: ui_settings.start_swl || ui_settings.swl || sdroxide_types::force_swl(),
             applied_look: (ui_settings.theme, ui_settings.button_style, ui_settings.window_style),
+            applied_theme_file: ui_settings.theme_file.clone(),
+            wire_theme: None,
+            applied_theme_text: None,
+            look_pending: false,
             classic_collapsed: false,
             applied_ui_font: ui_settings.menu_font_size,
             applied_language: ui_settings.language,

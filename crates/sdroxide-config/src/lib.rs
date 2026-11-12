@@ -1906,9 +1906,9 @@ impl ClientSettingsStore {
         if let Some(name) = profile
             && let Some(s) = self.profiles.get(name)
         {
-            return Some((Some(name.to_string()), *s));
+            return Some((Some(name.to_string()), s.clone()));
         }
-        self.default.map(|s| (None, s))
+        self.default.clone().map(|s| (None, s))
     }
 
     /// Store `settings` against `profile`, or as the default when it is `None`.

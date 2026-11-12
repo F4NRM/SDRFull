@@ -9685,3 +9685,9 @@ settings-ui-graphics-note = Vale a partir da próxima inicialização. Automáti
 wefax-auto-slant = INCLINAÇÃO AUTO
 
 wefax-auto-slant-hint = Endireita uma carta inclinada, primeiro pelo próprio sinal de fasagem e depois pela própria imagem. Desligado: só vale o ajuste abaixo e nada o altera. O ajuste e esta chave ficam guardados por rádio no servidor.
+
+settings-ui-theme-file = Tema de um arquivo
+
+settings-ui-theme-file-builtin = O tema embutido
+
+settings-ui-theme-file-hint = Os arquivos são lidos de themes/ no diretório de configuração.

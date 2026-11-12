@@ -9685,3 +9685,9 @@ settings-ui-graphics-note = Werkt vanaf de volgende start. Automatisch gebruikt 
 wefax-auto-slant = AUTO SCHEEFSTAND
 
 wefax-auto-slant-hint = Richt een scheve kaart recht, eerst op basis van het eigen fasesignaal en daarna op basis van het beeld zelf. Uit: alleen de trim hieronder geldt en niets verandert die. De trim en deze schakelaar worden per radio op de server bewaard.
+
+settings-ui-theme-file = Thema uit een bestand
+
+settings-ui-theme-file-builtin = Het ingebouwde thema
+
+settings-ui-theme-file-hint = Bestanden worden gelezen uit themes/ in de configuratiemap.

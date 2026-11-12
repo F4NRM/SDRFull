@@ -9623,3 +9623,9 @@ settings-ui-graphics-note = 下次启动时生效。自动模式使用 DirectX 1
 wefax-auto-slant = 自动倾斜校正
 
 wefax-auto-slant-hint = 先根据海图自身的相位信号、再根据图像本身来校正倾斜的海图。关闭时只应用下方的微调，不会有任何自动调整。微调值和此开关按每台电台保存在服务器上。
+
+settings-ui-theme-file = 来自文件的主题
+
+settings-ui-theme-file-builtin = 内置主题
+
+settings-ui-theme-file-hint = 文件从配置目录下的 themes/ 读取。

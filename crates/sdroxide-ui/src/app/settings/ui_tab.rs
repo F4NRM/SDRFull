@@ -118,6 +118,46 @@ pub(in crate::app) fn settings_ui_tab(
         enum_combo(ui, "ui-theme", &mut cfg.theme, &UiTheme::ALL, UiTheme::tr);
         ui.end_row();
 
+        // **A theme from a file** is a layer over the built-in above, not a
+        // replacement: the built-in stays chosen underneath, so a file that is
+        // deleted or will not load leaves the interface drawn rather than
+        // blank. Shown when there is something to choose, and also when one is
+        // stored: the theme on the screen may be one this machine has no file
+        // for — a browser has none at all — and it is still what is showing.
+        let file_themes = crate::theme::theme_files();
+        if !file_themes.is_empty() || cfg.theme_file.is_some() {
+            ui.label(tr!("settings-ui-theme-file"));
+            let current = cfg.theme_file.clone().unwrap_or_default();
+            let mut names: Vec<String> = file_themes.iter().map(|t| t.name().to_string()).collect();
+            if !current.is_empty() && !names.iter().any(|n| *n == current) {
+                names.push(current.clone());
+            }
+            ComboBox::from_id_salt("ui-theme-file")
+                .selected_text(if current.is_empty() {
+                    tr!("settings-ui-theme-file-builtin").to_string()
+                } else {
+                    current.clone()
+                })
+                .show_styled(ui, |ui| {
+                    if ui
+                        .selectable_label(current.is_empty(), tr!("settings-ui-theme-file-builtin"))
+                        .clicked()
+                    {
+                        cfg.theme_file = None;
+                    }
+                    for name in &names {
+                        if ui.selectable_label(current == *name, name.clone()).clicked() {
+                            cfg.theme_file = Some(name.clone());
+                        }
+                    }
+                });
+            ui.end_row();
+
+            ui.label("");
+            ui.label(RichText::new(tr!("settings-ui-theme-file-hint")).small().weak());
+            ui.end_row();
+        }
+
         ui.label(tr!("settings-ui-button-style"));
         enum_combo(ui, "ui-btn-style", &mut cfg.button_style, &ChromeStyle::ALL, ChromeStyle::tr);
         ui.end_row();

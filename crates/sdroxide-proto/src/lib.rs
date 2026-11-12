@@ -2429,8 +2429,20 @@ use sdroxide_types::{
 /// `Command::SetDigiConfig` whole, so this is the same appended-field break as
 /// v214. `#[serde(default = ...)]` keeps a stored `digi.json` loading unchanged.
 /// `PROTO_VERSION` 298 → 299, `VERSION_BYTE` 0x76 → 0x77.
-pub const PROTO_VERSION: u16 = 299;
-const VERSION_BYTE: u8 = 0x77;
+///
+/// v300: **a look from a theme file, on the wire.**
+/// [`sdroxide_types::ClientScreen`] gains `theme_file` at its tail: the name and
+/// the text of a theme that came from `themes/*.toml`. The text and not the four
+/// palettes, so the client parses it with the same loader the server used and a
+/// broken theme is refused by name at both ends; and not the name alone, because
+/// a browser has no `themes/` directory to read it from. `ClientScreen` rides
+/// `ServerMsg::ClientSettings` and `Command::SetClientSettings` whole, so this
+/// is the same appended-field break as v194 — with one further consequence: the
+/// screen is no longer `Copy`, because it now carries a `String`.
+/// `PROTO_VERSION` 299 → 300, `VERSION_BYTE` 0x77 → 0x78.
+/// `PROTO_VERSION` 299 → 300, `VERSION_BYTE` 0x77 → 0x78.
+pub const PROTO_VERSION: u16 = 300;
+const VERSION_BYTE: u8 = 0x78;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3754,11 +3766,17 @@ mod tests {
         }
         // v296: the SSTV clock layer (`TextLayer::clock`) appended at the tail
         // of a `Composer` layer, which rides the picture preset messages.
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
+        // v300: the theme-from-a-file at the tail of `ClientScreen`.
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
         // v297: the strip height at the tail of `ClientScreen`, and it comes
-        // back as sent.
+        // back as sent — with, since v300, the theme file's name and text.
+        let screen_text = "name = \"Vending machines\"\n".to_string();
         let screen = sdroxide_types::ClientScreen {
             wide_strip_height: 180.0,
+            theme_file: Some(sdroxide_types::ScreenThemeFile {
+                name: "Vending machines".into(),
+                text: screen_text.clone(),
+            }),
             ..sdroxide_types::ClientScreen::default()
         };
         let reply = ServerMsg::ClientSettings(ClientSettingsReply {
@@ -3767,7 +3785,12 @@ mod tests {
             has_stored: true,
         });
         match decode::<ServerMsg>(&encode(&reply).unwrap()).unwrap() {
-            ServerMsg::ClientSettings(r) => assert_eq!(r.settings.wide_strip_height, 180.0),
+            ServerMsg::ClientSettings(r) => {
+                assert_eq!(r.settings.wide_strip_height, 180.0);
+                let file = r.settings.theme_file.expect("the theme file came back");
+                assert_eq!(file.name, "Vending machines");
+                assert_eq!(file.text, screen_text);
+            }
             _ => panic!("ClientSettings did not round-trip"),
         }
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
@@ -3825,7 +3848,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3847,7 +3870,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4952,14 +4975,14 @@ mod tests {
         let ServerMsg::Ft8Status(s) = back else { panic!("not a status") };
         assert!(!s.config.wefax_auto_slant);
         assert_eq!(s.config.wefax_slant_ppm, -37.5);
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
     }
 
     /// v289: the satellite lock's CTCSS tone rides the end of `SatLockConfig`,
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

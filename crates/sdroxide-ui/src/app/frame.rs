@@ -879,9 +879,29 @@ impl eframe::App for SdroxideApp {
         // window's ScrollPalette push/pop.
         let look =
             (self.ui_settings.theme, self.ui_settings.button_style, self.ui_settings.window_style);
-        if self.applied_look != look {
+        // **The look from a file**, or from the profile as text, is a second
+        // layer over the built-in choice: a local move of either theme control
+        // clears the profile's own, or the picker would be a control that does
+        // nothing because something above it won.
+        let local_look =
+            self.applied_look != look || self.applied_theme_file != self.ui_settings.theme_file;
+        if local_look {
+            self.wire_theme = None;
+        }
+        let wire_text = self.wire_theme.as_ref().map(|t| t.text.clone());
+        if local_look
+            || self.look_pending
+            || self.applied_theme_text.as_deref() != wire_text.as_deref()
+        {
             self.applied_look = look;
+            self.applied_theme_file = self.ui_settings.theme_file.clone();
+            self.applied_theme_text = wire_text.clone();
+            self.look_pending = false;
             crate::theme::set_look(look.0, look.1, look.2);
+            crate::theme::install_theme_file(
+                wire_text.as_deref(),
+                self.applied_theme_file.as_deref(),
+            );
             crate::theme::apply_visuals(&ctx);
             ctx.request_repaint();
         }
@@ -4158,6 +4178,9 @@ impl SdroxideApp {
                         // find the picker, which is exactly how it reached a
                         // tester on three releases.
                         settings.apply_to(&mut self.ui_settings);
+                        // The look's theme file as well, as text: what the
+                        // server was wearing, for a screen with no files.
+                        self.adopt_profile_look(settings.theme_file.clone());
                         self.view.center_on_vfo = settings.center_on_vfo;
                         self.view.fft_size = settings.fft_size;
                         self.view.wide_strip_height =
@@ -5154,15 +5177,18 @@ impl SdroxideApp {
             return;
         }
         let mut screen = sdroxide_types::ClientScreen::from_settings(&self.ui_settings);
+        // The theme's text as well: a browser has no `themes/` directory, so the
+        // look travels as the file it was read from.
+        screen.theme_file = self.theme_file_for_profile();
         screen.center_on_vfo = self.view.center_on_vfo;
         screen.fft_size = self.view.fft_size;
         screen.wide_strip_height = self.view.wide_strip_height;
-        if self.client_settings_stored == Some(screen) {
+        if self.client_settings_stored.as_ref() == Some(&screen) {
             return;
         }
         self.client_save_last = now;
         let profile = self.client_settings_from.clone().flatten();
-        self.ctrl.send_client_settings(profile, screen);
+        self.ctrl.send_client_settings(profile, screen.clone());
         self.client_settings_stored = Some(screen);
         // Deliberately no `client_settings_status`: this happens on its own, and
         // a row that announces a save every few seconds is a row nobody reads.
@@ -5172,13 +5198,17 @@ impl SdroxideApp {
     pub(in crate::app) fn save_screen_to_profile(&mut self) {
         let profile = self.client_settings_from.clone().flatten();
         let mut screen = sdroxide_types::ClientScreen::from_settings(&self.ui_settings);
+        // The theme's text as well: a browser has no `themes/` directory, so the
+        // look travels as the file it was read from.
+        screen.theme_file = self.theme_file_for_profile();
         // `from_settings` cannot see these — they are the panadapter's own, in
-        // `ViewState`, which this crate owns and `sdroxide-types` does not. So
-        // the client fills them here and puts them back on the way in.
+        // `ViewState`, which this crate owns and `sdroxide-types` does not — nor
+        // the theme's text, which is a file's. So the client fills them here and
+        // puts them back on the way in.
         screen.center_on_vfo = self.view.center_on_vfo;
         screen.fft_size = self.view.fft_size;
         screen.wide_strip_height = self.view.wide_strip_height;
-        self.ctrl.send_client_settings(profile.clone(), screen);
+        self.ctrl.send_client_settings(profile.clone(), screen.clone());
         self.client_settings_stored = Some(screen);
         self.client_settings_status = Some(match &profile {
             Some(name) => tr!("frame-saved-to-profile", name = name),
@@ -5186,11 +5216,44 @@ impl SdroxideApp {
         });
     }
 
+    /// **The look this screen would store in a profile**, theme file and all.
+    ///
+    /// The file's text travels with its name because the screen that reads it
+    /// back may have no `themes/` directory: a browser has none at all. Taken
+    /// from the look **in force** rather than from the setting, so what is sent
+    /// is what is on the screen.
+    fn theme_file_for_profile(&self) -> Option<sdroxide_types::ScreenThemeFile> {
+        let file = crate::theme::active_theme_file()?;
+        Some(sdroxide_types::ScreenThemeFile {
+            name: file.name().to_string(),
+            text: file.text().to_string(),
+        })
+    }
+
+    /// Take a look that came with a stored profile.
+    ///
+    /// The built-in choice and the name are already in `ui_settings` — the
+    /// profile laid them there — and the text is the part only the server can
+    /// give. Marked as applied and put in force at the top of the next frame,
+    /// which is the one place a visuals rewrite cannot race the settings
+    /// window's `ScrollPalette` push/pop; marked as applied so that adoption is
+    /// not read as the operator moving a control, which would clear it.
+    fn adopt_profile_look(&mut self, theme_file: Option<sdroxide_types::ScreenThemeFile>) {
+        self.wire_theme = theme_file;
+        self.applied_look =
+            (self.ui_settings.theme, self.ui_settings.button_style, self.ui_settings.window_style);
+        self.applied_theme_file = self.ui_settings.theme_file.clone();
+        self.look_pending = true;
+    }
+
     /// Silent variant used by control chips: persists the screen (including the
     /// FFT size and CTR) without announcing it in the status row.
     pub(in crate::app) fn save_screen_to_profile_silent(&mut self) {
         let profile = self.client_settings_from.clone().flatten();
         let mut screen = sdroxide_types::ClientScreen::from_settings(&self.ui_settings);
+        // The theme's text as well: a browser has no `themes/` directory, so the
+        // look travels as the file it was read from.
+        screen.theme_file = self.theme_file_for_profile();
         screen.center_on_vfo = self.view.center_on_vfo;
         screen.fft_size = self.view.fft_size;
         screen.wide_strip_height = self.view.wide_strip_height;
@@ -5403,6 +5466,7 @@ impl SdroxideApp {
         match self.client_settings_stored.clone() {
             Some(stored) => {
                 stored.apply_to(&mut self.ui_settings);
+                self.adopt_profile_look(stored.theme_file.clone());
                 self.view.center_on_vfo = stored.center_on_vfo;
                 self.view.fft_size = stored.fft_size;
                 self.view.wide_strip_height =
