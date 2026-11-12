@@ -397,43 +397,6 @@ impl IqRateMeter {
 
 thread_local! {
     static IQ_RATE: std::cell::RefCell<IqRateMeter> = std::cell::RefCell::new(IqRateMeter::default());
-    static AUDIO_RATE: std::cell::RefCell<IqRateMeter> = std::cell::RefCell::new(IqRateMeter::default());
-}
-
-/// Count one block of a rig's sound-card audio into its own rate meter. Same
-/// fit as [`iq_rate_meter`], on the audio stream: a sound card's crystal is as
-/// far from true time as a tuner's, and a decoder cutting lines to the
-/// transmitter's clock (WEFAX) sees it as a slant whichever radio it listens to.
-///
-/// A recording played back is delivered as fast as it is read, which is no
-/// rate at all: while `playback` the meter is kept empty, so nothing of it is
-/// left in the fit when the live stream comes back.
-fn audio_rate_meter(n: usize, nominal_hz: f64, playback: bool) -> Option<f64> {
-    if playback {
-        AUDIO_RATE.with(|m| *m.borrow_mut() = IqRateMeter::default());
-        return None;
-    }
-    if n > 0 && nominal_hz > 0.0 {
-        AUDIO_RATE.with(|m| m.borrow_mut().feed(n, nominal_hz))
-    } else {
-        None
-    }
-}
-
-/// What a decoder is told about its sample clock, in ppm.
-///
-/// Fed from the IQ chain it gets the IQ stream's error; fed from a rig's sound
-/// card (demod-audio rig, or a transceiver's audio beside a panadapter
-/// receiver) it gets the audio stream's. A recording played back runs on no
-/// clock of the radio's and is told zero.
-fn digi_clock_ppm(from_iq: bool, playback: bool, iq_ppm: f64, audio_ppm: f64) -> f64 {
-    if playback {
-        0.0
-    } else if from_iq {
-        iq_ppm
-    } else {
-        audio_ppm
-    }
 }
 
 /// Count one IQ block into the rate meter of the engine thread. Returns the
@@ -3403,10 +3366,6 @@ struct Engine {
     /// (negative: slow), from the live fit of [`IqRateMeter`]. Handed to a
     /// decoder whose time base is that stream.
     iq_clock_ppm: f64,
-    /// The same for a rig's sound card: how far the audio stream it delivers
-    /// runs from its nominal rate, in ppm, from a second [`IqRateMeter`] kept
-    /// on the audio blocks. Handed to a decoder fed from that audio.
-    audio_clock_ppm: f64,
     cal_offset_db: f32,
     stacks: BandStacks,
     memories: Vec<MemoryChannel>,
@@ -5465,7 +5424,6 @@ fn engine_thread(
         recorder: None,
         playback_return: None,
         iq_clock_ppm: 0.0,
-        audio_clock_ppm: 0.0,
         cal_offset_db: engine_cfg.cal_offset_db,
         stacks,
         memories,
@@ -7103,12 +7061,6 @@ impl Engine {
             {
                 self.ext_audio_rate = rate;
             }
-            if let Some(ppm) =
-                audio_rate_meter(self.audio_re.len(), self.ext_audio_rate, self.playback_return.is_some())
-            {
-                self.audio_clock_ppm = ppm;
-                self.sync_digi_clock();
-            }
             self.play_rx_audio(self.ext_audio_rate);
             self.main_play.clear();
             self.main_play.extend_from_slice(&self.audio_play);
@@ -7593,10 +7545,6 @@ impl Engine {
     /// audio (packed in the I component). No DDC/demod — FFT it for the narrow
     /// panadapter, play it to the speakers, and feed the digital decoders.
     fn run_audio_mode(&mut self, iq: &[Complex32]) {
-        if let Some(ppm) = audio_rate_meter(iq.len(), self.radio_fs, self.playback_return.is_some()) {
-            self.audio_clock_ppm = ppm;
-            self.sync_digi_clock();
-        }
         self.audio_re.clear();
         self.audio_re.extend(iq.iter().map(|c| c.re));
 
@@ -9355,13 +9303,8 @@ impl Engine {
     /// base. One fed from a transceiver's sound card, or from a recording
     /// being played back, runs on a clock of its own and is told zero.
     fn sync_digi_clock(&mut self) {
-        let from_iq = !self.audio_mode && !self.caps.rx_audio_external;
-        let ppm = digi_clock_ppm(
-            from_iq,
-            self.playback_return.is_some(),
-            self.iq_clock_ppm,
-            self.audio_clock_ppm,
-        );
+        let from_iq = !self.audio_mode && !self.caps.rx_audio_external && self.playback_return.is_none();
+        let ppm = if from_iq { self.iq_clock_ppm } else { 0.0 };
         if let Some(d) = self.digi.as_mut() {
             d.set_clock_ppm(ppm);
         }
@@ -23152,23 +23095,6 @@ fn free_image_name(dir: &std::path::Path, kind: &str, ts: u128) -> String {
         name = format!("{kind}-{ts}-{n}.png");
     }
     name
-}
-
-#[cfg(test)]
-mod digi_clock_tests {
-    use super::digi_clock_ppm;
-
-    /// **A decoder fed from a rig's sound card is told that card's clock error,
-    /// not zero.** Only the IQ chain used to be measured, so WEFAX on a CAT
-    /// transceiver with a sound card got no correction at all.
-    #[test]
-    fn a_rig_sound_card_is_corrected_like_the_iq_stream() {
-        assert_eq!(digi_clock_ppm(true, false, -220.0, 35.0), -220.0);
-        assert_eq!(digi_clock_ppm(false, false, -220.0, 35.0), 35.0);
-        // A recording played back runs on no clock of the radio's.
-        assert_eq!(digi_clock_ppm(true, true, -220.0, 35.0), 0.0);
-        assert_eq!(digi_clock_ppm(false, true, -220.0, 35.0), 0.0);
-    }
 }
 
 #[cfg(test)]
