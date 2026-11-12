@@ -795,12 +795,25 @@ impl SdroxideApp {
             engine == CwEngine::Timing,
             RichText::new(engine.tr()).size(10.5),
         )
-        .on_hover_text(tr!(
-            "cw-click-decoder-neural-one-copies",
-            hint = engine.hint(),
-            neural = match engine {
-                CwEngine::Neural => CwEngine::Timing.tr(),
-                CwEngine::Timing => CwEngine::Neural.tr(),
+        .on_hover_text(format!(
+            "{}{}",
+            tr!(
+                "cw-click-decoder-neural-one-copies",
+                hint = engine.hint(),
+                neural = match engine {
+                    CwEngine::Neural => CwEngine::Timing.tr(),
+                    CwEngine::Timing => CwEngine::Neural.tr(),
+                }
+            ),
+            if engine == CwEngine::Neural {
+                format!(
+                    "
+
+{}",
+                    tr!("cw-neural-heavy-small-machine")
+                )
+            } else {
+                String::new()
             }
         ))
         .clicked()

@@ -9761,3 +9761,5 @@ ptt-not-open = Açık değil
 ptt-pressed = BASILI
 
 ptt-released = bırakıldı
+
+cw-neural-heavy-small-machine = Küçük bir makinede ağırdır: dört çekirdek veya daha azında (örneğin bir Raspberry Pi) zamanlama çözücü hafif seçimdir.

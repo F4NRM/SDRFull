@@ -9764,3 +9764,5 @@ ptt-not-open = Non ouvert
 ptt-pressed = APPUYÉ
 
 ptt-released = relâché
+
+cw-neural-heavy-small-machine = Lourd sur une petite machine : à quatre cœurs ou moins (un Raspberry Pi, par exemple), le décodeur temporel est le choix léger.

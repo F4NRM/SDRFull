@@ -9776,3 +9776,5 @@ ptt-not-open = Не открыто
 ptt-pressed = НАЖАТО
 
 ptt-released = отпущено
+
+cw-neural-heavy-small-machine = Тяжело для маломощного компьютера: при четырёх ядрах или меньше (например, Raspberry Pi) лёгкий выбор — декодер по времени.

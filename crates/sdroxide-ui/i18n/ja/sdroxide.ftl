@@ -9709,3 +9709,5 @@ ptt-not-open = 未接続
 ptt-pressed = 押下中
 
 ptt-released = 解放
+
+cw-neural-heavy-small-machine = 小型のマシンでは負荷が大きくなります。コアが4つ以下（Raspberry Pi など）の場合は、軽いタイミングデコーダーをお勧めします。
