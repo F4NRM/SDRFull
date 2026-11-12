@@ -2440,9 +2440,15 @@ use sdroxide_types::{
 /// is the same appended-field break as v194 — with one further consequence: the
 /// screen is no longer `Copy`, because it now carries a `String`.
 /// `PROTO_VERSION` 299 → 300, `VERSION_BYTE` 0x77 → 0x78.
-/// `PROTO_VERSION` 299 → 300, `VERSION_BYTE` 0x77 → 0x78.
-pub const PROTO_VERSION: u16 = 300;
-const VERSION_BYTE: u8 = 0x78;
+///
+/// v301: **the desk microphone and the pedal (issue #636).**
+/// `Command::SetPttInputs` and `Command::RescanPttInputs`,
+/// `RadioEvent::PttInputsStatus` / `ServerMsg::PttInputsStatus`, and
+/// `StationConfig::ptt_inputs` at the tail of `StationConfig`. All appended, so
+/// no surviving discriminant moves. `PROTO_VERSION` 300 → 301, `VERSION_BYTE`
+/// 0x78 → 0x79.
+pub const PROTO_VERSION: u16 = 301;
+const VERSION_BYTE: u8 = 0x79;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3050,6 +3056,11 @@ pub enum ServerMsg {
     /// The Meshtastic receiver: level, counters, the nodes heard and the packet
     /// log, a whole snapshot each time. Appended last (v287).
     MeshtasticStatus(Box<sdroxide_types::MeshtasticStatus>),
+    /// The desk microphone and the pedal (issue #636), mirrored from the
+    /// engine's `RadioEvent::PttInputsStatus`. Cached by the server and
+    /// replayed on connect, so a settings dialog opened mid-session shows the
+    /// devices at once. Appended last (v301).
+    PttInputsStatus(Box<sdroxide_types::PttInputsStatus>),
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3767,7 +3778,7 @@ mod tests {
         // v296: the SSTV clock layer (`TextLayer::clock`) appended at the tail
         // of a `Composer` layer, which rides the picture preset messages.
         // v300: the theme-from-a-file at the tail of `ClientScreen`.
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (301, 0x79));
         // v297: the strip height at the tail of `ClientScreen`, and it comes
         // back as sent — with, since v300, the theme file's name and text.
         let screen_text = "name = \"Vending machines\"\n".to_string();
@@ -3848,7 +3859,60 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (301, 0x79));
+    }
+
+    /// v301: the desk microphone and the pedal (issue #636) ride the wire, and
+    /// their messages sit last in their enums.
+    #[test]
+    fn the_ptt_inputs_round_trip_and_are_appended_last() {
+        use sdroxide_types::{
+            LineDrive, PttHold, PttInputConfig, PttInputSource, PttInputsConfig, PttInputsStatus,
+            SenseLine,
+        };
+        let mut cfg = PttInputsConfig::default();
+        cfg.desk_mic = PttInputConfig {
+            enabled: true,
+            source: PttInputSource::Serial,
+            port: "COM7".into(),
+            line: SenseLine::Dsr,
+            rts: LineDrive::On,
+            debounce_ms: 40,
+            hold: PttHold::Toggle,
+            ..PttInputConfig::default()
+        };
+        cfg.pedal = PttInputConfig {
+            enabled: true,
+            source: PttInputSource::UsbHid,
+            hid_key: "/dev/hidraw3".into(),
+            hid_byte: 2,
+            hid_mask: 0x04,
+            ..PttInputConfig::default()
+        };
+        for cmd in [
+            Command::SetPttInputs(Box::new(cfg.clone())),
+            Command::RescanPttInputs,
+        ] {
+            let m = ClientMsg::Command(cmd);
+            assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
+        }
+        let mut st = PttInputsStatus::default();
+        st.pedal.open = true;
+        st.pedal.hid_report = vec![0, 4];
+        st.serial_ports = vec!["COM7".into()];
+        let msg = ServerMsg::PttInputsStatus(Box::new(st));
+        let bytes = encode(&msg).unwrap();
+        assert_eq!(decode::<ServerMsg>(&bytes).unwrap(), msg);
+        // The position, not just the round trip: it directly follows the
+        // Meshtastic status, the last variant before it.
+        let prev = ServerMsg::MeshtasticStatus(Box::default());
+        assert_eq!(bytes[1], encode(&prev).unwrap()[1] + 1, "PttInputsStatus must be last");
+        // Riding `StationConfig` too: the config comes back as sent.
+        let station = sdroxide_types::StationConfig { ptt_inputs: cfg.clone(), ..Default::default() };
+        let back: sdroxide_types::StationConfig =
+            postcard::from_bytes(&postcard::to_allocvec(&station).unwrap()).unwrap();
+        assert_eq!(back.ptt_inputs, cfg);
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (301, 0x79));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3870,7 +3934,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (301, 0x79));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4975,14 +5039,14 @@ mod tests {
         let ServerMsg::Ft8Status(s) = back else { panic!("not a status") };
         assert!(!s.config.wefax_auto_slant);
         assert_eq!(s.config.wefax_slant_ppm, -37.5);
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (301, 0x79));
     }
 
     /// v289: the satellite lock's CTCSS tone rides the end of `SatLockConfig`,
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (300, 0x78));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (301, 0x79));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

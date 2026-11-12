@@ -4229,6 +4229,15 @@ struct Engine {
     /// The external T/R switch's config as persisted (`relay.json`), announced
     /// in the station bundle the way the rotator's is.
     relay_cfg: sdroxide_types::RelayConfig,
+    /// The desk microphone and pedal's setup (`ptt_inputs.json`, issue #636),
+    /// announced in the station bundle like the relay's.
+    ptt_inputs_cfg: sdroxide_types::PttInputsConfig,
+    /// What was last told to the clients about them, and when, so a status goes
+    /// out only when it changed and no faster than a few times a second.
+    ptt_inputs_last: Option<(sdroxide_types::PttInputsStatus, Instant)>,
+    /// Whether the transmitter is keyed by one of those inputs, so a release
+    /// unkeys only what they keyed and never a TUNE or the on-screen button.
+    ptt_inputs_keyed: bool,
     /// Uploading received pictures to an FTP server (`picupload.json`),
     /// announced in the station bundle like the rotator's.
     picup_cfg: sdroxide_types::PictureUploadConfig,
@@ -5740,6 +5749,9 @@ fn engine_thread(
         sat_lock: None,
         rot_cfg: sdroxide_types::RotatorConfig::default(),
         relay_cfg: sdroxide_types::RelayConfig::default(),
+        ptt_inputs_cfg: sdroxide_types::PttInputsConfig::default(),
+        ptt_inputs_last: None,
+        ptt_inputs_keyed: false,
         picup_cfg: sdroxide_types::PictureUploadConfig::default(),
         picup: sdroxide_picup::PictureUploader::new(),
         picup_pending: None,
@@ -5877,6 +5889,13 @@ fn engine_thread(
         engine.sync_rotator();
     }
     engine.relay_cfg = sdroxide_config::load_relay_config();
+    // The desk microphone and the pedal. Primary only at start-up, like the
+    // switch: one station, one set of devices. A client may hand them to
+    // another radio's engine later (`SetPttInputs`).
+    engine.ptt_inputs_cfg = sdroxide_config::load_ptt_inputs_config();
+    if engine.primary {
+        crate::ptt_inputs::hub().configure(engine.instance, &engine.ptt_inputs_cfg);
+    }
     // Received pictures to an FTP server. Every engine uploads what it receives
     // itself; the settings are the station's.
     engine.picup_cfg = sdroxide_config::load_picture_upload_config();
@@ -6101,6 +6120,7 @@ fn engine_thread(
         engine.poll_sat_track();
         engine.poll_rotator_status();
         engine.poll_tr_switch();
+        engine.poll_ptt_inputs();
         // Attach (or re-attach) the configured radio on its own when the
         // front-end is only a stand-in — no trip through Settings.
         engine.poll_reconnect();
@@ -12476,6 +12496,23 @@ impl Engine {
                 self.emit_station_config();
                 return;
             }
+            SetPttInputs(cfg) => {
+                if let Err(e) = sdroxide_config::save_ptt_inputs_config(&cfg) {
+                    warn!("saving the PTT inputs config: {e}");
+                }
+                self.ptt_inputs_cfg = *cfg;
+                // Whichever engine is told takes the devices over, as for the
+                // T/R switch above: a client is attached to one radio only.
+                crate::ptt_inputs::hub().configure(self.instance, &self.ptt_inputs_cfg);
+                self.ptt_inputs_last = None;
+                self.emit_station_config();
+                return;
+            }
+            RescanPttInputs => {
+                crate::ptt_inputs::hub().rescan();
+                self.ptt_inputs_last = None;
+                return;
+            }
             TestRelay { channel } => {
                 if let Some(hub) = self.tr_switch.as_ref() {
                     hub.test(channel);
@@ -16061,6 +16098,7 @@ impl Engine {
                 sat: self.sat_cfg.clone(),
                 rotator: self.rot_cfg.clone(),
                 relay: self.relay_cfg.clone(),
+                ptt_inputs: self.ptt_inputs_cfg.clone(),
                 picture_upload: self.picup_cfg.clone(),
                 region: sdroxide_types::region(),
                 cb_plan: sdroxide_types::cb_plan(),
@@ -16698,6 +16736,49 @@ impl Engine {
             hub.set_tx_band(self.instance, tx);
         }
         self.relay_bands_told = Some((rx_hz, tx_hz, rx, tx));
+    }
+
+    /// Key the radio from the desk microphone and the pedal (issue #636), and
+    /// tell the clients how they are doing.
+    ///
+    /// Only the engine that owns the devices does either. A press goes through
+    /// [`Command::SetPtt`], so the guards apply exactly as for the on-screen
+    /// button, and is refused, like a TCI client's, while the operator, a
+    /// digital-mode burst or TUNE already has the transmitter. A release
+    /// unkeys only what an input keyed.
+    fn poll_ptt_inputs(&mut self) {
+        let hub = crate::ptt_inputs::hub();
+        if !hub.owned_by(self.instance) {
+            return;
+        }
+        if let Some(on) = hub.take_change(self.instance) {
+            if on {
+                if !(self.digi_tx || self.state.tx.ptt || self.state.tx.tune) {
+                    self.apply(Command::SetPtt(true));
+                    self.ptt_inputs_keyed = self.state.tx.ptt;
+                    if !self.ptt_inputs_keyed {
+                        self.notice("the desk microphone or pedal asked to transmit and was refused");
+                    }
+                }
+            } else if self.ptt_inputs_keyed {
+                self.ptt_inputs_keyed = false;
+                self.apply(Command::SetPtt(false));
+            }
+        }
+        // Whatever ended the over (a refusal, the operator, a timeout), the next
+        // release has nothing of ours to undo.
+        if self.ptt_inputs_keyed && !self.state.tx.ptt {
+            self.ptt_inputs_keyed = false;
+        }
+        let st = hub.status();
+        let due = match &self.ptt_inputs_last {
+            None => true,
+            Some((last, at)) => last != &st && at.elapsed() >= Duration::from_millis(200),
+        };
+        if due {
+            self.ptt_inputs_last = Some((st.clone(), Instant::now()));
+            let _ = self.event_tx.send(RadioEvent::PttInputsStatus(Box::new(st)));
+        }
     }
 
     fn emit_relay_status(&mut self) {

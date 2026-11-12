@@ -25,10 +25,16 @@ use windows_sys::Win32::Devices::DeviceAndDriverInstallation::{
     DIGCF_DEVICEINTERFACE, DIGCF_PRESENT, SP_DEVICE_INTERFACE_DATA, SetupDiDestroyDeviceInfoList,
     SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsW, SetupDiGetDeviceInterfaceDetailW,
 };
-use windows_sys::Win32::Foundation::{CloseHandle, GENERIC_READ, GENERIC_WRITE, HANDLE};
-use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING, WriteFile,
+use windows_sys::Win32::Foundation::{
+    CloseHandle, ERROR_IO_PENDING, GENERIC_READ, GENERIC_WRITE, GetLastError, HANDLE,
+    WAIT_OBJECT_0,
 };
+use windows_sys::Win32::Storage::FileSystem::{
+    CreateFileW, FILE_FLAG_OVERLAPPED, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING, ReadFile,
+    WriteFile,
+};
+use windows_sys::Win32::System::IO::{CancelIoEx, GetOverlappedResult, OVERLAPPED};
+use windows_sys::Win32::System::Threading::{CreateEventW, ResetEvent, WaitForSingleObject};
 use windows_sys::core::GUID;
 
 use crate::error::{Error, Result};
@@ -52,7 +58,24 @@ unsafe extern "system" {
     fn HidD_GetSerialNumberString(device: HANDLE, buffer: *mut u16, len: u32) -> i32;
     fn HidD_SetFeature(device: HANDLE, buffer: *const u8, len: u32) -> i32;
     fn HidD_GetFeature(device: HANDLE, buffer: *mut u8, len: u32) -> i32;
+    fn HidD_GetPreparsedData(device: HANDLE, data: *mut isize) -> u8;
+    fn HidD_FreePreparsedData(data: isize) -> u8;
+    fn HidP_GetCaps(data: isize, caps: *mut HidpCaps) -> i32;
 }
+
+/// `HIDP_CAPS` is 64 bytes: five `u16` the switch reading needs and twenty-seven
+/// it does not. Only `input_report_len` is read.
+#[repr(C)]
+struct HidpCaps {
+    usage: u16,
+    usage_page: u16,
+    input_report_len: u16,
+    output_report_len: u16,
+    feature_report_len: u16,
+    rest: [u16; 27],
+}
+
+const HIDP_STATUS_SUCCESS: i32 = 0x0011_0000;
 
 /// An owned device handle. A `Drop` rather than a bare `HANDLE` because every
 /// path out of `enumerate` opens one and most of them throw it away.
@@ -152,6 +175,124 @@ impl HidDev for WinHid {
 pub fn open(key: &str) -> Result<Box<dyn HidDev>> {
     let handle = open_path(key)?;
     Ok(Box::new(WinHid { handle, path: key.to_string() }))
+}
+
+/// A device opened to read its input reports (issue #636).
+///
+/// Its own handle, opened for overlapped I/O: `ReadFile` on an ordinary handle
+/// blocks until a report arrives, and a reader that cannot be asked to stop
+/// would hold the port open for as long as nobody pressed anything. With an
+/// event, the wait has a timeout and a stop is a cancelled read.
+///
+/// `ReadFile` on a HID handle insists on a buffer of exactly the length the
+/// device declares for an input report, so that is asked of `hid.dll` at open.
+///
+/// A keyboard-class device (a pedal that types a key) is owned by the system on
+/// Windows and `CreateFileW` refuses it with "access denied"; the error says
+/// so.
+pub struct WinHidIn {
+    handle: Handle,
+    event: Handle,
+    path: String,
+    len: usize,
+}
+
+pub fn open_input(key: &str) -> Result<Box<dyn HidDev>> {
+    let w = wide(key);
+    let h = unsafe {
+        CreateFileW(
+            w.as_ptr(),
+            GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            std::ptr::null(),
+            OPEN_EXISTING,
+            FILE_FLAG_OVERLAPPED,
+            std::ptr::null_mut(),
+        )
+    };
+    if h.is_null() || h as isize == -1 {
+        return Err(Error::opening(key, std::io::Error::last_os_error()));
+    }
+    let handle = Handle(h);
+    let mut pre = 0isize;
+    if unsafe { HidD_GetPreparsedData(handle.0, &mut pre) } == 0 {
+        return Err(Error::opening(key, std::io::Error::last_os_error()));
+    }
+    let mut caps: HidpCaps = unsafe { std::mem::zeroed() };
+    let status = unsafe { HidP_GetCaps(pre, &mut caps) };
+    unsafe { HidD_FreePreparsedData(pre) };
+    if status != HIDP_STATUS_SUCCESS || caps.input_report_len == 0 {
+        return Err(Error::Open {
+            path: key.to_string(),
+            source: std::io::Error::other("the device has no input report to read"),
+        });
+    }
+    // Manual reset: `read_input` resets it itself before every read.
+    let event = unsafe { CreateEventW(std::ptr::null(), 1, 0, std::ptr::null()) };
+    if event.is_null() {
+        return Err(Error::opening(key, std::io::Error::last_os_error()));
+    }
+    Ok(Box::new(WinHidIn {
+        handle,
+        event: Handle(event),
+        path: key.to_string(),
+        len: usize::from(caps.input_report_len),
+    }))
+}
+
+impl HidDev for WinHidIn {
+    fn set_feature(&mut self, _id: u8, _body: &[u8]) -> Result<()> {
+        Err(Error::Unsupported("this handle only reads input reports".into()))
+    }
+    fn get_feature(&mut self, _id: u8, _body: &mut [u8]) -> Result<()> {
+        Err(Error::Unsupported("this handle only reads input reports".into()))
+    }
+    fn write_output(&mut self, _id: u8, _body: &[u8]) -> Result<()> {
+        Err(Error::Unsupported("this handle only reads input reports".into()))
+    }
+
+    fn read_input(&mut self, timeout: std::time::Duration) -> Result<Option<Vec<u8>>> {
+        let mut buf = vec![0u8; self.len];
+        let mut ov: OVERLAPPED = unsafe { std::mem::zeroed() };
+        ov.hEvent = self.event.0;
+        unsafe { ResetEvent(self.event.0) };
+        let ok = unsafe {
+            ReadFile(self.handle.0, buf.as_mut_ptr(), buf.len() as u32, std::ptr::null_mut(), &mut ov)
+        };
+        if ok == 0 {
+            if unsafe { GetLastError() } != ERROR_IO_PENDING {
+                return Err(Error::opening(&self.path, std::io::Error::last_os_error()));
+            }
+            let ms = u32::try_from(timeout.as_millis()).unwrap_or(u32::MAX);
+            if unsafe { WaitForSingleObject(self.event.0, ms) } != WAIT_OBJECT_0 {
+                // Nothing yet: cancel, and wait for the cancel so `buf` and `ov`
+                // are not written to after this function returns.
+                unsafe { CancelIoEx(self.handle.0, &ov) };
+                let mut n = 0u32;
+                let done = unsafe { GetOverlappedResult(self.handle.0, &ov, &mut n, 1) };
+                if done == 0 || n == 0 {
+                    return Ok(None);
+                }
+                buf.truncate(n as usize);
+                return Ok(Some(strip_id(buf)));
+            }
+        }
+        let mut n = 0u32;
+        if unsafe { GetOverlappedResult(self.handle.0, &ov, &mut n, 0) } == 0 {
+            return Err(Error::opening(&self.path, std::io::Error::last_os_error()));
+        }
+        buf.truncate(n as usize);
+        Ok(Some(strip_id(buf)))
+    }
+}
+
+/// Windows puts the report id in byte 0 always; Linux and macOS leave it out
+/// when it is 0. Dropping a zero id makes the same switch read the same here.
+fn strip_id(mut buf: Vec<u8>) -> Vec<u8> {
+    if buf.first() == Some(&0) {
+        buf.remove(0);
+    }
+    buf
 }
 
 pub fn enumerate(ids: &[(u16, u16)]) -> Vec<HidEntry> {

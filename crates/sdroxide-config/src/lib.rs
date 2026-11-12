@@ -2572,6 +2572,16 @@ pub fn save_relay_config(cfg: &sdroxide_types::RelayConfig) -> Result<(), Config
     save_json("relay.json", cfg)
 }
 
+/// The desk microphone and the pedal that key the transmitter (issue #636).
+/// The devices are on the engine's machine, so the file is too.
+pub fn load_ptt_inputs_config() -> sdroxide_types::PttInputsConfig {
+    load_json("ptt_inputs.json")
+}
+
+pub fn save_ptt_inputs_config(cfg: &sdroxide_types::PttInputsConfig) -> Result<(), ConfigError> {
+    save_json("ptt_inputs.json", cfg)
+}
+
 // ── Broadcast station schedules ──────────────────────────────────────────────
 //
 // Three layers, in the order they win:

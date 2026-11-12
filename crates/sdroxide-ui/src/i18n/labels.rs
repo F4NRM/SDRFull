@@ -20,7 +20,7 @@ use sdroxide_types::{
     CwEngine, DecodeSort, DiversityMode, DxpedMode, FailSafe, FtpSecurity, HpsdrFilterBoard,
     HpsdrIoRxInput, HydraSdrGain, IcomRxSource, IcomScopeSpan, IsmFamily, IsmProtocol, Js8Speed,
     LimeAuxRole, LookupProvider, MailFolder, MemorySort, MeterView, MouseButton, NrLevel,
-    NrStrength, OrbitRings, QsoStep, RdsStandard, Region, RelativeMode, RelayLink, RelayRole,
+    LineDrive, NrStrength, OrbitRings, PttHold, PttInputSource, QsoStep, RdsStandard, Region, RelativeMode, RelayLink, RelayRole,
     RfeChannel, RfeLink, RfeModeControl, RifpEncoding, ScanKind, ScanResume, SenseLine, Shift,
     Speed, TlsVerify, ToneMode, UploadNaming, WheelAction,
 };
@@ -926,6 +926,35 @@ impl Tr for SenseLine {
             SenseLine::Cts => tr!("sense-line-cts"),
             SenseLine::Dsr => tr!("sense-line-dsr"),
             SenseLine::Dcd => tr!("sense-line-dcd"),
+        }
+    }
+}
+
+impl Tr for PttInputSource {
+    fn tr(self) -> String {
+        match self {
+            PttInputSource::Serial => tr!("ptt-source-serial"),
+            PttInputSource::UsbHid => tr!("ptt-source-hid"),
+            PttInputSource::UsbMidi => tr!("ptt-source-midi"),
+        }
+    }
+}
+
+impl Tr for LineDrive {
+    fn tr(self) -> String {
+        match self {
+            LineDrive::Leave => tr!("ptt-drive-leave"),
+            LineDrive::On => tr!("ptt-drive-on"),
+            LineDrive::Off => tr!("ptt-drive-off"),
+        }
+    }
+}
+
+impl Tr for PttHold {
+    fn tr(self) -> String {
+        match self {
+            PttHold::Hold => tr!("ptt-hold-hold"),
+            PttHold::Toggle => tr!("ptt-hold-toggle"),
         }
     }
 }

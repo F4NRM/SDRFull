@@ -300,6 +300,10 @@ pub(crate) struct Latest {
     /// The Meshtastic receiver's nodes and packet log: a whole snapshot, kept
     /// and replayed on connect like the sonde tracks.
     pub meshtastic_status: Option<Box<sdroxide_types::MeshtasticStatus>>,
+    /// The desk microphone and the pedal (issue #636): whether each is open and
+    /// what the station can offer to choose from. Replayed on connect, so a
+    /// settings dialog opened mid-session lists the devices at once.
+    pub ptt_inputs: Option<Box<sdroxide_types::PttInputsStatus>>,
     /// What the DRM decoder has made of the broadcast currently tuned. Replayed
     /// on connect for the same reason as `rds`: a station's label and the
     /// transmission's parameters are standing conditions, and a client that
@@ -1426,6 +1430,10 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             RadioEvent::RelayStatus(st) => {
                 latest.relay = Some(st.clone());
                 Some(ServerMsg::RelayStatus(st))
+            }
+            RadioEvent::PttInputsStatus(st) => {
+                latest.ptt_inputs = Some(st.clone());
+                Some(ServerMsg::PttInputsStatus(st))
             }
             // Handled above, and deliberately not forwarded: the skimmer
             // firehose is a hundred times the spot list's traffic, and the

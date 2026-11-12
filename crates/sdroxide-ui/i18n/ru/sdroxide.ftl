@@ -9706,3 +9706,73 @@ settings-ui-theme-file = Тема из файла
 settings-ui-theme-file-builtin = Встроенная тема
 
 settings-ui-theme-file-hint = Файлы читаются из themes/ в каталоге конфигурации.
+
+ptt-desk-title = Настольный или внешний микрофон
+
+ptt-pedal-title = Педаль или выключатель микрофона
+
+ptt-waiting = Ожидание настроек станции…
+
+ptt-intro = Кнопка PTT микрофона или педаль могут включать передатчик. Подключите выключатель от RTS к CTS, DSR или DCD последовательного порта (подойдёт адаптер USB–последовательный порт) либо используйте USB HID-устройство или MIDI-ноту. Любой из входов включает передатчик; он отпускается, когда отпущены оба. Устройство читается на компьютере станции.
+
+ptt-apply-hint = Сохраняет настройки и открывает устройства на компьютере станции.
+
+ptt-source = Источник
+
+ptt-source-serial = Последовательный порт
+
+ptt-source-hid = USB HID
+
+ptt-source-midi = USB MIDI
+
+ptt-input-line = Линия выключателя
+
+ptt-rts = Выход RTS
+
+ptt-dtr = Выход DTR
+
+ptt-drive-leave = Не менять
+
+ptt-drive-on = Включён
+
+ptt-drive-off = Выключен
+
+ptt-active-high = Полярность
+
+ptt-active-high-label = Нажато при высоком уровне
+
+ptt-active-high-hint = Выключатель, подключённый от RTS к DSR, даёт высокий уровень при нажатии. Снимите флажок, если ваш интерфейс тянет линию вниз.
+
+ptt-debounce = Подавление дребезга
+
+ptt-hold = Режим
+
+ptt-hold-hold = Удерживать для передачи
+
+ptt-hold-toggle = Нажатие переключает
+
+ptt-hid-device = USB HID-устройство
+
+ptt-hid-switch = Выключатель
+
+ptt-hid-byte-bits = Байт { $byte }, биты { $mask }
+
+ptt-learn = ОБУЧИТЬ
+
+ptt-learning = НАЖМИТЕ ВЫКЛЮЧАТЕЛЬ…
+
+ptt-hid-report = Последний отчёт: { $bytes }
+
+ptt-hid-no-report = Отчётов пока нет
+
+ptt-midi-port = MIDI-вход
+
+ptt-midi-control = Элемент управления
+
+ptt-open = Открыто
+
+ptt-not-open = Не открыто
+
+ptt-pressed = НАЖАТО
+
+ptt-released = отпущено

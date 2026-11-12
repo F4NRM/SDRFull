@@ -531,6 +531,13 @@ pub enum RadioEvent {
     /// snapshot each time. Bridged to remote and web clients as
     /// `ServerMsg::MeshtasticStatus`.
     MeshtasticStatus(Box<crate::MeshtasticStatus>),
+    /// The desk microphone and the pedal: whether each is open, the lines and
+    /// reports it reads, and what the station can offer to choose from (serial
+    /// ports, HID devices, MIDI ports). Emitted by the engine that owns them
+    /// when something changes. Boxed for the usual reason.
+    ///
+    /// Appended last, for the usual reason.
+    PttInputsStatus(Box<crate::PttInputsStatus>),
 }
 
 /// Snapshot of the frontend's switchable sound devices (native clients).

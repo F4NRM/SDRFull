@@ -255,6 +255,13 @@ pub fn open(key: &str) -> Result<Box<dyn HidDev>> {
     Ok(Box::new(MacHid { device, key: key.to_string() }))
 }
 
+/// Reading input reports needs a run-loop callback, which is not written: the
+/// device opens and [`HidDev::read_input`] says so. A serial port or a MIDI
+/// device does the same job on a Mac.
+pub fn open_input(key: &str) -> Result<Box<dyn HidDev>> {
+    open(key)
+}
+
 pub fn enumerate(ids: &[(u16, u16)]) -> Vec<HidEntry> {
     with_devices(|devices| {
         let mut out = Vec::new();

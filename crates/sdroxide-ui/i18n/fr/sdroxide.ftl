@@ -9694,3 +9694,73 @@ settings-ui-theme-file = Thème depuis un fichier
 settings-ui-theme-file-builtin = Le thème intégré
 
 settings-ui-theme-file-hint = Les fichiers sont lus dans themes/ du dossier de configuration.
+
+ptt-desk-title = Micro de table ou externe
+
+ptt-pedal-title = Pédale ou interrupteur Micro
+
+ptt-waiting = En attente des réglages de la station…
+
+ptt-intro = La barre PTT d'un micro ou une pédale peut commander l'émission. Câblez l'interrupteur de RTS vers CTS, DSR ou DCD d'un port série (un adaptateur USB-série convient), ou utilisez un appareil USB HID ou une note MIDI. Chaque entrée déclenche l'émission ; elle retombe quand les deux sont relâchées. L'appareil est lu sur l'ordinateur de la station.
+
+ptt-apply-hint = Enregistre et ouvre les appareils sur l'ordinateur de la station.
+
+ptt-source = Source
+
+ptt-source-serial = Série
+
+ptt-source-hid = USB HID
+
+ptt-source-midi = USB MIDI
+
+ptt-input-line = Ligne de l'interrupteur
+
+ptt-rts = Sortie RTS
+
+ptt-dtr = Sortie DTR
+
+ptt-drive-leave = Ne pas toucher
+
+ptt-drive-on = Actif
+
+ptt-drive-off = Inactif
+
+ptt-active-high = Polarité
+
+ptt-active-high-label = Appuyé quand le niveau est haut
+
+ptt-active-high-hint = Un interrupteur câblé de RTS vers DSR donne un niveau haut quand on appuie. Décochez si votre interface tire la ligne vers le bas.
+
+ptt-debounce = Anti-rebond
+
+ptt-hold = Mode
+
+ptt-hold-hold = Maintenu pour émettre
+
+ptt-hold-toggle = Appui pour basculer
+
+ptt-hid-device = Appareil USB HID
+
+ptt-hid-switch = Interrupteur
+
+ptt-hid-byte-bits = Octet { $byte }, bits { $mask }
+
+ptt-learn = APPRENDRE
+
+ptt-learning = APPUYEZ SUR L'INTERRUPTEUR…
+
+ptt-hid-report = Dernier rapport : { $bytes }
+
+ptt-hid-no-report = Aucun rapport reçu pour l'instant
+
+ptt-midi-port = Entrée MIDI
+
+ptt-midi-control = Contrôle
+
+ptt-open = Ouvert
+
+ptt-not-open = Non ouvert
+
+ptt-pressed = APPUYÉ
+
+ptt-released = relâché

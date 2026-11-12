@@ -15,6 +15,7 @@ pub mod playback;
 mod recorder;
 pub mod scanner;
 mod source;
+pub mod ptt_inputs;
 mod tr_switch;
 mod tx_gate;
 mod voice;

@@ -13747,6 +13747,46 @@ by itself when you plug it back in.
 > (`--connect`, [8](#8-remote-operation)). Keyboard and mouse bindings work in
 > the browser client too; MIDI needs the native app.
 
+#### 6.4.4 Desk microphone and pedal (external PTT)
+
+Under the MIDI controller, behind a rule, two identical blocks let a table
+microphone's PTT bar or a footswitch key the transmitter: **Desk or external
+microphone** and **Pedal or microphone switch**. Two blocks, so that a
+microphone on one USB port and a pedal on another each have a place. Either one
+keys; the transmitter drops when both are released. A press is refused, like a
+TCI client's, while you, a digital-mode burst or TUNE already has the
+transmitter, and a release only unkeys what an input keyed.
+
+Unlike the bindings above, **the device is read on the station's computer** —
+the one that runs the radio — whether the screen is the native app or a
+browser. The setup is saved there (`ptt_inputs.json`) and **APPLY** sends it.
+
+Choose a **Source**:
+
+- **Serial** — a serial port or a USB-serial adapter (Prolific, FTDI, CH340:
+  about 5 to 15 EUR). Wire the switch from **RTS** to **CTS** or **DSR** (or
+  **DCD**): the program holds RTS at a positive voltage, and the switch carries
+  it to the input line. The two lines from the switch must have **no connection
+  to ground**. The block shows the three input lines live, so pressing the
+  switch lights the right one. **RTS output** and **DTR output** can be held
+  **On**, **Off** or left as they are. Tick **Pressed when high** unless your
+  interface pulls the line down.
+- **USB HID** — a pedal or switch that speaks plain HID. Choose it from the
+  list, press **LEARN** and press the switch: the byte and bit that moved are
+  remembered. A switch that sends a key (a USB keyboard) is owned by the
+  operating system on Windows and cannot be read this way; use a serial port or
+  MIDI. On Linux the `/dev/hidraw*` node needs read permission for your user
+  (a udev rule for the device). **Not available on macOS yet.**
+- **USB MIDI** — choose the input, press **LEARN** and press the control. A note-on
+  is a press and a note-off a release; a controller counts as pressed from
+  value 64 up.
+
+**Debounce** ignores contact bounce shorter than the time given. **Mode** is
+*Hold to transmit* (a microphone bar) or *Press to switch* (each press flips
+between transmit and receive, for a long over). A switch that is already closed
+when the port opens does not key the transmitter, and a port that disappears
+while the switch is down releases it.
+
 ### 6.5 Spots: spot feeds
 
 ![The Spots tab: DX cluster login, the POTA / SOTA / PSK Reporter feeds, and the Report as (SWL) identity](images/15-settings-spots.jpg)
@@ -17395,6 +17435,7 @@ and not the station's.
 | `input.json` | JSON | Control inputs: keyboard bindings, panadapter mouse behaviour, mouse-button bindings, and the MIDI controller mapping. Belongs to the machine running the user interface, not the engine. |
 | `remote_login.json` | JSON | A sign-in to *somebody else's* server that you asked this client to remember ([§8.3](#83-sign-in-who-may-operate-the-station)). Written only when the **Remember on this device** box is ticked, holds the password in plaintext, and deleted when you untick it or the server refuses it. Belongs to the user interface, like `input.json`; the browser client keeps the same thing in local storage instead. |
 | `satellites.json` | JSON | Satellite additions for the 3D tracker: subscribed element-set listings, element sets pasted in by hand, and frequency entries that override the built-in table. Belongs to the engine, like `net.json`: the listings are fetched and cached where the radio is, so remote and browser clients track the same satellites. |
+| `ptt_inputs.json` | JSON | The desk microphone and the pedal that key the transmitter ([§6.4.4](#644-desk-microphone-and-pedal-external-ptt)): for each of the two, serial port and lines, USB HID device and bit, or MIDI port and control, polarity, debounce and hold or toggle. Belongs to the engine — the devices are plugged into the station's computer. |
 | `relay.json` | JSON | The station's external transmit/receive switch ([§6.11](#611-tr-switch-protecting-the-receiver-on-transmit)): which relay board or contact closure, the contact table, the sequencer's lead and hold times, what to do if it stops answering, and the transmit sense input. Belongs to the engine — the relay is bolted to the antenna — so remote and browser clients set up the real one. |
 | `broadcast_stations.json` | JSON | *Your own* broadcast stations and corrections, merged over the downloaded schedule ([§10.6](#106-broadcast-stations-on-longwave-and-shortwave)). Never written by sdroxide, and absent until you create it. |
 | `broadcast/` | CSV | The broadcasting season's schedule as downloaded from eibispace.de, one file per season. Managed by sdroxide: refetched when the season changes, and safe to delete. |

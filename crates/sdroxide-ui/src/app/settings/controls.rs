@@ -107,7 +107,7 @@ fn action_group_label(group: &str) -> String {
 }
 
 /// A MIDI control's identity, in the interface's language.
-fn midi_msg_label(msg: &sdroxide_types::MidiMsg) -> String {
+pub(super) fn midi_msg_label(msg: &sdroxide_types::MidiMsg) -> String {
     use sdroxide_types::{MidiMsg, MidiMsgKind};
     let ch = if msg.channel == MidiMsg::ANY_CHANNEL {
         tr!("controls-midi-any")
@@ -171,6 +171,8 @@ pub(in crate::app) fn settings_controls_tab(
     midi_out: &[(String, String)],
     midi_status: &crate::input::MidiStatusView,
     last_midi: Option<(sdroxide_types::MidiMsg, u8)>,
+    ptt_seeded: bool,
+    ptt_status: &sdroxide_types::PttInputsStatus,
 ) {
     use sdroxide_types::{
         Action, ActionKind, ButtonMode, KeyBinding, MouseButton, MouseButtonBinding, WheelAction,
@@ -444,6 +446,19 @@ pub(in crate::app) fn settings_controls_tab(
         midi_out,
         midi_status,
         last_midi,
+    );
+    // Under the MIDI controller, behind a rule: the desk microphone and the
+    // pedal that key the transmitter (issue #636).
+    super::ptt_inputs::settings_ptt_inputs_section(
+        ui,
+        super::ptt_inputs::PttView {
+            edit: io.ptt_edit,
+            seeded: ptt_seeded,
+            status: ptt_status,
+            learn: io.ptt_learn,
+            apply: io.ptt_apply,
+            rescan: io.ptt_rescan,
+        },
     );
 }
 

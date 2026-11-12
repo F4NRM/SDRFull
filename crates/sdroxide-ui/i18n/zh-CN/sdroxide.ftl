@@ -9629,3 +9629,73 @@ settings-ui-theme-file = 来自文件的主题
 settings-ui-theme-file-builtin = 内置主题
 
 settings-ui-theme-file-hint = 文件从配置目录下的 themes/ 读取。
+
+ptt-desk-title = 台式或外接麦克风
+
+ptt-pedal-title = 脚踏板或麦克风开关
+
+ptt-waiting = 正在等待电台设置…
+
+ptt-intro = 麦克风的PTT条或脚踏板可以控制发射机。把开关接在串口的RTS与CTS、DSR或DCD之间（USB转串口适配器即可），或使用USB HID设备或MIDI音符。任一输入都会触发发射；两者都松开后恢复接收。设备在电台所在的计算机上读取。
+
+ptt-apply-hint = 在电台计算机上保存并打开这些设备。
+
+ptt-source = 来源
+
+ptt-source-serial = 串口
+
+ptt-source-hid = USB HID
+
+ptt-source-midi = USB MIDI
+
+ptt-input-line = 开关信号线
+
+ptt-rts = RTS输出
+
+ptt-dtr = DTR输出
+
+ptt-drive-leave = 保持原样
+
+ptt-drive-on = 开
+
+ptt-drive-off = 关
+
+ptt-active-high = 极性
+
+ptt-active-high-label = 高电平时为按下
+
+ptt-active-high-hint = 从RTS接到DSR的开关在按下时为高电平。如果您的接口会把信号线拉低，请取消勾选。
+
+ptt-debounce = 消抖
+
+ptt-hold = 方式
+
+ptt-hold-hold = 按住发射
+
+ptt-hold-toggle = 按一下切换
+
+ptt-hid-device = USB HID设备
+
+ptt-hid-switch = 开关
+
+ptt-hid-byte-bits = 字节 { $byte }，位 { $mask }
+
+ptt-learn = 学习
+
+ptt-learning = 请按下开关…
+
+ptt-hid-report = 最近一次报告：{ $bytes }
+
+ptt-hid-no-report = 尚未收到报告
+
+ptt-midi-port = MIDI输入
+
+ptt-midi-control = 控件
+
+ptt-open = 已打开
+
+ptt-not-open = 未打开
+
+ptt-pressed = 已按下
+
+ptt-released = 已松开

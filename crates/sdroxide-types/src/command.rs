@@ -1567,6 +1567,26 @@ pub enum Command {
     ///
     /// Appended for the usual reason — postcard numbers variants by position.
     SetWideWindow(Option<f64>),
+
+    /// Set up the desk microphone and the pedal that key the transmitter
+    /// (issue #636): serial handshake lines, a USB HID report or a MIDI note.
+    ///
+    /// Saved to `ptt_inputs.json` and echoed back in
+    /// [`crate::RadioEvent::StationConfig`], because the operator setting it up
+    /// may be on another machine entirely and the devices are on this one.
+    ///
+    /// Boxed: two slots with a handful of strings each, and an enum is as big as
+    /// its largest variant everywhere it is held.
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    SetPttInputs(Box<crate::PttInputsConfig>),
+
+    /// Look again for the serial ports, HID devices and MIDI ports the station
+    /// can offer for [`Command::SetPttInputs`]. Answered by a
+    /// [`crate::RadioEvent::PttInputsStatus`].
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    RescanPttInputs,
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.
