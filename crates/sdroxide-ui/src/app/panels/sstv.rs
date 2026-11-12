@@ -4244,7 +4244,6 @@ mod qsl_tests {
 
 #[cfg(test)]
 mod editor_tests {
-    use super::*;
     use sdroxide_types::{Composer, TextLayer};
 
     /// **Deleting the last line must not index past the end.** The crash the
