@@ -221,6 +221,15 @@ impl SdroxideApp {
                 changed = true;
             }
 
+            let auto_slant = self.digi_cfg_edit.wefax_auto_slant;
+            if crate::chrome::chip(ui, auto_slant, tr!("wefax-auto-slant"))
+                .on_hover_text(tr!("wefax-auto-slant-hint"))
+                .clicked()
+            {
+                self.digi_cfg_edit.wefax_auto_slant = !auto_slant;
+                changed = true;
+            }
+
             ui.add_space(8.0);
             // Phase nudge: for a chart whose phasing pulse was missed, which is
             // every chart you tune into halfway through.

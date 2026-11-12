@@ -9681,3 +9681,7 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Werkt vanaf de volgende start. Automatisch gebruikt DirectX 12, en OpenGL bij oude AMD-stuurprogramma's die de waterval als vlakke horizontale banden tekenen. Probeer OpenGL als uw waterval alleen horizontale lijnen toont.
+
+wefax-auto-slant = AUTO SCHEEFSTAND
+
+wefax-auto-slant-hint = Richt een scheve kaart recht, eerst op basis van het eigen fasesignaal en daarna op basis van het beeld zelf. Uit: alleen de trim hieronder geldt en niets verandert die. De trim en deze schakelaar worden per radio op de server bewaard.

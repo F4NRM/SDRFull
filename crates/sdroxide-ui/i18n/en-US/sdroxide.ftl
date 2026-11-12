@@ -9710,3 +9710,7 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Takes effect at the next start. Automatic uses DirectX 12, and OpenGL on old AMD drivers that draw the waterfall as flat horizontal bands. Try OpenGL if your waterfall shows only horizontal lines.
+
+wefax-auto-slant = AUTO SLANT
+
+wefax-auto-slant-hint = Straighten a chart that leans, from its own phasing signal and then from the picture itself. Off: only the trim below applies, and nothing moves it. The trim and this switch are kept for each radio on the server.

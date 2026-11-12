@@ -87,6 +87,7 @@ impl WefaxController {
         rx.set_auto_start(cfg.wefax_auto_start);
         rx.set_auto_stop(cfg.wefax_auto_stop);
         rx.set_slant_ppm(cfg.wefax_slant_ppm);
+        rx.set_auto_slant(cfg.wefax_auto_slant);
         WefaxController {
             cfg,
             rx,
@@ -351,6 +352,7 @@ impl DigiEngine for WefaxController {
         self.rx.set_lpm(to_lpm(cfg.wefax_lpm));
         self.rx.set_auto_start(cfg.wefax_auto_start);
         self.rx.set_auto_stop(cfg.wefax_auto_stop);
+        self.rx.set_auto_slant(cfg.wefax_auto_slant);
         // Only when the operator's own trim moved: any other setting sends the
         // whole config again, and that must not throw away what the auto-slant
         // measured for the page in progress.

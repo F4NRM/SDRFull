@@ -9684,3 +9684,7 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Pris en compte au prochain démarrage. Automatique utilise DirectX 12, et OpenGL avec les anciens pilotes AMD qui dessinent la cascade en bandes horizontales plates. Essayez OpenGL si votre cascade n'affiche que des lignes horizontales.
+
+wefax-auto-slant = INCLINAISON AUTO
+
+wefax-auto-slant-hint = Redresse une carte qui penche, d'après son propre signal de phasage puis d'après l'image elle-même. Coupé : seul le réglage ci-dessous s'applique et rien ne le modifie. Le réglage et cet interrupteur sont mémorisés pour chaque radio sur le serveur.

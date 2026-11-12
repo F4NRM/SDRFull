@@ -9673,3 +9673,7 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Wirkt beim nächsten Start. Automatisch nutzt DirectX 12 und OpenGL bei alten AMD-Treibern, die das Wasserfalldiagramm als flache horizontale Streifen zeichnen. Probieren Sie OpenGL, wenn Ihr Wasserfall nur waagerechte Linien zeigt.
+
+wefax-auto-slant = NEIGUNG AUTOMATISCH
+
+wefax-auto-slant-hint = Richtet eine schiefe Karte aus, zuerst nach ihrem eigenen Phasensignal und dann nach dem Bild selbst. Aus: Nur der Trimm darunter gilt, und nichts verändert ihn. Trimm und Schalter werden für jedes Funkgerät auf dem Server gespeichert.

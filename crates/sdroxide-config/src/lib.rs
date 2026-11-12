@@ -716,7 +716,7 @@ fn copy_dir_recursive(from: &std::path::Path, to: &std::path::Path) -> std::io::
 ///
 /// Only the files that describe *a radio* are scoped: `radio.json`,
 /// `session.json`, `scanner.json`, `modeprofiles.json`, `tciserver.json`,
-/// `rigctld.json`, `wsjtx.json`, `wspr.json`. Everything the operator shares
+/// `rigctld.json`, `wsjtx.json`, `wspr.json`, `wefax.json`. Everything the operator shares
 /// across radios — memories, band stacks, the logbook, `config.toml` — stays
 /// on the root free functions.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -913,6 +913,14 @@ impl Store {
             None if self.radio_id() != 0 => cfg.wspr_tx_percent = 0,
             None => {}
         }
+        // The shared file's trim was set for radio 0, on an installation that
+        // predates the split. A radio added since starts from none, rather than
+        // from a trim that was never measured on it.
+        match self.load_wefax_config() {
+            Some(w) => w.apply_to(&mut cfg),
+            None if self.radio_id() != 0 => sdroxide_types::WefaxRadio::default().apply_to(&mut cfg),
+            None => {}
+        }
         cfg
     }
 
@@ -925,14 +933,31 @@ impl Store {
     /// from there — is not handed another radio's beacon.
     pub fn save_digi_config(&self, cfg: &sdroxide_types::DigiConfig) -> Result<(), ConfigError> {
         let own = sdroxide_types::WsprRadio::of(cfg);
+        let own_wefax = sdroxide_types::WefaxRadio::of(cfg);
         if self.radio_id() == 0 {
             save_digi_config(cfg)?;
         } else {
             let mut shared = cfg.clone();
-            sdroxide_types::WsprRadio::of(&load_digi_config()).apply_to(&mut shared);
+            let on_disk = load_digi_config();
+            sdroxide_types::WsprRadio::of(&on_disk).apply_to(&mut shared);
+            // The shared file keeps what radio 0 set: another radio's trim is
+            // its own and goes to its own file.
+            sdroxide_types::WefaxRadio::of(&on_disk).apply_to(&mut shared);
             save_digi_config(&shared)?;
         }
+        self.save("wefax.json", &own_wefax)?;
         self.save("wspr.json", &own)
+    }
+
+    /// This radio's weather-fax trim and auto-slant switch, or `None` where it
+    /// has never saved any. An unreadable file is quarantined and reads as the
+    /// defaults.
+    pub fn load_wefax_config(&self) -> Option<sdroxide_types::WefaxRadio> {
+        let dir = self.dir().ok()?;
+        match read_config_text(&dir, "wefax.json") {
+            FileText::Missing => None,
+            _ => Some(self.load("wefax.json")),
+        }
     }
 
     /// This radio's WSPR beacon settings, or `None` where it has never saved

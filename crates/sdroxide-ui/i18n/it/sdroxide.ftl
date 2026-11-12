@@ -9690,3 +9690,7 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Ha effetto al prossimo avvio. Automatico usa DirectX 12, e OpenGL con i vecchi driver AMD che disegnano la cascata come bande orizzontali piatte. Provi OpenGL se la cascata mostra solo linee orizzontali.
+
+wefax-auto-slant = INCLINAZIONE AUTO
+
+wefax-auto-slant-hint = Raddrizza una carta inclinata, prima dal suo segnale di fasatura e poi dall'immagine stessa. Disattivato: vale solo la regolazione qui sotto e nulla la modifica. La regolazione e questo interruttore sono memorizzati per ogni radio sul server.
