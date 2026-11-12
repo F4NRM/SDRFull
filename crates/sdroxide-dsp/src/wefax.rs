@@ -731,6 +731,10 @@ const STOP_RUN: u32 = 7;
 /// or a noise burst inside the tone does not throw away the windows already
 /// matched.
 const STOP_MISS_TOL: u32 = 2;
+/// The share of a window's variation that sits at the stop pitch above which
+/// the window counts as the stop tone even when it did not swing the whole
+/// range. A chart's own detail never gets near it: a real tone reads 0.5-0.95.
+const STOP_SHARE_SURE: f32 = 0.5;
 /// How long an automatically begun page may carry nothing but a white carrier,
 /// after chart content, before it is ended. Stations keep a white carrier up
 /// after a chart; if the stop tone was missed it is the only way out of the
@@ -1716,16 +1720,16 @@ impl WefaxRx {
 
     /// A phasing pulse found by a lock, moved into the coordinates of the lines
     /// cut from the lock on, which begin right after it: the pulse ends such a
-    /// line, as far back from the end as the picture's start sits beyond the
-    /// pulse's own start (see [`PulseRegion::picture_start`]).
+    /// line, as far back from the end as the picture's start (the middle of the
+    /// pulse, see [`PulseRegion::picture_start`]) sits beyond the pulse's own
+    /// start.
     ///
     /// Taken against a whole line, not against the one that locked: the first
     /// line of a start-tone page carries the samples that came before the
     /// signal and is longer.
     fn aligned_pulse(&self, pulse: PulseRegion) -> PulseRegion {
         let n = (self.samples_per_line().round() as usize).max(1);
-        let standard = (n as f64 * 0.05).round() as usize;
-        let back = (pulse.width / 2 + standard / 2 + pulse.width % 2) % n;
+        let back = (pulse.width / 2 + pulse.width % 2) % n;
         PulseRegion { start: (n - back) % n, width: pulse.width }
     }
 
@@ -2086,11 +2090,16 @@ impl WefaxRx {
                     let k = (TONE_WINDOW_S as f32 / CARRIER_REF_S).clamp(0.0, 1.0);
                     self.carrier_ref += k * (power - self.carrier_ref);
                 }
+                let stop_share = self.level_spec.share(self.stop_det.window(), STOP_TONE_HZ);
+                // The swing test keeps a carrier wobbling about mid-grey from
+                // passing for the tone. A tone this clean at 450 Hz is not that,
+                // and a weak or filtered one (a signal 2026-11-12 whose stop tone
+                // swung the full range in three windows out of eight) is still
+                // the tone.
                 if in_band
-                    && self.stop_det.swing
+                    && (self.stop_det.swing || stop_share >= STOP_SHARE_SURE)
                     && (alt_hz - STOP_TONE_HZ).abs() <= STOP_TONE_HZ * self.tone_tol()
-                    && self.level_spec.share(self.stop_det.window(), STOP_TONE_HZ)
-                        >= self.periodic_share()
+                    && stop_share >= self.periodic_share()
                 {
                     self.stop_run += 1;
                     self.stop_miss = 0;
@@ -3586,6 +3595,29 @@ mod tests {
         );
     }
 
+    /// A stop tone that is weak or filtered, swinging only between 0.3 and 0.7
+    /// of the range and lasting four seconds, still ends the page: a signal of
+    /// 2026-11-12 sent one, and the page ran on past it for minutes.
+    #[test]
+    fn a_weak_four_second_stop_tone_still_ends_the_page() {
+        let lpm = Lpm::L120;
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_lpm(lpm);
+        let mut ev = into_image(&mut rx, lpm);
+        ev.extend(drain(&mut rx, &ramp_picture(lpm, 6)));
+        let n = (RATE * 4.0) as usize;
+        let levels: Vec<f32> = (0..n)
+            .map(|i| if (i as f64 / RATE * STOP_TONE_HZ).fract() < 0.5 { 0.7 } else { 0.3 })
+            .collect();
+        let mut audio = modulate(&levels);
+        audio.extend(white_carrier(2.0, false));
+        ev.extend(drain(&mut rx, &audio));
+        assert!(
+            ev.iter().any(|e| matches!(e, WefaxEvent::Complete { by_tone: true, .. })),
+            "the weak stop tone was missed: {ev:?}"
+        );
+    }
+
     /// A start tone mid-picture with no phasing behind it is the chart's own
     /// detail, not a new transmission: the page goes on.
     #[test]
@@ -4690,17 +4722,13 @@ mod carrier_tests {
             rx.image_slant(&row);
         }
         assert!(
-            (rx.slant_ppm() - 0.8 * 221.0).abs() < 60.0 || rx.slant_ppm() > 150.0,
-            "the walk was not taken off: {}",
+            rx.slant_ppm() > 150.0 && rx.slant_ppm() < 700.0,
+            "the walk was not taken off, or too much of it: {}",
             rx.slant_ppm()
         );
         // The same walk, sign flipped every window: the chart's texture.
         let mut rx = WefaxRx::new(RATE);
-        for (k, row) in rows(&|y| 0.4 * (y % 56) as f64 * if (y / 56) % 2 == 0 { 1.0 } else { -1.0 }, 400)
-            .into_iter()
-            .enumerate()
-        {
-            let _ = k;
+        for row in rows(&|y| 0.4 * (y % 56) as f64 * if (y / 56) % 2 == 0 { 1.0 } else { -1.0 }, 400) {
             rx.image_slant(&row);
         }
         assert!(rx.slant_ppm().abs() < 1.0, "a walk that changes sign was followed: {}", rx.slant_ppm());
@@ -4711,6 +4739,20 @@ mod carrier_tests {
             rx.image_slant(&row);
         }
         assert_eq!(rx.slant_ppm(), 0.0);
+    }
+
+    /// A line cut from a lock begins at the middle of the pulse, so the pulse of
+    /// the next phasing line is centred on that line's end: its region is
+    /// [`PulseRegion::picture_start`] of itself, one line on.
+    #[test]
+    fn the_pulse_of_a_cut_line_is_centred_on_the_line_boundary() {
+        let rx = WefaxRx::new(RATE);
+        let n = (rx.samples_per_line().round() as usize).max(1);
+        for width in [20usize, 21, 600, 601] {
+            let region = rx.aligned_pulse(PulseRegion { start: 1000, width });
+            assert_eq!(region.width, width);
+            assert_eq!(region.picture_start(n) as usize, 0, "width {width}: {region:?}");
+        }
     }
 
     /// A weak signal's pulse is a scatter of blips a fifth of a line wide, not a
