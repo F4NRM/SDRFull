@@ -9619,3 +9619,7 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = 下次启动时生效。自动模式使用 DirectX 12；在会把瀑布图画成平直横条的旧版 AMD 驱动上则使用 OpenGL。如果瀑布图只显示水平线，请尝试 OpenGL。
+
+wefax-auto-slant = 自动倾斜校正
+
+wefax-auto-slant-hint = 先根据海图自身的相位信号、再根据图像本身来校正倾斜的海图。关闭时只应用下方的微调，不会有任何自动调整。微调值和此开关按每台电台保存在服务器上。

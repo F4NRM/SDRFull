@@ -603,6 +603,9 @@ pub struct WefaxRx {
     /// stays off as well. A pulse-based correction undone by its own check does
     /// not turn it off.
     lean_off: bool,
+    /// Whether the receiver corrects the slant by itself at all, from the
+    /// phasing signal and from the picture. On unless the operator turned it off.
+    auto_slant: bool,
     /// The last line drawn, to stand in for a line the receiver lost.
     last_line: Vec<u8>,
     /// Lost lines repeated in a row.
@@ -1101,6 +1104,7 @@ impl WefaxRx {
             lean_rows: Vec::new(),
             lean_hist: Vec::new(),
             lean_off: false,
+            auto_slant: true,
             last_line: Vec::new(),
             lost_run: 0,
             phase: Phase::Idle,
@@ -1192,6 +1196,17 @@ impl WefaxRx {
     /// Undo the auto-slant on the page in progress: the trim goes back to the
     /// operator's own and the auto-slant stays off until the next page. The
     /// lines already drawn are not touched, only the ones still to come.
+    /// Let the receiver correct the slant by itself, or leave the line clock to
+    /// the operator's own trim alone. Takes effect on the lines still to come.
+    pub fn set_auto_slant(&mut self, on: bool) {
+        self.auto_slant = on;
+    }
+
+    /// Whether the receiver corrects the slant by itself.
+    pub fn auto_slant(&self) -> bool {
+        self.auto_slant
+    }
+
     pub fn revert_slant(&mut self) {
         self.slant_ppm = self.slant_base;
         self.slant_pending = None;
@@ -1874,7 +1889,7 @@ impl WefaxRx {
     /// measurement to name is still corrected once the whole signal has been
     /// read (see [`SLANT_FINE_LINES`]).
     fn probe_slant(&mut self, line: &[f32]) {
-        if self.slant_locked {
+        if self.slant_locked || !self.auto_slant {
             return;
         }
         let Some(pos) = phasing_skew_strict(line) else { return };
@@ -1949,7 +1964,7 @@ impl WefaxRx {
     /// with itself [`LEAN_LAG`] lines on, and what is left of the walk is
     /// taken off the trim, a part at a time.
     fn image_slant(&mut self, gray: &[u8]) {
-        if self.lean_off {
+        if self.lean_off || !self.auto_slant {
             return;
         }
         self.lean_rows.push(gray.to_vec());
@@ -2896,6 +2911,19 @@ mod tests {
             assert!((ppm as f64 - slant).abs() < 80.0, "reported {ppm} for {slant}");
             assert!(lines > 0, "the correction must say how many lines it used");
         }
+    }
+
+    /// With the auto-slant off the line clock stays where the operator put it,
+    /// from the phasing signal and from the picture alike.
+    #[test]
+    fn with_the_auto_slant_off_the_trim_is_left_alone() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_auto_slant(false);
+        assert!(!rx.auto_slant());
+        rx.set_slant_ppm(12.0);
+        rx.start_manual(&mut Vec::new());
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 40, 700.0));
+        assert_eq!(rx.slant_ppm(), 12.0, "the phasing signal moved the trim");
     }
 
     /// **The auto-slant follows a pulse that walks across the line boundary,

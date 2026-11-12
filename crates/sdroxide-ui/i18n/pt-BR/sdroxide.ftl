@@ -9681,3 +9681,7 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Vale a partir da próxima inicialização. Automático usa DirectX 12, e OpenGL com drivers AMD antigos que desenham a cachoeira como faixas horizontais planas. Experimente OpenGL se a cachoeira mostrar apenas linhas horizontais.
+
+wefax-auto-slant = INCLINAÇÃO AUTO
+
+wefax-auto-slant-hint = Endireita uma carta inclinada, primeiro pelo próprio sinal de fasagem e depois pela própria imagem. Desligado: só vale o ajuste abaixo e nada o altera. O ajuste e esta chave ficam guardados por rádio no servidor.

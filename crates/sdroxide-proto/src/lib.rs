@@ -2420,8 +2420,17 @@ use sdroxide_types::{
 /// frequency without tuning, or `None` to follow the dial again. A v297 station
 /// does not know the variant.
 /// `PROTO_VERSION` 297 → 298, `VERSION_BYTE` 0x75 → 0x76.
-pub const PROTO_VERSION: u16 = 298;
-const VERSION_BYTE: u8 = 0x76;
+///
+/// v299: **the weather-fax auto-slant switch.** [`sdroxide_types::DigiConfig`]
+/// gains `wefax_auto_slant` (bool, on by default) at its tail: whether the
+/// receiver corrects the slant by itself, from the phasing signal and from the
+/// picture. With the existing `wefax_slant_ppm` it is kept for each radio on the
+/// server (`wefax.json`), not in the client. `DigiConfig` rides the status and
+/// `Command::SetDigiConfig` whole, so this is the same appended-field break as
+/// v214. `#[serde(default = ...)]` keeps a stored `digi.json` loading unchanged.
+/// `PROTO_VERSION` 298 → 299, `VERSION_BYTE` 0x76 → 0x77.
+pub const PROTO_VERSION: u16 = 299;
+const VERSION_BYTE: u8 = 0x77;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3745,7 +3754,7 @@ mod tests {
         }
         // v296: the SSTV clock layer (`TextLayer::clock`) appended at the tail
         // of a `Composer` layer, which rides the picture preset messages.
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
         // v297: the strip height at the tail of `ClientScreen`, and it comes
         // back as sent.
         let screen = sdroxide_types::ClientScreen {
@@ -3816,7 +3825,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3838,7 +3847,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4921,11 +4930,34 @@ mod tests {
         assert!(matches!(decode::<ClientMsg>(&[]), Err(ProtoError::Empty)));
     }
 
+    /// v299: the weather-fax auto-slant switch rides the end of `DigiConfig`,
+    /// on by default; the version is pinned.
+    #[test]
+    fn the_wefax_auto_slant_switch_round_trips() {
+        use sdroxide_types::DigiConfig;
+
+        assert!(DigiConfig::default().wefax_auto_slant, "on by default");
+        let cfg = DigiConfig {
+            wefax_auto_slant: false,
+            wefax_slant_ppm: -37.5,
+            ..DigiConfig::default()
+        };
+        let m = ClientMsg::Command(Command::SetDigiConfig(cfg.clone()));
+        assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
+        let m = ServerMsg::Ft8Status(DigiStatus::idle(cfg));
+        let back = decode::<ServerMsg>(&encode(&m).unwrap()).unwrap();
+        assert_eq!(back, m);
+        let ServerMsg::Ft8Status(s) = back else { panic!("not a status") };
+        assert!(!s.config.wefax_auto_slant);
+        assert_eq!(s.config.wefax_slant_ppm, -37.5);
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
+    }
+
     /// v289: the satellite lock's CTCSS tone rides the end of `SatLockConfig`,
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (298, 0x76));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (299, 0x77));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

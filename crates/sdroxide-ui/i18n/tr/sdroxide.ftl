@@ -9681,3 +9681,7 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = Bir sonraki başlatmada geçerli olur. Otomatik, DirectX 12 kullanır; şelaleyi düz yatay bantlar olarak çizen eski AMD sürücülerinde ise OpenGL kullanır. Şelaleniz yalnızca yatay çizgiler gösteriyorsa OpenGL'i deneyin.
+
+wefax-auto-slant = OTOMATİK EĞİM
+
+wefax-auto-slant-hint = Eğik bir haritayı önce kendi faz sinyalinden, sonra görüntünün kendisinden düzeltir. Kapalıyken yalnızca aşağıdaki ayar geçerlidir ve onu hiçbir şey değiştirmez. Ayar ve bu anahtar sunucuda her telsiz için ayrı saklanır.

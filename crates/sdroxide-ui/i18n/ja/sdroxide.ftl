@@ -9629,3 +9629,7 @@ settings-ui-graphics-dx12 = DirectX 12
 settings-ui-graphics-gl = OpenGL
 
 settings-ui-graphics-note = 次回の起動から有効になります。自動では DirectX 12 を使い、ウォーターフォールが平らな横縞に描かれる古い AMD ドライバーでは OpenGL を使います。ウォーターフォールが横線だけになる場合は OpenGL をお試しください。
+
+wefax-auto-slant = 自動傾き補正
+
+wefax-auto-slant-hint = 傾いたチャートを、まず自身の位相信号から、次に画像そのものから補正します。オフの場合は下の調整値だけが適用され、それを変更するものはありません。調整値とこのスイッチは、サーバー上で無線機ごとに保存されます。

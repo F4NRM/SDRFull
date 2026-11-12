@@ -3276,6 +3276,14 @@ pub struct DigiConfig {
     /// Appended at the tail, so this is a wire change.
     #[serde(default)]
     pub sstv_save_all: bool,
+    /// WEFAX: let the receiver correct the slant by itself, from the phasing
+    /// signal and from the picture. On by default; off leaves the line clock to
+    /// [`wefax_slant_ppm`](Self::wefax_slant_ppm) alone, for an operator who has
+    /// trimmed a radio by hand and wants nothing moving it.
+    ///
+    /// Appended last, so this is a wire change (`PROTO_VERSION` 298 → 299).
+    #[serde(default = "yes")]
+    pub wefax_auto_slant: bool,
 }
 
 /// Six: the value the bench chose for a 27 MHz band full of CB QRM, where four
@@ -3356,6 +3364,42 @@ impl WsprRadio {
         cfg.wspr_power_dbm = self.power_dbm;
         cfg.wspr_hop = self.hop;
         cfg.wspr_hop_bands = self.hop_bands;
+    }
+}
+
+/// The weather-fax settings that belong to one radio rather than the station.
+///
+/// How far a receiver's sample clock is from the sending station's is a fact
+/// about that receiver: a sound card on one radio and an SDR's IQ stream on
+/// another are a few hundred parts per million apart, and one shared trim
+/// straightens one of them and leans the other. Each radio keeps its own, laid
+/// over the shared file when the config is loaded, the way [`WsprRadio`] is.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct WefaxRadio {
+    /// [`DigiConfig::wefax_slant_ppm`].
+    #[serde(default)]
+    pub slant_ppm: f32,
+    /// [`DigiConfig::wefax_auto_slant`].
+    #[serde(default = "yes")]
+    pub auto_slant: bool,
+}
+
+impl Default for WefaxRadio {
+    fn default() -> Self {
+        WefaxRadio::of(&DigiConfig::default())
+    }
+}
+
+impl WefaxRadio {
+    /// This radio's settings, as `cfg` holds them.
+    pub fn of(cfg: &DigiConfig) -> Self {
+        WefaxRadio { slant_ppm: cfg.wefax_slant_ppm, auto_slant: cfg.wefax_auto_slant }
+    }
+
+    /// Lay these over `cfg`, leaving everything that is not WEFAX's alone.
+    pub fn apply_to(self, cfg: &mut DigiConfig) {
+        cfg.wefax_slant_ppm = self.slant_ppm;
+        cfg.wefax_auto_slant = self.auto_slant;
     }
 }
 
@@ -3574,6 +3618,7 @@ impl Default for DigiConfig {
             wefax_rx_auto: true,
             sstv_sync_pulses: sstv_default_sync_pulses(),
             sstv_save_all: false,
+            wefax_auto_slant: true,
         }
     }
 }
