@@ -722,6 +722,10 @@ const STOP_RUN: u32 = 7;
 /// or a noise burst inside the tone does not throw away the windows already
 /// matched.
 const STOP_MISS_TOL: u32 = 2;
+/// The share of a window's variation that sits at the stop pitch above which
+/// the window counts as the stop tone even when it did not swing the whole
+/// range. A chart's own detail never gets near it: a real tone reads 0.5-0.95.
+const STOP_SHARE_SURE: f32 = 0.5;
 /// How long an automatically begun page may carry nothing but a white carrier,
 /// after chart content, before it is ended. Stations keep a white carrier up
 /// after a chart; if the stop tone was missed it is the only way out of the
@@ -2002,11 +2006,16 @@ impl WefaxRx {
                     let k = (TONE_WINDOW_S as f32 / CARRIER_REF_S).clamp(0.0, 1.0);
                     self.carrier_ref += k * (power - self.carrier_ref);
                 }
+                let stop_share = self.level_spec.share(self.stop_det.window(), STOP_TONE_HZ);
+                // The swing test keeps a carrier wobbling about mid-grey from
+                // passing for the tone. A tone this clean at 450 Hz is not that,
+                // and a weak or filtered one (a signal 2026-11-12 whose stop tone
+                // swung the full range in three windows out of eight) is still
+                // the tone.
                 if in_band
-                    && self.stop_det.swing
+                    && (self.stop_det.swing || stop_share >= STOP_SHARE_SURE)
                     && (alt_hz - STOP_TONE_HZ).abs() <= STOP_TONE_HZ * self.tone_tol()
-                    && self.level_spec.share(self.stop_det.window(), STOP_TONE_HZ)
-                        >= self.periodic_share()
+                    && stop_share >= self.periodic_share()
                 {
                     self.stop_run += 1;
                     self.stop_miss = 0;
@@ -3449,6 +3458,29 @@ mod tests {
         assert!(
             ev.iter().any(|e| matches!(e, WefaxEvent::Complete { by_tone: true, .. })),
             "the stop tone with a fade in it was missed: {ev:?}"
+        );
+    }
+
+    /// A stop tone that is weak or filtered, swinging only between 0.3 and 0.7
+    /// of the range and lasting four seconds, still ends the page: a signal of
+    /// 2026-11-12 sent one, and the page ran on past it for minutes.
+    #[test]
+    fn a_weak_four_second_stop_tone_still_ends_the_page() {
+        let lpm = Lpm::L120;
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_lpm(lpm);
+        let mut ev = into_image(&mut rx, lpm);
+        ev.extend(drain(&mut rx, &ramp_picture(lpm, 6)));
+        let n = (RATE * 4.0) as usize;
+        let levels: Vec<f32> = (0..n)
+            .map(|i| if (i as f64 / RATE * STOP_TONE_HZ).fract() < 0.5 { 0.7 } else { 0.3 })
+            .collect();
+        let mut audio = modulate(&levels);
+        audio.extend(white_carrier(2.0, false));
+        ev.extend(drain(&mut rx, &audio));
+        assert!(
+            ev.iter().any(|e| matches!(e, WefaxEvent::Complete { by_tone: true, .. })),
+            "the weak stop tone was missed: {ev:?}"
         );
     }
 
