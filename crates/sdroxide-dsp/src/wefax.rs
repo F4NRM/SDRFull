@@ -19,7 +19,7 @@
 //!   [`Ioc::I576`]) or 675 Hz ([`Ioc::I288`]) for about five seconds, which is
 //!   what says a transmission is beginning and at which index of cooperation;
 //! * a **phasing signal** — around thirty seconds of lines that are black
-//!   except for a white pulse occupying the last 5 % of each. The pulse is the
+//!   except for a white pulse of 5 % centred on the line boundary. The pulse is the
 //!   only thing that says where a line *starts*; without it the chart arrives
 //!   correctly but cut vertically and wrapped, which is the classic radiofax
 //!   failure;
@@ -2292,16 +2292,17 @@ struct PulseRegion {
 impl PulseRegion {
     /// Where the picture begins, in samples into a line of `n`.
     ///
-    /// The standard puts the pulse at the end of the line, five per cent wide,
-    /// and the picture starts right after it. That is the pulse's centre plus
-    /// half of five per cent — which, for a pulse of exactly that width, is
-    /// its falling edge, as it has always been. A station whose pulse is wider
-    /// (one real recording's is a quarter of the line) is then still placed by
-    /// its middle, where its chart actually is, and not by an edge a quarter of
-    /// a line away.
+    /// The picture starts in the middle of the pulse.
+    ///
+    /// The pulse is five per cent of the line and the picture's own white
+    /// margin is the other half of it: the test pattern of 2026-10-19, a
+    /// reference decoded square by other programs, came out with its left ruler
+    /// cut off and wrapped to the right edge, 2.5 % of a line, when the picture
+    /// was started on the pulse's falling edge, and 5 % too far the other way
+    /// when started on its rising edge. A station whose pulse is wider (one real
+    /// recording's is a quarter of the line) is placed by its middle as well.
     fn picture_start(&self, n: usize) -> u32 {
-        let standard = (n as f64 * 0.05).round() as usize;
-        ((self.start + self.width / 2 + standard / 2 + (self.width % 2)) % n.max(1)) as u32
+        ((self.start + self.width / 2 + (self.width % 2)) % n.max(1)) as u32
     }
 
     /// Whether `line` is brighter inside the pulse than outside it by a clear
@@ -2475,14 +2476,16 @@ mod tests {
         modulate(&levels)
     }
 
-    /// `count` phasing lines: black, with a white pulse in the last 5 %.
+    /// `count` phasing lines: black, with a white pulse of 5 % centred on the
+    /// line boundary — the picture begins in the middle of the pulse.
     fn phasing(lpm: Lpm, count: usize) -> Vec<f32> {
         let per = (RATE * lpm.line_secs()) as usize;
         let pulse = (per as f64 * 0.05) as usize;
         let mut levels = Vec::new();
         for _ in 0..count {
+            levels.extend(std::iter::repeat_n(1.0f32, pulse / 2));
             levels.extend(std::iter::repeat_n(0.0f32, per - pulse));
-            levels.extend(std::iter::repeat_n(1.0f32, pulse));
+            levels.extend(std::iter::repeat_n(1.0f32, pulse - pulse / 2));
         }
         modulate(&levels)
     }
@@ -3712,15 +3715,15 @@ mod tests {
             *v = 1.0;
         }
         let skew = phasing_skew(&l).expect("a phasing line must yield a skew");
-        // The pulse ends at the end of the line, so the picture starts there.
-        assert!(skew as usize == 0 || skew as usize >= n - 2, "skew {skew} of {n}");
+        // The picture starts in the middle of the pulse.
+        assert!((skew as usize).abs_diff(n - pulse / 2) <= 2, "skew {skew} of {n}");
 
         // The same pulse a third of the way in.
         let mut l = vec![0.0f32; n];
         for v in l.iter_mut().skip(n / 3).take(pulse) {
             *v = 1.0;
         }
-        assert_eq!(phasing_skew(&l), Some((n / 3 + pulse) as u32));
+        assert_eq!(phasing_skew(&l), Some((n / 3 + pulse / 2) as u32));
 
         // A ramp is picture, not phasing.
         let ramp: Vec<f32> = (0..n).map(|i| i as f32 / n as f32).collect();
@@ -4234,14 +4237,15 @@ mod audio_tone_tests {
         (RATE * LPM.line_secs()) as usize
     }
 
-    /// Black lines, each ending in a 5 % white pulse.
+    /// Black lines, each with a 5 % white pulse centred on the line boundary.
     fn phasing(lines: usize) -> Vec<f32> {
         let per = per_line();
         let pulse = per / 20;
         let mut v = Vec::new();
         for _ in 0..lines {
+            v.extend(std::iter::repeat_n(1.0f32, pulse / 2));
             v.extend(std::iter::repeat_n(0.0f32, per - pulse));
-            v.extend(std::iter::repeat_n(1.0f32, pulse));
+            v.extend(std::iter::repeat_n(1.0f32, pulse - pulse / 2));
         }
         fm(&v)
     }
@@ -4451,7 +4455,9 @@ mod carrier_tests {
             for i in 0..n {
                 seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
                 let r = (seed >> 8) as f32 / (1u32 << 24) as f32;
-                levels.push(if i >= a && i < a + w && r < density { 1.0 } else { 0.0 });
+                // Circular, so a pulse centred on the line boundary wraps.
+                let inside = (i + n - a) % n < w;
+                levels.push(if inside && r < density { 1.0 } else { 0.0 });
             }
         }
         levels
@@ -4496,7 +4502,7 @@ mod carrier_tests {
     #[test]
     fn the_phasing_signal_alone_begins_a_page() {
         let mut rx = WefaxRx::new(RATE);
-        let mut audio = fm(&phasing(12, 0.95, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
+        let mut audio = fm(&phasing(12, 0.975, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
         audio.extend(fm(&ramp(20), BLACK_HZ, WHITE_HZ));
         let ev = feed(&mut rx, &audio);
         assert!(ev.iter().any(|e| matches!(e, WefaxEvent::Start { auto: true, .. })), "{ev:?}");
@@ -4541,8 +4547,8 @@ mod carrier_tests {
             })
             .unwrap_or_else(|| panic!("a wide noisy pulse was not found: {ev:?}"));
         // The pulse runs from 0.10 to 0.35 of the line: its middle is 0.225 and
-        // the picture starts half a standard pulse after that.
-        let want = (0.225 + 0.025) * per() as f64;
+        // the picture starts there.
+        let want = 0.225 * per() as f64;
         assert!((f64::from(skew) - want).abs() < 0.03 * per() as f64, "skew {skew}, wanted {want}");
     }
 
@@ -4554,7 +4560,7 @@ mod carrier_tests {
         for shift in [-100.0, 100.0] {
             let (black, white) = (BLACK_HZ + shift, WHITE_HZ + shift);
             let mut rx = WefaxRx::new(RATE);
-            let mut audio = fm(&phasing(10, 0.95, 0.05, 1.0), black, white);
+            let mut audio = fm(&phasing(10, 0.975, 0.05, 1.0), black, white);
             audio.extend(fm(&ramp(12), black, white));
             let l = lines(&feed(&mut rx, &audio));
             assert!(l.len() >= 6, "shift {shift}: only {} lines", l.len());
@@ -4572,7 +4578,7 @@ mod carrier_tests {
         let mut rx = WefaxRx::new(RATE);
         let mut out = Vec::new();
         rx.start_manual(&mut out);
-        let mut audio = fm(&phasing(8, 0.95, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
+        let mut audio = fm(&phasing(8, 0.975, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
         audio.extend(fm(&ramp(20), BLACK_HZ, WHITE_HZ));
         // Ten seconds of random black and white, a symbol every seven samples
         // (1714 a second): a crossing every other symbol, which is the stop
@@ -4599,7 +4605,7 @@ mod carrier_tests {
     #[test]
     fn a_carrier_below_white_still_ends_an_automatic_page() {
         let mut rx = WefaxRx::new(RATE);
-        let mut audio = fm(&phasing(12, 0.95, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
+        let mut audio = fm(&phasing(12, 0.975, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
         audio.extend(fm(&ramp(30), BLACK_HZ, WHITE_HZ));
         audio.extend(carrier(2100.0, 150.0));
         let ev = feed(&mut rx, &audio);
@@ -4614,14 +4620,14 @@ mod carrier_tests {
     #[test]
     fn nothing_begins_a_page_straight_after_one_ends() {
         let mut rx = WefaxRx::new(RATE);
-        let mut audio = fm(&phasing(12, 0.95, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
+        let mut audio = fm(&phasing(12, 0.975, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
         audio.extend(fm(&ramp(20), BLACK_HZ, WHITE_HZ));
         let first = feed(&mut rx, &audio);
         // Stop it by hand, then phasing at once.
         let mut out = Vec::new();
         rx.stop_manual(&mut out);
         assert!(out.iter().any(|e| matches!(e, WefaxEvent::Complete { .. })), "{first:?}");
-        let ev = feed(&mut rx, &fm(&phasing(8, 0.95, 0.05, 1.0), BLACK_HZ, WHITE_HZ));
+        let ev = feed(&mut rx, &fm(&phasing(8, 0.975, 0.05, 1.0), BLACK_HZ, WHITE_HZ));
         assert!(
             !ev.iter().any(|e| matches!(e, WefaxEvent::Start { .. })),
             "phasing straight after a page began another: {ev:?}"
