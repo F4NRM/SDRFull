@@ -688,6 +688,10 @@ pub struct WefaxRx {
     /// been so far.
     lead_phasing: Option<PulseRegion>,
     lead_skipped: u32,
+    /// How many of those leading lines are drawn all the same, as a thin strip
+    /// marking the top of the page: [`LEAD_PHASING_KEEP`] after a start tone,
+    /// none for a page begun by phasing alone.
+    lead_keep: u32,
     /// No page is begun by phasing alone before this sample: see [`IDLE_HOLD_S`].
     idle_hold_until: u64,
     /// The operator's receive sensitivity, `-5..=+5`. See [`WefaxRx::sens_k`].
@@ -840,6 +844,11 @@ const PHASE_LINES: u32 = 5;
 /// what the rephase rule looks for. This is the guard that keeps it from cutting
 /// the page it has just started: see [`WefaxRx::note_phasing_line`].
 const PHASING_SIGNAL_S: f64 = 30.0;
+/// Lines of the phasing signal left at the head of a page, so the top of the
+/// picture still shows where the signal ended and the chart began. The rest of
+/// its half minute (a lock takes a few lines of it) is dropped, which is what
+/// other WEFAX programs do with it.
+const LEAD_PHASING_KEEP: u32 = 3;
 /// Phasing-looking lines in a row, in the middle of a picture, that mean the
 /// next transmission has begun on top of it.
 ///
@@ -1061,6 +1070,7 @@ impl WefaxRx {
             white_hz: WHITE_HZ,
             lead_phasing: None,
             lead_skipped: 0,
+            lead_keep: 0,
             idle_hold_until: 0,
             sensitivity: 0,
         }
@@ -1284,6 +1294,7 @@ impl WefaxRx {
         self.hz_buf.clear();
         self.lead_phasing = None;
         self.lead_skipped = 0;
+        self.lead_keep = 0;
         self.reset_idle();
         self.rephase_lines = 0;
         self.had_content = false;
@@ -1964,7 +1975,7 @@ impl WefaxRx {
             Phase::Phasing => {
                 self.phase_samples += line.len() as u64;
                 self.probe_slant(&line);
-                if let Some((mean, _)) = self.phasing_stack.push(&line, self.lock_lines as usize) {
+                if let Some((mean, pulse)) = self.phasing_stack.push(&line, self.lock_lines as usize) {
                     // The pulse sits at the *end* of a phasing line, so the
                     // picture starts just after it.
                     self.calibrate(&line, &line_hz);
@@ -1976,6 +1987,18 @@ impl WefaxRx {
                     self.phasing_lines = 0;
                     self.phasing_stack.reset();
                     self.phase = Phase::Image;
+                    // The phasing signal runs for half a minute and the lock
+                    // takes a few lines of it: the rest are still phasing, not
+                    // chart, and are dropped as they pass (see `lead_phasing`).
+                    // The region is moved into the coordinates of the lines cut
+                    // from here on, which begin right after the pulse.
+                    let n = line.len().max(1);
+                    self.lead_phasing = Some(PulseRegion {
+                        start: (pulse.start + n - (mean as usize % n)) % n,
+                        width: pulse.width,
+                    });
+                    self.lead_skipped = 0;
+                    self.lead_keep = LEAD_PHASING_KEEP;
                     if self.start_pending {
                         self.start_pending = false;
                         out.push(WefaxEvent::Start { ioc: self.ioc, lpm: self.lpm, auto: true });
@@ -2011,7 +2034,11 @@ impl WefaxRx {
                 // "in the middle of a picture" is load-bearing, because a page
                 // opens with its *own* phasing signal: see
                 // [`WefaxRx::note_phasing_line`].
-                let since_lock_s = f64::from(self.line_no) * self.samples_per_line() / self.rate;
+                // Counting the phasing lines dropped from the head as well as
+                // the ones drawn: it is time since the lock that is asked.
+                let lines_since_lock =
+                    u32::from(self.line_no) + self.lead_skipped.saturating_sub(self.lead_keep);
+                let since_lock_s = f64::from(lines_since_lock) * self.samples_per_line() / self.rate;
                 // The run is maintained whether or not the guard has expired —
                 // `note_phasing_line` is what counts the lines, so skipping the
                 // call would leave the count at zero when the guard lifts.
@@ -2036,9 +2063,20 @@ impl WefaxRx {
                     // to show a pulse of its own.
                     let room =
                         (PHASING_SIGNAL_S * 1.5 * self.rate / self.samples_per_line()) as u32;
-                    let mean = line.iter().sum::<f32>() / line.len().max(1) as f32;
-                    if self.lead_skipped < room && mean <= 0.4 && pulse.stands_out_by(&line, 0.12) {
+                    // The first line after a lock carries the samples between
+                    // the cut and the picture's start in front of it: judge the
+                    // line proper, the last `spl` samples.
+                    let proper = &line[line.len().saturating_sub(self.samples_per_line().round() as usize)..];
+                    let mean = proper.iter().sum::<f32>() / proper.len().max(1) as f32;
+                    if self.lead_skipped < room && mean <= 0.4 && pulse.stands_out_by(proper, 0.12) {
                         self.lead_skipped += 1;
+                        if self.lead_skipped > self.lead_keep {
+                            return;
+                        }
+                        // Drawn: a thin strip of it stays as the page's top edge.
+                        let gray = self.picture(from);
+                        out.push(WefaxEvent::Line { y: self.line_no, gray });
+                        self.line_no = self.line_no.saturating_add(1);
                         return;
                     }
                     self.lead_phasing = None;
@@ -3033,6 +3071,40 @@ mod tests {
         audio.extend(phasing(lpm, 40));
         audio.extend(ramp_picture(lpm, chart));
         drain(rx, &audio)
+    }
+
+    /// **The phasing signal does not fill the top of the picture.**
+    ///
+    /// A start tone, then half a minute of phasing, then the chart. The lock
+    /// takes a few lines of the phasing; the rest of it used to be drawn as
+    /// fifty-odd black rows at the top of the DWD page of 2026-11-11, where
+    /// JVComm32 shows a thin strip.
+    #[test]
+    fn the_phasing_signal_leaves_a_thin_strip_at_the_top_of_the_page() {
+        let lpm = Lpm::L120;
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_lpm(lpm);
+        let mut audio = tone(Ioc::I576.start_tone_hz(), 5.0);
+        audio.extend(phasing(lpm, 60));
+        audio.extend(ramp_picture(lpm, 40));
+        let ev = drain(&mut rx, &audio);
+        let rows: Vec<&Vec<u8>> = ev
+            .iter()
+            .filter_map(|e| match e {
+                WefaxEvent::Line { gray, .. } => Some(gray),
+                _ => None,
+            })
+            .collect();
+        let dark = rows
+            .iter()
+            .take_while(|r| r.iter().map(|&v| v as u32).sum::<u32>() / (r.len() as u32) < 60)
+            .count();
+        assert!(
+            dark <= LEAD_PHASING_KEEP as usize + 1,
+            "{dark} dark rows at the top, of {} lines: the phasing signal is in the picture",
+            rows.len()
+        );
+        assert!(rows.len() >= 36, "the chart itself lost lines: only {} drawn", rows.len());
     }
 
     fn completes(ev: &[WefaxEvent]) -> usize {
