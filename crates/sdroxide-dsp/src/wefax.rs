@@ -1577,8 +1577,9 @@ impl WefaxRx {
     /// A pixel the crash blanker emptied (less than a third of the signal it
     /// should hold) or whose steps point every way (no coherence, which is what
     /// noise on a weak pixel looks like) has nothing to say: it takes the
-    /// nearest pixel that does, up to [`PIC_FILL_PX`] away, and is left as it
-    /// is when none is that close.
+    /// middle one of the nearest pixel that does on each side, up to
+    /// [`PIC_FILL_PX`] away, and the pixel the line above has there. It is left
+    /// as it is when none is that close and there is no line above.
     fn shade(&self, sums: &[(Complex32, f32)]) -> (Vec<u8>, f32) {
         let expect = self.samples_per_line() as f32 / sums.len().max(1) as f32 * self.pic_mag;
         let valid = |&(s, m): &(Complex32, f32)| {
@@ -1622,8 +1623,27 @@ impl WefaxRx {
                 }
                 let dl = if left[i] == usize::MAX { usize::MAX } else { i - left[i] };
                 let dr = if right[i] == usize::MAX { usize::MAX } else { right[i] - i };
-                let j = if dl <= dr { left[i] } else { right[i] };
-                if dl.min(dr) <= PIC_FILL_PX { level(&sums[j]) } else { level(&sums[i]) }
+                // What the pixel's neighbours say: the nearest good pixel on
+                // each side, and what the line above had in the same place.
+                // Copying the nearest side alone drew the black edge of a
+                // frame out into the white beside it, a dash of up to
+                // [`PIC_FILL_PX`] pixels; the line above breaks the tie.
+                let side = |d: usize, j: usize| (d <= PIC_FILL_PX).then(|| level(&sums[j]));
+                let l = side(dl, left[i]);
+                let r = side(dr, right[i]);
+                let up = (self.last_line.len() == n).then(|| self.last_line[i]);
+                match (l, r, up) {
+                    (Some(l), Some(r), Some(u)) => l.max(r.min(u)).min(r.max(l.min(u))),
+                    (Some(l), Some(r), None) => if dl <= dr { l } else { r },
+                    (Some(a), None, Some(u)) | (None, Some(a), Some(u)) => {
+                        // One side only: it counts when the line above agrees
+                        // with it, and the line above when it does not.
+                        if a.abs_diff(u) < 96 { a } else { u }
+                    }
+                    (Some(a), None, None) | (None, Some(a), None) => a,
+                    (None, None, Some(u)) => u,
+                    (None, None, None) => level(&sums[i]),
+                }
             })
             .collect();
         (gray, share)
@@ -4561,6 +4581,30 @@ mod carrier_tests {
         assert!(l.len() >= 15, "only {} lines", l.len());
         let mean = l[0].1.iter().map(|&g| f64::from(g)).sum::<f64>() / l[0].1.len() as f64 / 255.0;
         assert!(mean > 0.3, "the page opens on the phasing signal: {mean:.2}");
+    }
+
+    /// A stretch of lost pixels beside the black edge of a frame is not drawn as
+    /// a black dash running out of that edge: the line above says what is there.
+    #[test]
+    fn lost_pixels_beside_a_black_edge_are_not_drawn_as_a_dash() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.pic_mag = 1.0;
+        let width = rx.ioc.width() as usize;
+        let weight = rx.samples_per_line() as f32 / width as f32;
+        let step = |hz: f64, m: f32| {
+            Complex32::from_polar(m, ((hz - CENTRE_HZ) * TAU / RATE) as f32)
+        };
+        let mut sums = vec![(step(WHITE_HZ, weight), weight); width];
+        sums[30] = (step(BLACK_HZ, weight), weight);
+        for s in &mut sums[31..46] {
+            *s = (Complex32::default(), 0.0);
+        }
+        rx.last_line = vec![255; width];
+        let (gray, _) = rx.shade(&sums);
+        assert!(gray[30] < 40, "the edge itself stays black: {}", gray[30]);
+        for (x, &g) in gray.iter().enumerate().take(46).skip(31) {
+            assert!(g > 200, "pixel {x} is {g}: the edge was drawn out into the gap");
+        }
     }
 
     /// A line cut from a lock begins at the middle of the pulse, so the pulse of
