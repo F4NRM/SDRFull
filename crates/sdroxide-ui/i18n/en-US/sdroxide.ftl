@@ -9720,3 +9720,73 @@ settings-ui-theme-file = Theme from a file
 settings-ui-theme-file-builtin = The built-in theme
 
 settings-ui-theme-file-hint = Files are read from themes/ in the configuration directory.
+
+ptt-desk-title = Desk or external microphone
+
+ptt-pedal-title = Pedal or microphone switch
+
+ptt-waiting = Waiting for the station's settings…
+
+ptt-intro = A microphone's PTT bar or a footswitch can key the transmitter. Wire the switch from RTS to CTS, DSR or DCD on a serial port (a USB-serial adapter will do), or use a USB HID device or a MIDI note. Either input keys the transmitter; it drops when both are released. The device is read on the station's computer.
+
+ptt-apply-hint = Save and open the devices on the station's computer.
+
+ptt-source = Source
+
+ptt-source-serial = Serial
+
+ptt-source-hid = USB HID
+
+ptt-source-midi = USB MIDI
+
+ptt-input-line = Switch line
+
+ptt-rts = RTS output
+
+ptt-dtr = DTR output
+
+ptt-drive-leave = Leave as is
+
+ptt-drive-on = On
+
+ptt-drive-off = Off
+
+ptt-active-high = Polarity
+
+ptt-active-high-label = Pressed when high
+
+ptt-active-high-hint = A switch wired from RTS to DSR gives a high level when pressed. Untick it if your interface pulls the line down.
+
+ptt-debounce = Debounce
+
+ptt-hold = Mode
+
+ptt-hold-hold = Hold to transmit
+
+ptt-hold-toggle = Press to switch
+
+ptt-hid-device = USB HID device
+
+ptt-hid-switch = Switch
+
+ptt-hid-byte-bits = Byte { $byte }, bits { $mask }
+
+ptt-learn = LEARN
+
+ptt-learning = PRESS THE SWITCH…
+
+ptt-hid-report = Last report: { $bytes }
+
+ptt-hid-no-report = No report received yet
+
+ptt-midi-port = MIDI input
+
+ptt-midi-control = Control
+
+ptt-open = Open
+
+ptt-not-open = Not open
+
+ptt-pressed = PRESSED
+
+ptt-released = released

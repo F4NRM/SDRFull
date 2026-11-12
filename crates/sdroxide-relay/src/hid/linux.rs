@@ -87,6 +87,38 @@ impl HidDev for HidRaw {
         self.file.write_all(&buf)?;
         Ok(())
     }
+
+    fn read_input(&mut self, timeout: std::time::Duration) -> Result<Option<Vec<u8>>> {
+        let mut pfd = libc::pollfd { fd: self.file.as_raw_fd(), events: libc::POLLIN, revents: 0 };
+        let ms = i32::try_from(timeout.as_millis()).unwrap_or(i32::MAX);
+        let rc = unsafe { libc::poll(&mut pfd, 1, ms) };
+        if rc < 0 {
+            let e = std::io::Error::last_os_error();
+            if e.kind() == std::io::ErrorKind::Interrupted {
+                return Ok(None);
+            }
+            return Err(Error::opening(&self.path, e));
+        }
+        if rc == 0 {
+            return Ok(None);
+        }
+        // The device went away: hidraw reports it as an error condition rather
+        // than as readable bytes.
+        if pfd.revents & (libc::POLLERR | libc::POLLHUP | libc::POLLNVAL) != 0 {
+            return Err(Error::NotFound { key: self.path.clone() });
+        }
+        let mut buf = [0u8; 256];
+        let n = unsafe { libc::read(self.file.as_raw_fd(), buf.as_mut_ptr().cast(), buf.len()) };
+        if n < 0 {
+            return Err(Error::opening(&self.path, std::io::Error::last_os_error()));
+        }
+        Ok(Some(buf[..n as usize].to_vec()))
+    }
+}
+
+/// A hidraw node reads the same way it writes: no separate handle.
+pub fn open_input(key: &str) -> Result<Box<dyn HidDev>> {
+    open(key)
 }
 
 pub fn open(key: &str) -> Result<Box<dyn HidDev>> {

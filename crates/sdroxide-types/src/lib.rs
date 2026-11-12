@@ -75,6 +75,7 @@ mod radio;
 mod rds;
 pub mod recording;
 mod region;
+mod ptt_input;
 mod relay;
 pub mod reopen;
 mod repeater;
@@ -336,6 +337,11 @@ pub use rds::{
     pty_name, rt_plus_class,
 };
 pub use recording::{JobAction, RecordingFormat, RecordingJob, RecordingKind};
+pub use ptt_input::{
+    Debounce, LineDrive, PttHidDevice, PttHold, PttInputConfig, PttInputSource, PttInputState,
+    PttInputsConfig, PttInputsStatus, PttMidiPort, PttSlot, hid_learn, hid_pressed, level_pressed,
+    midi_pressed,
+};
 pub use region::{Region, region, set_region};
 pub use relay::{
     DEFAULT_HOLD_MS, DEFAULT_LEAD_MS, FailSafe, MAX_CHANNEL, RelayBandRow, RelayChannel,

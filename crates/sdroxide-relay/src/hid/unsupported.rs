@@ -12,6 +12,10 @@ pub fn enumerate(_ids: &[(u16, u16)]) -> Vec<HidEntry> {
     Vec::new()
 }
 
+pub fn open_input(key: &str) -> Result<Box<dyn HidDev>> {
+    open(key)
+}
+
 pub fn open(_key: &str) -> Result<Box<dyn HidDev>> {
     Err(Error::Unsupported(
         "USB HID relays and sound-card GPIO are not supported on this platform — use a serial \

@@ -118,4 +118,10 @@ pub struct StationConfig {
     ///
     /// Appended last, for the usual reason.
     pub band_plan_name: Option<String>,
+    /// The desk microphone and the pedal that key the transmitter —
+    /// `ptt_inputs.json` on the engine's machine (issue #636). The devices are
+    /// on that machine, so a remote screen only edits the setup.
+    ///
+    /// Appended last, for the usual reason.
+    pub ptt_inputs: crate::PttInputsConfig,
 }

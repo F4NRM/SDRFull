@@ -1799,6 +1799,14 @@ pub struct SdroxideApp {
     /// server configs.
     relay_edit: sdroxide_types::RelayConfig,
     relay_seeded: bool,
+    /// The desk microphone and pedal (issue #636): the dialog's copy, seeded
+    /// once from the station's bundle; the station's report of them; the learn
+    /// buttons' baselines; and whether the lists were asked for this session.
+    ptt_edit: sdroxide_types::PttInputsConfig,
+    ptt_seeded: bool,
+    ptt_status: sdroxide_types::PttInputsStatus,
+    ptt_learn: settings::ptt_inputs::PttLearn,
+    ptt_scanned: bool,
     /// The switching devices the engine's machine can see, from
     /// [`sdroxide_types::DeviceProbe::Relays`].
     relay_devices: Vec<sdroxide_types::RelayDevice>,
@@ -2843,6 +2851,11 @@ impl SdroxideApp {
             relay_status: Default::default(),
             relay_edit: Default::default(),
             relay_seeded: false,
+            ptt_edit: Default::default(),
+            ptt_seeded: false,
+            ptt_status: Default::default(),
+            ptt_learn: Default::default(),
+            ptt_scanned: false,
             relay_devices: Vec::new(),
             rot_cfg_seeded: false,
             // Whatever this process is already on: the binary applies the

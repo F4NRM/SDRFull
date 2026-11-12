@@ -21,6 +21,7 @@ pub(in crate::app) mod net;
 pub(in crate::app) mod picup;
 pub(in crate::app) mod profiles;
 pub(in crate::app) mod radio;
+pub(in crate::app) mod ptt_inputs;
 pub(in crate::app) mod relay;
 #[cfg(not(target_arch = "wasm32"))]
 pub(in crate::app) mod remote;
@@ -662,6 +663,12 @@ pub(in crate::app) struct SettingsIo<'a> {
     relay_apply: &'a mut bool,
     /// Which contact the operator asked to hear, if any.
     relay_test: &'a mut Option<u8>,
+    /// The desk microphone and the pedal (issue #636): the dialog's copy, the
+    /// learn buttons' baselines, and what the operator asked for.
+    ptt_edit: &'a mut sdroxide_types::PttInputsConfig,
+    ptt_learn: &'a mut self::ptt_inputs::PttLearn,
+    ptt_apply: &'a mut bool,
+    ptt_rescan: &'a mut bool,
     /// Control-input bindings, plus the row (if any) waiting to capture a
     /// keypress. Persisted on close, since a rebind has no APPLY step.
     input_edit: &'a mut sdroxide_types::InputSettings,
@@ -1875,6 +1882,10 @@ impl SdroxideApp {
         let mut relay_edit = self.relay_edit.clone();
         let mut relay_apply = false;
         let mut relay_test: Option<u8> = None;
+        let mut ptt_edit = self.ptt_edit.clone();
+        let mut ptt_learn = self.ptt_learn.clone();
+        let mut ptt_apply = false;
+        let mut ptt_rescan = false;
         let mut input_edit = self.input.cfg.clone();
         let mut key_capture = self.input.key_capture;
         let mut midi_learn = self.input.midi_learn;
@@ -2089,6 +2100,10 @@ impl SdroxideApp {
                                 relay_edit: &mut relay_edit,
                                 relay_apply: &mut relay_apply,
                                 relay_test: &mut relay_test,
+                                ptt_edit: &mut ptt_edit,
+                                ptt_learn: &mut ptt_learn,
+                                ptt_apply: &mut ptt_apply,
+                                ptt_rescan: &mut ptt_rescan,
                                 input_edit: &mut input_edit,
                                 key_capture: &mut key_capture,
                                 midi_learn: &mut midi_learn,
@@ -2213,6 +2228,19 @@ impl SdroxideApp {
         }
         if let Some(channel) = relay_test {
             cmds.push(Command::TestRelay { channel });
+        }
+        self.ptt_edit = ptt_edit;
+        self.ptt_learn = ptt_learn;
+        if ptt_apply {
+            // The station saves ptt_inputs.json and opens the devices; the
+            // devices are on its machine, not on this screen's.
+            cmds.push(Command::SetPttInputs(Box::new(self.ptt_edit.clone())));
+        }
+        // Once when the Controls tab first shows the section, so the lists are
+        // the station's and not whatever was there at start-up.
+        if ptt_rescan || (self.settings_tab == SettingsTab::Controls && !self.ptt_scanned) {
+            self.ptt_scanned = true;
+            cmds.push(Command::RescanPttInputs);
         }
         // Persisted on the way back only if it changed, so a settings session that
         // opens and closes without touching the report does not rewrite the
@@ -4851,6 +4879,8 @@ impl SdroxideApp {
                 &self.midi_out_ports,
                 &self.input.midi_status(),
                 self.input.last_midi,
+                self.ptt_seeded,
+                &self.ptt_status,
             ),
             SettingsTab::Servers => {
                 settings_rigctld_tab(

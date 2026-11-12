@@ -9639,3 +9639,73 @@ settings-ui-theme-file = ファイルから読み込むテーマ
 settings-ui-theme-file-builtin = 組み込みテーマ
 
 settings-ui-theme-file-hint = ファイルは設定ディレクトリの themes/ から読み込みます。
+
+ptt-desk-title = 卓上マイクまたは外付けマイク
+
+ptt-pedal-title = フットペダルまたはマイクスイッチ
+
+ptt-waiting = 局の設定を待っています…
+
+ptt-intro = マイクのPTTバーやフットペダルで送信を制御できます。スイッチをシリアルポートのRTSからCTS、DSR、またはDCDへ配線するか（USB-シリアル変換アダプターでも可）、USB HIDデバイスまたはMIDIノートを使います。どちらの入力でも送信になり、両方を離すと受信に戻ります。デバイスは局のコンピューターで読み取られます。
+
+ptt-apply-hint = 局のコンピューターで設定を保存し、デバイスを開きます。
+
+ptt-source = 入力元
+
+ptt-source-serial = シリアル
+
+ptt-source-hid = USB HID
+
+ptt-source-midi = USB MIDI
+
+ptt-input-line = スイッチの信号線
+
+ptt-rts = RTS出力
+
+ptt-dtr = DTR出力
+
+ptt-drive-leave = 変更しない
+
+ptt-drive-on = オン
+
+ptt-drive-off = オフ
+
+ptt-active-high = 極性
+
+ptt-active-high-label = Highのとき押下
+
+ptt-active-high-hint = RTSからDSRへ配線したスイッチは、押すとHighになります。インターフェースが信号線をLowに引く場合はチェックを外してください。
+
+ptt-debounce = チャタリング防止
+
+ptt-hold = 動作
+
+ptt-hold-hold = 押している間送信
+
+ptt-hold-toggle = 押すたびに切り替え
+
+ptt-hid-device = USB HIDデバイス
+
+ptt-hid-switch = スイッチ
+
+ptt-hid-byte-bits = バイト { $byte }、ビット { $mask }
+
+ptt-learn = 学習
+
+ptt-learning = スイッチを押してください…
+
+ptt-hid-report = 最後のレポート：{ $bytes }
+
+ptt-hid-no-report = まだレポートを受信していません
+
+ptt-midi-port = MIDI入力
+
+ptt-midi-control = コントロール
+
+ptt-open = 接続中
+
+ptt-not-open = 未接続
+
+ptt-pressed = 押下中
+
+ptt-released = 解放

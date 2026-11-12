@@ -4773,6 +4773,10 @@ impl SdroxideApp {
                         self.rot_cfg_edit = c.rotator.clone();
                         self.rot_cfg_seeded = true;
                     }
+                    if !self.ptt_seeded {
+                        self.ptt_edit = c.ptt_inputs.clone();
+                        self.ptt_seeded = true;
+                    }
                     if !self.relay_seeded {
                         self.relay_edit = c.relay.clone();
                         self.relay_seeded = true;
@@ -4822,6 +4826,7 @@ impl SdroxideApp {
                     self.rotator_status = Some((connected, az_deg, el_deg, error));
                 }
                 RadioEvent::RelayStatus(st) => self.relay_status = *st,
+                RadioEvent::PttInputsStatus(st) => self.ptt_status = *st,
                 RadioEvent::ImageSaved(e) => match e.kind {
                     sdroxide_types::ImageKind::Sstv => self.sstv.on_saved(e, &ctx),
                     sdroxide_types::ImageKind::Wefax => self.wefax.on_saved(e, &ctx),

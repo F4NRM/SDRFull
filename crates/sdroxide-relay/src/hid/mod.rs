@@ -26,7 +26,9 @@
 //! body alone — so normalising here is the only way the callers can be written
 //! once. Both devices supported use report id 0.
 
-use crate::error::Result;
+use std::time::Duration;
+
+use crate::error::{Error, Result};
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -57,6 +59,23 @@ pub trait HidDev: Send {
 
     /// An output report — how a CM108's GPIO pins are driven.
     fn write_output(&mut self, report_id: u8, body: &[u8]) -> Result<()>;
+
+    /// Wait up to `timeout` for one input report — how a footswitch or a desk
+    /// microphone's button says it was pressed (issue #636).
+    ///
+    /// `Ok(None)` is "nothing came", not an error. The bytes are what the device
+    /// sent: for a device that numbers its reports byte 0 is the report id; for
+    /// one that does not (almost every switch) byte 0 is the first data byte,
+    /// on every platform.
+    ///
+    /// Only a device opened with [`open_input`] answers; the relay boards do not
+    /// need it and the default says so.
+    fn read_input(&mut self, _timeout: Duration) -> Result<Option<Vec<u8>>> {
+        Err(Error::Unsupported(
+            "reading a USB HID switch is not supported on this platform — use a serial              port or a MIDI device"
+                .into(),
+        ))
+    }
 }
 
 /// A HID device seen on the bus, before anything is opened.
@@ -87,4 +106,13 @@ pub fn enumerate(ids: &[(u16, u16)]) -> Vec<HidEntry> {
 /// Open one, by the `key` an [`HidEntry`] gave.
 pub fn open(key: &str) -> Result<Box<dyn HidDev>> {
     backend::open(key)
+}
+
+/// Open one to *read* its input reports ([`HidDev::read_input`]).
+///
+/// Separate from [`open`] because on Windows a handle that waits with a timeout
+/// has to be opened for overlapped I/O, and a relay board's writes then need an
+/// `OVERLAPPED` they have no use for.
+pub fn open_input(key: &str) -> Result<Box<dyn HidDev>> {
+    backend::open_input(key)
 }

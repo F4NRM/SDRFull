@@ -259,6 +259,7 @@ async fn run_session(
         hd,
         relay,
         profiles,
+        ptt_inputs,
     ) = {
         let latest = shared.latest.lock().unwrap();
         (
@@ -290,6 +291,7 @@ async fn run_session(
             latest.hd.clone(),
             latest.relay.clone(),
             latest.profiles.clone(),
+            latest.ptt_inputs.clone(),
         )
     };
     let ack = ServerMsg::HelloAck { proto: PROTO_VERSION, caps, state, rx_codec, tx_codec };
@@ -436,6 +438,11 @@ async fn run_session(
     }
     if let Some(st) = meshtastic_status {
         let _ = socket.send(msg(&ServerMsg::MeshtasticStatus(st))).await;
+    }
+    // The desk microphone and the pedal, so the settings dialog lists the
+    // station's devices as soon as it opens.
+    if let Some(st) = ptt_inputs {
+        let _ = socket.send(msg(&ServerMsg::PttInputsStatus(st))).await;
     }
     // And the transmit-image presets, for the same reason. The received
     // galleries are not replayed: a panel lists its store when it opens, which

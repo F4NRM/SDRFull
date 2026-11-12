@@ -9691,3 +9691,73 @@ settings-ui-theme-file = Dosyadan tema
 settings-ui-theme-file-builtin = Yerleşik tema
 
 settings-ui-theme-file-hint = Dosyalar yapılandırma dizinindeki themes/ klasöründen okunur.
+
+ptt-desk-title = Masa veya harici mikrofon
+
+ptt-pedal-title = Pedal veya mikrofon anahtarı
+
+ptt-waiting = İstasyonun ayarları bekleniyor…
+
+ptt-intro = Bir mikrofonun PTT çubuğu veya bir pedal vericiyi anahtarlayabilir. Anahtarı bir seri portta RTS'den CTS, DSR veya DCD'ye bağlayın (USB-seri adaptör yeterlidir) ya da bir USB HID cihazı veya MIDI notası kullanın. Girişlerden her biri vericiyi anahtarlar; ikisi de bırakıldığında verici durur. Cihaz istasyonun bilgisayarında okunur.
+
+ptt-apply-hint = Cihazları istasyonun bilgisayarında kaydeder ve açar.
+
+ptt-source = Kaynak
+
+ptt-source-serial = Seri
+
+ptt-source-hid = USB HID
+
+ptt-source-midi = USB MIDI
+
+ptt-input-line = Anahtar hattı
+
+ptt-rts = RTS çıkışı
+
+ptt-dtr = DTR çıkışı
+
+ptt-drive-leave = Olduğu gibi bırak
+
+ptt-drive-on = Açık
+
+ptt-drive-off = Kapalı
+
+ptt-active-high = Kutuplama
+
+ptt-active-high-label = Yüksek seviyede basılı
+
+ptt-active-high-hint = RTS'den DSR'ye bağlı bir anahtar basıldığında yüksek seviye verir. Arayüzünüz hattı aşağı çekiyorsa işareti kaldırın.
+
+ptt-debounce = Sıçrama giderme
+
+ptt-hold = Mod
+
+ptt-hold-hold = Yayın için basılı tut
+
+ptt-hold-toggle = Geçiş için bas
+
+ptt-hid-device = USB HID cihazı
+
+ptt-hid-switch = Anahtar
+
+ptt-hid-byte-bits = Bayt { $byte }, bitler { $mask }
+
+ptt-learn = ÖĞRET
+
+ptt-learning = ANAHTARA BASIN…
+
+ptt-hid-report = Son rapor: { $bytes }
+
+ptt-hid-no-report = Henüz rapor alınmadı
+
+ptt-midi-port = MIDI girişi
+
+ptt-midi-control = Kontrol
+
+ptt-open = Açık
+
+ptt-not-open = Açık değil
+
+ptt-pressed = BASILI
+
+ptt-released = bırakıldı

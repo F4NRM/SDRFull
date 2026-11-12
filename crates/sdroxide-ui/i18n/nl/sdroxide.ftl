@@ -9691,3 +9691,73 @@ settings-ui-theme-file = Thema uit een bestand
 settings-ui-theme-file-builtin = Het ingebouwde thema
 
 settings-ui-theme-file-hint = Bestanden worden gelezen uit themes/ in de configuratiemap.
+
+ptt-desk-title = Tafel- of externe microfoon
+
+ptt-pedal-title = Pedaal of microfoonschakelaar
+
+ptt-waiting = Wachten op de instellingen van het station…
+
+ptt-intro = De PTT-balk van een microfoon of een voetschakelaar kan de zender bedienen. Sluit de schakelaar aan van RTS naar CTS, DSR of DCD op een seriële poort (een USB-seriële adapter volstaat), of gebruik een USB-HID-apparaat of een MIDI-noot. Elke ingang bedient de zender; die valt terug als beide losgelaten zijn. Het apparaat wordt gelezen op de computer van het station.
+
+ptt-apply-hint = Slaat op en opent de apparaten op de computer van het station.
+
+ptt-source = Bron
+
+ptt-source-serial = Serieel
+
+ptt-source-hid = USB-HID
+
+ptt-source-midi = USB-MIDI
+
+ptt-input-line = Schakelaarlijn
+
+ptt-rts = RTS-uitgang
+
+ptt-dtr = DTR-uitgang
+
+ptt-drive-leave = Ongewijzigd laten
+
+ptt-drive-on = Aan
+
+ptt-drive-off = Uit
+
+ptt-active-high = Polariteit
+
+ptt-active-high-label = Ingedrukt bij hoog niveau
+
+ptt-active-high-hint = Een schakelaar van RTS naar DSR geeft een hoog niveau als hij wordt ingedrukt. Schakel uit als uw interface de lijn laag trekt.
+
+ptt-debounce = Ontdenderen
+
+ptt-hold = Werking
+
+ptt-hold-hold = Ingedrukt houden om te zenden
+
+ptt-hold-toggle = Indrukken om te wisselen
+
+ptt-hid-device = USB-HID-apparaat
+
+ptt-hid-switch = Schakelaar
+
+ptt-hid-byte-bits = Byte { $byte }, bits { $mask }
+
+ptt-learn = LEREN
+
+ptt-learning = DRUK OP DE SCHAKELAAR…
+
+ptt-hid-report = Laatste rapport: { $bytes }
+
+ptt-hid-no-report = Nog geen rapport ontvangen
+
+ptt-midi-port = MIDI-ingang
+
+ptt-midi-control = Regelaar
+
+ptt-open = Geopend
+
+ptt-not-open = Niet geopend
+
+ptt-pressed = INGEDRUKT
+
+ptt-released = losgelaten

@@ -9683,3 +9683,73 @@ settings-ui-theme-file = Theme aus einer Datei
 settings-ui-theme-file-builtin = Das eingebaute Theme
 
 settings-ui-theme-file-hint = Dateien werden aus themes/ im Konfigurationsverzeichnis gelesen.
+
+ptt-desk-title = Tisch- oder externes Mikrofon
+
+ptt-pedal-title = Fußschalter oder Mikrofonschalter
+
+ptt-waiting = Warte auf die Einstellungen der Station…
+
+ptt-intro = Die PTT-Taste eines Mikrofons oder ein Fußschalter kann den Sender tasten. Verdrahten Sie den Schalter von RTS nach CTS, DSR oder DCD an einer seriellen Schnittstelle (ein USB-Seriell-Adapter genügt), oder nutzen Sie ein USB-HID-Gerät oder eine MIDI-Note. Jeder Eingang tastet den Sender; er fällt ab, wenn beide losgelassen sind. Das Gerät wird am Rechner der Station gelesen.
+
+ptt-apply-hint = Speichert und öffnet die Geräte am Rechner der Station.
+
+ptt-source = Quelle
+
+ptt-source-serial = Seriell
+
+ptt-source-hid = USB-HID
+
+ptt-source-midi = USB-MIDI
+
+ptt-input-line = Schalterleitung
+
+ptt-rts = RTS-Ausgang
+
+ptt-dtr = DTR-Ausgang
+
+ptt-drive-leave = Unverändert lassen
+
+ptt-drive-on = Ein
+
+ptt-drive-off = Aus
+
+ptt-active-high = Polarität
+
+ptt-active-high-label = Gedrückt bei hohem Pegel
+
+ptt-active-high-hint = Ein Schalter von RTS nach DSR liefert beim Drücken einen hohen Pegel. Abwählen, wenn Ihre Schnittstelle die Leitung nach unten zieht.
+
+ptt-debounce = Entprellung
+
+ptt-hold = Betriebsart
+
+ptt-hold-hold = Zum Senden halten
+
+ptt-hold-toggle = Drücken zum Umschalten
+
+ptt-hid-device = USB-HID-Gerät
+
+ptt-hid-switch = Schalter
+
+ptt-hid-byte-bits = Byte { $byte }, Bits { $mask }
+
+ptt-learn = ANLERNEN
+
+ptt-learning = SCHALTER DRÜCKEN…
+
+ptt-hid-report = Letzter Bericht: { $bytes }
+
+ptt-hid-no-report = Noch kein Bericht empfangen
+
+ptt-midi-port = MIDI-Eingang
+
+ptt-midi-control = Regler
+
+ptt-open = Geöffnet
+
+ptt-not-open = Nicht geöffnet
+
+ptt-pressed = GEDRÜCKT
+
+ptt-released = losgelassen
