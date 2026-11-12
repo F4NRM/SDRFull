@@ -1679,6 +1679,14 @@ impl WefaxRx {
                 let l = side(dl, left[i]);
                 let r = side(dr, right[i]);
                 let up = (self.last_line.len() == n).then(|| self.last_line[i]);
+                // A gap wider than a few pixels is a burst of noise, not an
+                // edge: the two sides are too far apart to say what is between
+                // them, and drawn from them it is a horizontal streak out of
+                // every stroke. A picture is far more alike from one line to
+                // the next than from one end of a gap to the other.
+                if let Some(u) = up.filter(|_| dl.saturating_add(dr) > PIC_FILL_NEAR) {
+                    return u;
+                }
                 match (l, r, up) {
                     (Some(l), Some(r), Some(u)) => l.max(r.min(u)).min(r.max(l.min(u))),
                     (Some(l), Some(r), None) => if dl <= dr { l } else { r },
@@ -2321,6 +2329,9 @@ const PIC_MIN_WEIGHT: f32 = 0.34;
 /// Coherence a pixel needs, and how far its stand-in may be, pixels.
 const PIC_COHERENCE: f32 = 0.25;
 const PIC_FILL_PX: usize = 24;
+/// Gaps this wide (the distance from the nearest good pixel on one side plus
+/// the other, in pixels) are filled from the line above alone.
+const PIC_FILL_NEAR: usize = 6;
 
 /// A line with fewer than this share of pixels drawn from their own signal is
 /// a lost line, and the line above is repeated for it, at most
@@ -4811,6 +4822,38 @@ mod carrier_tests {
         for (x, &g) in gray.iter().enumerate().take(46).skip(31) {
             assert!(g > 200, "pixel {x} is {g}: the edge was drawn out into the gap");
         }
+    }
+
+    /// A burst of noise that wipes out a stretch of a line must not wipe out
+    /// the vertical stroke it crosses: the two good sides are white, the line
+    /// above has the stroke, and the stroke stays. (Drawn from the sides alone
+    /// it was a white streak through every stroke the burst crossed.) A gap of a
+    /// few pixels is still drawn from its sides.
+    #[test]
+    fn a_wide_burst_does_not_cut_the_strokes_it_crosses() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.pic_mag = 1.0;
+        let width = rx.ioc.width() as usize;
+        let weight = rx.samples_per_line() as f32 / width as f32;
+        let white =
+            (Complex32::from_polar(weight, ((WHITE_HZ - CENTRE_HZ) * TAU / RATE) as f32), weight);
+        let mut sums = vec![white; width];
+        for s in &mut sums[95..110] {
+            *s = (Complex32::default(), 0.0);
+        }
+        // One lost pixel beside the stroke of the next gap, for the short case.
+        sums[300] = (Complex32::default(), 0.0);
+        rx.last_line = vec![255; width];
+        for x in 100..103 {
+            rx.last_line[x] = 0;
+        }
+        rx.last_line[300] = 0;
+        let (gray, _) = rx.shade(&sums);
+        for (x, &g) in gray.iter().enumerate().take(103).skip(100) {
+            assert!(g < 60, "pixel {x} is {g}: the stroke was cut by the burst");
+        }
+        assert!(gray[96] > 200 && gray[108] > 200, "the rest of the gap stays white");
+        assert!(gray[300] > 200, "a single lost pixel is drawn from its sides: {}", gray[300]);
     }
 
     /// A line cut from a lock begins at the middle of the pulse, so the pulse of
