@@ -887,9 +887,41 @@ struct SlantFit {
     sxy: f64,
     sxx: f64,
     syy: f64,
+    /// The last position added, unwrapped (see [`SlantFit::unwrap`]).
+    last: Option<f64>,
 }
 
 impl SlantFit {
+    /// `pos`, a position in a line of `n` samples, moved to the whole-number
+    /// lap nearest the last one added.
+    ///
+    /// A pulse that sits near the line boundary reads as `n - 3`, then `2`, then
+    /// `n - 1` as it walks: a straight drift that the fit takes for a jump of a
+    /// whole line. Following it round the circle keeps the drift a drift. The
+    /// first position is taken as it is.
+    ///
+    /// A position further from the last than a clock could have moved it in one
+    /// line (`max_step`) is not a drift but a chart line that passed the pulse
+    /// test, or the lock's own longer first line: `None`, and it leaves the fit
+    /// as it was. Until a few positions are in, though, the baseline is not yet
+    /// trusted and the new position replaces it.
+    fn unwrap(&mut self, pos: f64, n: f64, max_step: f64) -> Option<f64> {
+        let Some(last) = self.last else {
+            self.last = Some(pos);
+            return Some(pos);
+        };
+        let step = (pos - last + n / 2.0).rem_euclid(n) - n / 2.0;
+        if step.abs() > max_step {
+            if self.n < 3.0 {
+                *self = Self { last: Some(pos), ..Self::default() };
+                return Some(pos);
+            }
+            return None;
+        }
+        self.last = Some(last + step);
+        Some(last + step)
+    }
+
     /// Standard error of the slope, samples per line: how far the pulse's
     /// positions scatter around the fitted line, over the spread of the lines.
     fn slope_error(&self) -> f64 {
@@ -948,7 +980,7 @@ const CARRIER_REF_S: f32 = 20.0;
 /// at 120 LPM, well inside the thirty-second phasing signal, and long enough
 /// that a few parts-per-million of line-clock error move the pulse several
 /// samples — which is what makes the slant measurable at all.
-const SLANT_PROBE_LINES: u32 = 20;
+const SLANT_PROBE_LINES: u32 = 12;
 /// The smallest drift the auto-slant will act on once the whole phasing signal
 /// has been fitted, in parts per million.
 ///
@@ -1776,7 +1808,10 @@ impl WefaxRx {
         }
         let Some(pos) = phasing_skew_strict(line) else { return };
         self.phasing_lines += 1;
-        self.slant_fit.add(f64::from(self.phasing_lines), f64::from(pos));
+        let n = line.len() as f64;
+        let max_step = n * SLANT_MAX_PPM * 1e-6 + 2.0;
+        let Some(pos) = self.slant_fit.unwrap(f64::from(pos), n, max_step) else { return };
+        self.slant_fit.add(f64::from(self.phasing_lines), pos);
         let Some(slope) = self.slant_fit.slope(SLANT_PROBE_LINES) else { return };
         // A walk the pulse's own scatter could have made is noise, not drift:
         // on a weak signal the fit used to name a slant out of it and lean a
@@ -2623,6 +2658,9 @@ mod tests {
             let mut rx = WefaxRx::new(RATE);
             let mut ev = into_image(&mut rx, Lpm::L120);
             rx.set_clock_ppm(told);
+            // This is about the clock the receiver is told, not about the
+            // auto-slant, which would otherwise start trimming it.
+            rx.slant_locked = true;
             ev.extend(drain(&mut rx, &audio));
             let pos = bar_positions(&ev);
             assert!(pos.len() > 40, "only {} lines", pos.len());
@@ -2683,6 +2721,53 @@ mod tests {
             assert!((ppm as f64 - slant).abs() < 80.0, "reported {ppm} for {slant}");
             assert!(lines > 0, "the correction must say how many lines it used");
         }
+    }
+
+    /// **The auto-slant follows a pulse that walks across the line boundary,
+    /// and does it from a short phasing signal.** A pulse that sits just before
+    /// the cut reads as `n - 3`, `n - 5`... and, a line later, as `2`: a straight
+    /// walk the fit took for a jump of a whole line, so it never measured a
+    /// thing (a test pattern whose phasing signal was fifteen lines long, 2026-11-12).
+    #[test]
+    fn the_auto_slant_follows_a_pulse_across_the_line_boundary() {
+        let n = RATE * Lpm::L120.line_secs();
+        for slant in [-500.0f64, 400.0] {
+            let mut rx = WefaxRx::new(RATE);
+            rx.start_manual(&mut Vec::new());
+            // Cut the stream so that the first pulse ends twenty samples short
+            // of (or past) a line boundary, on the side the walk is coming
+            // from: the walk carries it across the boundary half way through.
+            let per = n * (1.0 + slant * 1e-6);
+            let skip = (per + slant.signum() * 20.0).round() as usize;
+            let audio: Vec<f32> = phasing_slanted(Lpm::L120, 21, slant).into_iter().skip(skip).collect();
+            let _ = drain(&mut rx, &audio);
+            assert!(
+                (rx.slant_ppm() as f64 - slant).abs() < 120.0,
+                "slant {slant} ppm across the boundary was left at {}",
+                rx.slant_ppm()
+            );
+        }
+    }
+
+    /// The positions a pulse reads as while it walks across the line boundary
+    /// are one straight line to the fit, and a chart line that happened to pass
+    /// the pulse test is not part of it.
+    #[test]
+    fn the_fit_unwraps_positions_and_ignores_a_jump() {
+        let n = 6000.0;
+        let max_step = 14.0;
+        let mut fit = SlantFit::default();
+        let walk = [4.0, 1.0, 5998.0, 5995.0, 5992.0];
+        let out: Vec<f64> = walk.iter().filter_map(|&p| fit.unwrap(p, n, max_step)).collect();
+        assert_eq!(out, vec![4.0, 1.0, -2.0, -5.0, -8.0]);
+        for (i, p) in out.iter().enumerate() {
+            fit.add(i as f64, *p);
+        }
+        assert!((fit.slope(5).unwrap() + 3.0).abs() < 1e-9);
+        // A position a whole chart away from the walk is left out, and the walk
+        // goes on from where it was.
+        assert_eq!(fit.unwrap(3000.0, n, max_step), None);
+        assert_eq!(fit.unwrap(5989.0, n, max_step), Some(-11.0));
     }
 
     /// **A page starts from the operator's trim, not from the last page's
