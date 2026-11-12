@@ -1684,16 +1684,16 @@ impl WefaxRx {
 
     /// A phasing pulse found by a lock, moved into the coordinates of the lines
     /// cut from the lock on, which begin right after it: the pulse ends such a
-    /// line, as far back from the end as the picture's start sits beyond the
-    /// pulse's own start (see [`PulseRegion::picture_start`]).
+    /// line, as far back from the end as the picture's start (the middle of the
+    /// pulse, see [`PulseRegion::picture_start`]) sits beyond the pulse's own
+    /// start.
     ///
     /// Taken against a whole line, not against the one that locked: the first
     /// line of a start-tone page carries the samples that came before the
     /// signal and is longer.
     fn aligned_pulse(&self, pulse: PulseRegion) -> PulseRegion {
         let n = (self.samples_per_line().round() as usize).max(1);
-        let standard = (n as f64 * 0.05).round() as usize;
-        let back = (pulse.width / 2 + standard / 2 + pulse.width % 2) % n;
+        let back = (pulse.width / 2 + pulse.width % 2) % n;
         PulseRegion { start: (n - back) % n, width: pulse.width }
     }
 
@@ -4529,6 +4529,20 @@ mod carrier_tests {
         assert!(l.len() >= 15, "only {} lines", l.len());
         let mean = l[0].1.iter().map(|&g| f64::from(g)).sum::<f64>() / l[0].1.len() as f64 / 255.0;
         assert!(mean > 0.3, "the page opens on the phasing signal: {mean:.2}");
+    }
+
+    /// A line cut from a lock begins at the middle of the pulse, so the pulse of
+    /// the next phasing line is centred on that line's end: its region is
+    /// [`PulseRegion::picture_start`] of itself, one line on.
+    #[test]
+    fn the_pulse_of_a_cut_line_is_centred_on_the_line_boundary() {
+        let rx = WefaxRx::new(RATE);
+        let n = (rx.samples_per_line().round() as usize).max(1);
+        for width in [20usize, 21, 600, 601] {
+            let region = rx.aligned_pulse(PulseRegion { start: 1000, width });
+            assert_eq!(region.width, width);
+            assert_eq!(region.picture_start(n) as usize, 0, "width {width}: {region:?}");
+        }
     }
 
     /// A weak signal's pulse is a scatter of blips a fifth of a line wide, not a
