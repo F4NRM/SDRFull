@@ -2106,7 +2106,19 @@ pub fn save_digi_config(cfg: &sdroxide_types::DigiConfig) -> Result<(), ConfigEr
 /// separate from the live `RadioState.skimmer`: a narrowband (audio-mode)
 /// source forces the skimmers off, and that must not overwrite what the
 /// operator picked for a wideband one.
+///
+/// With no file yet (a first run) the CW decoder follows the machine: timing on
+/// four cores or fewer, neural above (issue #719). A file that exists is read as
+/// it is, so an operator's choice, or a file that predates the field, is never
+/// moved.
 pub fn load_skimmer_config() -> sdroxide_types::SkimmerSettings {
+    let first_run = config_dir()
+        .map(|dir| matches!(read_config_text(&dir, "skimmer.json"), FileText::Missing))
+        .unwrap_or(false);
+    if first_run {
+        let cores = std::thread::available_parallelism().map_or(usize::MAX, |n| n.get());
+        return sdroxide_types::SkimmerSettings::for_cores(cores);
+    }
     load_json("skimmer.json")
 }
 

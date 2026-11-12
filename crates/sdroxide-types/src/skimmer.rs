@@ -137,7 +137,21 @@ impl Default for SkimmerSettings {
     }
 }
 
+/// A machine with this many cores or fewer is "small" for the neural CW
+/// decoder: it keeps one core busy per signal on screen (issue #719, a
+/// Raspberry Pi 5 sat at 250-310 % of a CPU on a CW segment).
+pub const SMALL_MACHINE_CORES: usize = 4;
+
 impl SkimmerSettings {
+    /// The settings a station with no saved choice starts on, given how many
+    /// cores it has: the timing decoder on a small machine, the neural one
+    /// elsewhere. A saved `skimmer.json` is never changed by this.
+    pub fn for_cores(cores: usize) -> Self {
+        let cw_decoder =
+            if cores <= SMALL_MACHINE_CORES { CwEngine::Timing } else { CwEngine::Neural };
+        SkimmerSettings { cw_decoder, ..SkimmerSettings::default() }
+    }
+
     /// Nothing running — the state for devices without a wideband IQ stream.
     ///
     /// The decoder choice matches [`Default`] rather than being meaningful here:
@@ -194,4 +208,28 @@ pub struct SkimmerSpot {
     pub wpm: u16,
     /// True while the signal is currently keying (recently active).
     pub active: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_small_machine_starts_on_the_timing_decoder() {
+        for cores in [1, 2, 4, SMALL_MACHINE_CORES] {
+            assert_eq!(SkimmerSettings::for_cores(cores).cw_decoder, CwEngine::Timing, "{cores}");
+        }
+        for cores in [SMALL_MACHINE_CORES + 1, 8, 32] {
+            assert_eq!(SkimmerSettings::for_cores(cores).cw_decoder, CwEngine::Neural, "{cores}");
+        }
+    }
+
+    #[test]
+    fn only_the_decoder_depends_on_the_machine() {
+        let small = SkimmerSettings::for_cores(4);
+        assert_eq!(
+            SkimmerSettings { cw_decoder: CwEngine::Neural, ..small },
+            SkimmerSettings::default()
+        );
+    }
 }

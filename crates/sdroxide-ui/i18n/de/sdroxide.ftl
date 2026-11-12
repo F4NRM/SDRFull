@@ -9753,3 +9753,5 @@ ptt-not-open = Nicht geöffnet
 ptt-pressed = GEDRÜCKT
 
 ptt-released = losgelassen
+
+cw-neural-heavy-small-machine = Rechenintensiv auf kleinen Rechnern: bei vier Kernen oder weniger (z. B. ein Raspberry Pi) ist der Takt-Decoder die leichte Wahl.

@@ -9699,3 +9699,5 @@ ptt-not-open = 未打开
 ptt-pressed = 已按下
 
 ptt-released = 已松开
+
+cw-neural-heavy-small-machine = 在小型设备上负载较重：四核或更少（例如树莓派）时，时序解码器是轻量之选。

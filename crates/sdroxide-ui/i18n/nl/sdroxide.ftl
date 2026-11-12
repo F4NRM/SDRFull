@@ -9761,3 +9761,5 @@ ptt-not-open = Niet geopend
 ptt-pressed = INGEDRUKT
 
 ptt-released = losgelaten
+
+cw-neural-heavy-small-machine = Zwaar voor een kleine computer: bij vier kernen of minder (bijvoorbeeld een Raspberry Pi) is de timingdecoder de lichte keuze.

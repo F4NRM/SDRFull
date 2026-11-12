@@ -9770,3 +9770,5 @@ ptt-not-open = Non aperto
 ptt-pressed = PREMUTO
 
 ptt-released = rilasciato
+
+cw-neural-heavy-small-machine = Pesante su una macchina piccola: con quattro core o meno (ad esempio un Raspberry Pi) il decodificatore a temporizzazione è la scelta leggera.

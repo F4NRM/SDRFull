@@ -9790,3 +9790,5 @@ ptt-not-open = Not open
 ptt-pressed = PRESSED
 
 ptt-released = released
+
+cw-neural-heavy-small-machine = Heavy on a small machine: on four cores or fewer (a Raspberry Pi, say) the timing decoder is the light choice.

@@ -127,12 +127,18 @@ const NEURAL_WPM: std::ops::RangeInclusive<u16> = 5..=60;
 ///
 /// A skimmer that finds and marks signals but cannot read them is still worth
 /// having, so a model that will not load is a downgrade rather than a failure.
+/// Inference threads for `cores` cores: half of them up to four, but a single
+/// one on a small machine, where two busy threads are half of it (issue #719).
+fn deep_threads(cores: usize) -> usize {
+    if cores <= sdroxide_types::SMALL_MACHINE_CORES { 1 } else { (cores / 2).clamp(1, 4) }
+}
+
 fn build_deep(skim_rate: f64, max_tracks: usize) -> Option<(DeepFront, Pool)> {
     // Inference is the only thing here worth spreading, and it is not worth the
     // whole machine: the skimmer shares it with a receiver. The pool bounds both
     // how many windows are in the model at once and how many cores they may use
     // between them — see `Decoder::with_thread_pool`.
-    let threads = std::thread::available_parallelism().map_or(2, |n| n.get() / 2).clamp(1, 4);
+    let threads = deep_threads(std::thread::available_parallelism().map_or(2, |n| n.get()));
     match Pool::new(threads) {
         Ok(pool) => Some((DeepFront::new(skim_rate, FFT_SIZE, max_tracks), pool)),
         Err(e) => {
@@ -786,6 +792,15 @@ impl CwSkimmer {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_small_machine_gets_one_inference_thread() {
+        assert_eq!(super::deep_threads(1), 1);
+        assert_eq!(super::deep_threads(4), 1);
+        assert_eq!(super::deep_threads(6), 3);
+        assert_eq!(super::deep_threads(8), 4);
+        assert_eq!(super::deep_threads(64), 4);
+    }
+
     use sdroxide_dsp::CwTx;
 
     use super::*;

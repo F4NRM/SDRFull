@@ -9761,3 +9761,5 @@ ptt-not-open = Não aberto
 ptt-pressed = PRESSIONADO
 
 ptt-released = solto
+
+cw-neural-heavy-small-machine = Pesado em uma máquina pequena: com quatro núcleos ou menos (um Raspberry Pi, por exemplo), o decodificador de tempo é a escolha leve.

@@ -373,7 +373,7 @@ pub use signal_id::{
     PROFILES, SIGIDWIKI_BASE, SignalFamily, SignalProfile, identify, search_profiles,
 };
 pub use skimmer::{
-    CW_SLOT_CHOICES, CW_SLOTS_DEFAULT, CwEngine, SkimmerKind, SkimmerSettings, SkimmerSpot,
+    CW_SLOT_CHOICES, CW_SLOTS_DEFAULT, CwEngine, SMALL_MACHINE_CORES, SkimmerKind, SkimmerSettings, SkimmerSpot,
 };
 pub use spectrum::{
     DEFAULT_DISPLAY_BINS, DEFAULT_ROWS_PER_SEC, MAX_DISPLAY_BINS, MAX_ROWS_PER_SEC, SpectrumConfig,
