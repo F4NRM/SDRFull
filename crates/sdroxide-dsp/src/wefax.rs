@@ -559,6 +559,11 @@ pub struct WefaxRx {
     /// Sample-clock trim in parts per million. Positive stretches the line,
     /// which corrects an image slanting to the left.
     slant_ppm: f64,
+    /// How far the input's real sample rate is from `rate`, in ppm, as measured
+    /// by whoever delivers it. Kept apart from `slant_ppm`: that is a trim and
+    /// the auto-slant's to move, this is a fact about the stream that follows
+    /// the receiver's gain, and the auto-slant measures what is left.
+    clock_ppm: f64,
     /// Auto-slant: a least-squares fit of the phasing pulse's position against
     /// the phasing-line index. The pulse sits at the same place in every
     /// phasing line, so the slope of that fit *is* the line-clock error — and
@@ -965,6 +970,8 @@ const SLANT_FINE_LINES: u32 = 50;
 /// page of bands — issue #239, where the decoder was worse than leaving the
 /// clock alone.
 const SLANT_MAX_PPM: f64 = 2_000.0;
+/// The largest input clock error [`WefaxRx::set_clock_ppm`] follows.
+const CLOCK_MAX_PPM: f64 = 1_000.0;
 /// How many standard errors a fitted walk must stand above before it is
 /// believed to be a clock error and not the pulse's scatter.
 const SLANT_SIGNIFICANCE: f64 = 3.0;
@@ -1014,6 +1021,7 @@ impl WefaxRx {
             auto_start: true,
             auto_stop: true,
             slant_ppm: 0.0,
+            clock_ppm: 0.0,
             slant_fit: SlantFit::default(),
             phasing_lines: 0,
             last_slant: (0.0, 0),
@@ -1124,6 +1132,19 @@ impl WefaxRx {
         self.slant_locked
     }
 
+    /// The input's real sample rate against its nominal one, in ppm (negative:
+    /// it runs slow), as measured by whoever delivers it. The line length
+    /// follows at once, on top of the trim and whatever the auto-slant found.
+    pub fn set_clock_ppm(&mut self, ppm: f64) {
+        self.clock_ppm = ppm.clamp(-CLOCK_MAX_PPM, CLOCK_MAX_PPM);
+    }
+
+    /// The input clock error last given to [`Self::set_clock_ppm`].
+    pub fn clock_ppm(&self) -> f64 {
+        self.clock_ppm
+    }
+
+    /// The sample-clock trim now in force.
     pub fn slant_ppm(&self) -> f32 {
         self.slant_ppm as f32
     }
@@ -1245,7 +1266,7 @@ impl WefaxRx {
 
     /// Samples in one scan line, including the slant trim.
     fn samples_per_line(&self) -> f64 {
-        self.rate * self.lpm.line_secs() * (1.0 + self.slant_ppm * 1e-6)
+        self.rate * self.lpm.line_secs() * (1.0 + self.slant_ppm * 1e-6) * (1.0 + self.clock_ppm * 1e-6)
     }
 
     fn begin(&mut self, ioc: Ioc, auto: bool, out: &mut Vec<WefaxEvent>) {
@@ -2512,6 +2533,93 @@ mod tests {
             rx.process(chunk, &mut out);
         }
         out
+    }
+
+    /// A picture whose every line is black but for a white bar at 40 % of the
+    /// line, cut on a clock `clock_ppm` long — what a stream whose real sample
+    /// rate is off by that much hands a receiver that believes it is nominal.
+    fn bar_picture_on_clock(lpm: Lpm, lines: usize, clock_ppm: f64) -> Vec<f32> {
+        let slanted = RATE * lpm.line_secs() * (1.0 + clock_ppm * 1e-6);
+        let mut levels = Vec::new();
+        let (mut at, mut cut) = (0.0f64, 0usize);
+        for _ in 0..lines {
+            at += slanted;
+            let end = at.round() as usize;
+            let len = end - cut;
+            let (from, to) = ((len as f64 * 0.4) as usize, (len as f64 * 0.5) as usize);
+            levels.extend((0..len).map(|i| if (from..to).contains(&i) { 1.0f32 } else { 0.0 }));
+            cut = end;
+        }
+        modulate(&levels)
+    }
+
+    /// Where the white bar sits in each decoded row, in pixels (centroid).
+    fn bar_positions(events: &[WefaxEvent]) -> Vec<f64> {
+        events
+            .iter()
+            .filter_map(|e| match e {
+                WefaxEvent::Line { gray, .. } => {
+                    let (sum, wsum) = gray.iter().enumerate().fold((0.0, 0.0), |(s, w), (x, &g)| {
+                        let g = g as f64;
+                        (s + g * x as f64, w + g)
+                    });
+                    (wsum > 0.0).then(|| sum / wsum)
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// A stream whose sample rate runs slow (an RSP1 at its highest gain was
+    /// measured 220 ppm slow) leans the page: every line is a little shorter in
+    /// samples than the receiver believes, so the picture walks along the row.
+    /// Told the measured error, the receiver cuts its lines to the real clock
+    /// and the picture stands square.
+    #[test]
+    fn a_measured_clock_error_squares_a_page_cut_on_a_slow_clock() {
+        let clock = -600.0f64;
+        let lines = 60;
+        let audio = bar_picture_on_clock(Lpm::L120, lines, clock);
+
+        let walk = |told: f64| {
+            let mut rx = WefaxRx::new(RATE);
+            let mut ev = into_image(&mut rx, Lpm::L120);
+            rx.set_clock_ppm(told);
+            ev.extend(drain(&mut rx, &audio));
+            let pos = bar_positions(&ev);
+            assert!(pos.len() > 40, "only {} lines", pos.len());
+            let settled = &pos[3..];
+            settled.last().unwrap() - settled.first().unwrap()
+        };
+
+        let width = Ioc::I576.width() as f64;
+        let untold = walk(0.0);
+        assert!(
+            untold.abs() > width * 0.02,
+            "the slow clock should lean the page by itself, walked {untold:.1} px"
+        );
+        let told = walk(clock);
+        assert!(
+            told.abs() < width * 0.004,
+            "with the error known the page must stand square, walked {told:.1} px of {width}"
+        );
+    }
+
+    /// A stream running at its nominal rate is not touched: telling the receiver
+    /// zero changes nothing, so the correction costs a healthy radio nothing.
+    #[test]
+    fn a_zero_clock_error_leaves_the_decode_as_it_was() {
+        let audio = bar_picture_on_clock(Lpm::L120, 20, 0.0);
+        let run = |told: Option<f64>| {
+            let mut rx = WefaxRx::new(RATE);
+            let mut ev = into_image(&mut rx, Lpm::L120);
+            if let Some(ppm) = told {
+                rx.set_clock_ppm(ppm);
+            }
+            ev.extend(drain(&mut rx, &audio));
+            bar_positions(&ev)
+        };
+        assert_eq!(run(None), run(Some(0.0)));
     }
 
     /// The auto-slant measures the pulse's walk over the phasing signal and
