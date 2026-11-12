@@ -594,6 +594,15 @@ pub struct WefaxRx {
     /// No more auto-slant on this page: the last correction was undone, by the
     /// check above or by the operator.
     slant_locked: bool,
+    /// The lines drawn since the picture-based slant last measured, kept to
+    /// measure the next window from: see [`WefaxRx::image_slant`].
+    lean_rows: Vec<Vec<u8>>,
+    /// The walks the last windows measured, in parts per million.
+    lean_hist: Vec<f64>,
+    /// The operator reverted the auto-slant on this page: the picture-based one
+    /// stays off as well. A pulse-based correction undone by its own check does
+    /// not turn it off.
+    lean_off: bool,
     /// The last line drawn, to stand in for a line the receiver lost.
     last_line: Vec<u8>,
     /// Lost lines repeated in a row.
@@ -1015,6 +1024,22 @@ const SLANT_FINE_LINES: u32 = 50;
 /// page of bands — issue #239, where the decoder was worse than leaving the
 /// clock alone.
 const SLANT_MAX_PPM: f64 = 2_000.0;
+/// Lines in a window the picture-based slant measures, and how far apart the
+/// two lines it correlates are. Eight lines apart a drift of ten parts per
+/// million is a fifth of a pixel across the width, which the correlation's peak
+/// resolves; forty-eight lines of it average out a chart's own diagonals.
+const LEAN_BLOCK: usize = 48;
+const LEAN_LAG: usize = 8;
+/// What the correlation's peak must stand at above its own average to be a
+/// frame or a meridian walking and not the chart's texture.
+const LEAN_CONFIDENCE: f64 = 1.5;
+/// Windows whose walks are averaged, the smallest average worth correcting
+/// (parts per million), how large the windows' spread may be against it, and
+/// the share of the average corrected at a time.
+const LEAN_WINDOWS: usize = 4;
+const LEAN_MIN_PPM: f64 = 80.0;
+const LEAN_STEADY: f64 = 0.8;
+const LEAN_GAIN: f64 = 0.8;
 /// The largest input clock error [`WefaxRx::set_clock_ppm`] follows.
 const CLOCK_MAX_PPM: f64 = 1_000.0;
 /// How many standard errors a fitted walk must stand above before it is
@@ -1073,6 +1098,9 @@ impl WefaxRx {
             slant_base: 0.0,
             slant_pending: None,
             slant_locked: false,
+            lean_rows: Vec::new(),
+            lean_hist: Vec::new(),
+            lean_off: false,
             last_line: Vec::new(),
             lost_run: 0,
             phase: Phase::Idle,
@@ -1168,6 +1196,7 @@ impl WefaxRx {
         self.slant_ppm = self.slant_base;
         self.slant_pending = None;
         self.slant_locked = true;
+        self.lean_off = true;
         self.slant_fit = SlantFit::default();
         self.phasing_lines = 0;
         self.last_slant = (0.0, 0);
@@ -1343,6 +1372,9 @@ impl WefaxRx {
         self.slant_pending = None;
         self.slant_locked = false;
         self.last_slant = (0.0, 0);
+        self.lean_rows.clear();
+        self.lean_hist.clear();
+        self.lean_off = false;
         self.last_line.clear();
         self.lost_run = 0;
         self.auto_begun = auto;
@@ -1905,6 +1937,58 @@ impl WefaxRx {
         }
     }
 
+    /// Correct the slant from the picture itself, a window of lines at a time.
+    ///
+    /// The phasing signal is a second opinion about the line clock and not
+    /// always a good one: a receiver whose gain moves during the thirty seconds
+    /// of it (an AGC, an operator on the gain control) moves the pulse for a
+    /// reason that is not the clock, and the page that follows is leaned the
+    /// wrong way by the very correction meant to straighten it. The picture
+    /// says what is left: a frame's edge or a meridian that walks sideways from
+    /// one line to the next. Each window of [`LEAN_BLOCK`] lines is correlated
+    /// with itself [`LEAN_LAG`] lines on, and what is left of the walk is
+    /// taken off the trim, a part at a time.
+    fn image_slant(&mut self, gray: &[u8]) {
+        if self.lean_off {
+            return;
+        }
+        self.lean_rows.push(gray.to_vec());
+        if self.lean_rows.len() < LEAN_BLOCK + LEAN_LAG {
+            return;
+        }
+        let measured = image_lean(&self.lean_rows, LEAN_LAG);
+        self.lean_rows.clear();
+        let Some((lag, confidence)) = measured else { return };
+        if confidence < LEAN_CONFIDENCE {
+            return;
+        }
+        // Content that moves right from line to line means lines cut too short.
+        let ppm = lag / LEAN_LAG as f64 / f64::from(self.ioc.width()) * 1e6;
+        if ppm.abs() > SLANT_MAX_PPM {
+            return;
+        }
+        // One window is a chart's texture as much as its clock: a coastline's
+        // diagonal moves the peak a few pixels either way. A walk that is the
+        // clock is there in window after window, on the same side.
+        self.lean_hist.push(ppm);
+        if self.lean_hist.len() < LEAN_WINDOWS {
+            return;
+        }
+        let n = self.lean_hist.len() as f64;
+        let mean = self.lean_hist.iter().sum::<f64>() / n;
+        let spread = (self.lean_hist.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n).sqrt();
+        self.lean_hist.remove(0);
+        if mean.abs() < LEAN_MIN_PPM || spread > LEAN_STEADY * mean.abs() {
+            return;
+        }
+        // The clock moves, so what was measured against the old one is stale.
+        self.lean_hist.clear();
+        self.slant_ppm = (self.slant_ppm + LEAN_GAIN * mean).clamp(-SLANT_MAX_PPM, SLANT_MAX_PPM);
+        // The pulse-based check compares windows of phasing lines against the
+        // clock set before; this correction is not the one it is watching.
+        self.slant_pending = None;
+    }
+
     fn note_phasing_line(&mut self, line: &[f32]) -> bool {
         // The strict test: mid-picture, a line that is merely "mostly black
         // with a white patch" is a chart's own graphic, not a phasing pulse.
@@ -2183,6 +2267,7 @@ impl WefaxRx {
                     return;
                 }
                 let gray = self.picture(from);
+                self.image_slant(&gray);
                 out.push(WefaxEvent::Line { y: self.line_no, gray });
                 self.line_no = self.line_no.saturating_add(1);
                 if self.line_no >= MAX_LINES {
@@ -2255,6 +2340,55 @@ fn picture_line(px: &[Complex32], origin: f64, spl: f64, width: usize) -> Vec<(C
         *o = (s, m);
     }
     out
+}
+
+/// How far the picture's content walks sideways, in pixels, over `lag` lines,
+/// and how clear the measure is (the correlation's peak against its average).
+///
+/// Every line of `rows` is correlated with the one `lag` lines later, the
+/// correlations are summed so what is common to the whole window stands out,
+/// and the peak is read to a fifth of a pixel. Positive is to the right.
+fn image_lean(rows: &[Vec<u8>], lag: usize) -> Option<(f64, f64)> {
+    let width = rows.first()?.len();
+    if width == 0 || rows.len() <= lag {
+        return None;
+    }
+    // Ink as positive, the line's own mean taken out: a white margin says
+    // nothing, a black line is what moves.
+    let ink: Vec<Vec<f32>> = rows
+        .iter()
+        .map(|r| {
+            let mean = r.iter().map(|&g| 255.0 - f32::from(g)).sum::<f32>() / width as f32;
+            r.iter().map(|&g| 255.0 - f32::from(g) - mean).collect()
+        })
+        .collect();
+    let reach = (lag as f64 * SLANT_MAX_PPM * 1e-6 * width as f64).ceil() as isize + 2;
+    let shifts = (2 * reach + 1) as usize;
+    let mut acc = vec![0.0f64; shifts];
+    for (a, b) in ink.iter().zip(ink.iter().skip(lag)) {
+        for (k, slot) in acc.iter_mut().enumerate() {
+            let s = k as isize - reach;
+            let (from, to) = (0.max(-s) as usize, (width as isize).min(width as isize - s) as usize);
+            let mut sum = 0.0f32;
+            for x in from..to {
+                sum += a[x] * b[(x as isize + s) as usize];
+            }
+            *slot += f64::from(sum);
+        }
+    }
+    let (best, peak) = acc.iter().copied().enumerate().max_by(|a, b| a.1.total_cmp(&b.1))?;
+    let mean = acc.iter().map(|v| v.abs()).sum::<f64>() / shifts as f64;
+    if peak <= 0.0 || mean <= 0.0 {
+        return None;
+    }
+    let offset = if best > 0 && best + 1 < shifts {
+        let (y1, y2, y3) = (acc[best - 1], acc[best], acc[best + 1]);
+        let den = y1 - 2.0 * y2 + y3;
+        if den.abs() > f64::EPSILON { (0.5 * (y1 - y3) / den).clamp(-0.5, 0.5) } else { 0.0 }
+    } else {
+        0.0
+    };
+    Some((best as f64 - reach as f64 + offset, peak / mean))
 }
 
 /// Where the phasing pulse ends, in samples from the start of `line`.
@@ -4581,6 +4715,50 @@ mod carrier_tests {
         assert!(l.len() >= 15, "only {} lines", l.len());
         let mean = l[0].1.iter().map(|&g| f64::from(g)).sum::<f64>() / l[0].1.len() as f64 / 255.0;
         assert!(mean > 0.3, "the page opens on the phasing signal: {mean:.2}");
+    }
+
+    /// A page whose frame walks sideways line after line is straightened by
+    /// the picture itself, a window at a time; one whose walk is only texture,
+    /// first one way and then the other, is left alone.
+    #[test]
+    fn the_picture_straightens_a_slant_that_stays_and_ignores_one_that_does_not() {
+        let width = Ioc::I576.width() as usize;
+        // Two black bars, the position of each moved by `walk` pixels a line.
+        let rows = |walk: &dyn Fn(usize) -> f64, count: usize| -> Vec<Vec<u8>> {
+            (0..count)
+                .map(|y| {
+                    let mut row = vec![255u8; width];
+                    for base in [300.0, 1100.0] {
+                        let x = (base + walk(y)).round() as usize;
+                        row[x..x + 4].fill(0);
+                    }
+                    row
+                })
+                .collect()
+        };
+        // 0.4 px a line to the right is 221 ppm of 1809 px: lines cut short.
+        let mut rx = WefaxRx::new(RATE);
+        for row in rows(&|y| 0.4 * y as f64, 400) {
+            rx.image_slant(&row);
+        }
+        assert!(
+            rx.slant_ppm() > 150.0 && rx.slant_ppm() < 700.0,
+            "the walk was not taken off, or too much of it: {}",
+            rx.slant_ppm()
+        );
+        // The same walk, sign flipped every window: the chart's texture.
+        let mut rx = WefaxRx::new(RATE);
+        for row in rows(&|y| 0.4 * (y % 56) as f64 * if (y / 56) % 2 == 0 { 1.0 } else { -1.0 }, 400) {
+            rx.image_slant(&row);
+        }
+        assert!(rx.slant_ppm().abs() < 1.0, "a walk that changes sign was followed: {}", rx.slant_ppm());
+        // The operator's revert keeps it off.
+        let mut rx = WefaxRx::new(RATE);
+        rx.revert_slant();
+        for row in rows(&|y| 0.4 * y as f64, 400) {
+            rx.image_slant(&row);
+        }
+        assert_eq!(rx.slant_ppm(), 0.0);
     }
 
     /// A stretch of lost pixels beside the black edge of a frame is not drawn as
