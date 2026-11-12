@@ -1192,9 +1192,21 @@ jobs:
         with:
           name: web-dist
           path: web-dist
+      # A run whose only platform job never started (a macOS ARM runner that was
+      # never acquired and got cancelled) downloads no `pkg-*` artifact, so
+      # `dist/` does not exist: the zip below died with "Could not create output
+      # file" and hid the real cause. Say it plainly, and publish nothing, rather
+      # than a release made of the web client alone.
+      - name: Require at least one platform build
+        run: |
+          if ! ls dist/* >/dev/null 2>&1; then
+            echo "::error::No platform build produced a package (a build job was cancelled or never started); nothing to publish. Re-run the failed job."
+            exit 1
+          fi
       - name: Zip standalone web client
         if: ${{ hashFiles('web-dist/**') != '' }}
         run: |
+          mkdir -p dist
           cd web-dist
           zip -r "../dist/sdroxide-web-$GITHUB_REF_NAME.zip" .
       - name: Create release
