@@ -141,7 +141,8 @@ impl SdroxideApp {
             let now_unix = crate::time::now_unix() as f64;
             let key = t.call.to_ascii_uppercase();
             let rec = me.auto_attempts.get(&key).copied().unwrap_or((0, 0.0));
-            me.auto_attempts.insert(key, auto::after_call(rec, me.digi_cfg_edit.auto_call_retries, now_unix));
+            me.auto_attempts
+                .insert(key, auto::after_call(rec, me.digi_cfg_edit.auto_call_retries, now_unix));
             let label = me.auto_role.map_or("auto", |r| r.label());
             me.auto_note = tr!("auto-answering", role = label, call = &t.call);
             cmds.push(Command::DigiStartQso {
@@ -175,8 +176,7 @@ impl SdroxideApp {
                     let limit = self.digi_cfg_edit.auto_cq_repeats;
                     self.auto_role = Some(auto::AutoRole::Rx);
                     self.auto_cq = auto::CqCounter::default();
-                    self.auto_note =
-                        tr!("auto-cq-no-answer", limit = limit);
+                    self.auto_note = tr!("auto-cq-no-answer", limit = limit);
                 } else {
                     self.auto_note = tr!("auto-listening", role = role.label());
                 }
@@ -184,12 +184,13 @@ impl SdroxideApp {
             auto::AutoStep::Stop(reason) => {
                 let limit = match reason {
                     auto::StopReason::CqLimit => u32::from(self.digi_cfg_edit.auto_cq_repeats),
-                    auto::StopReason::Session => {
-                        u32::from(self.digi_cfg_edit.auto_session_min)
-                    }
+                    auto::StopReason::Session => u32::from(self.digi_cfg_edit.auto_session_min),
                 };
                 let sentence = reason.sentence(limit);
-                self.stop_auto(tr!("auto-role-stopped", role = role.label(), sentence = sentence), cmds);
+                self.stop_auto(
+                    tr!("auto-role-stopped", role = role.label(), sentence = sentence),
+                    cmds,
+                );
                 return;
             }
         }
@@ -287,8 +288,7 @@ impl SdroxideApp {
         // over — and becomes eligible again when that traffic goes stale.
         let ignored = &self.session_ignored;
         auto::pick_cq(&self.digi_decodes, ix, my_call, my_grid, &self.auto_tried, |d| {
-            busy_or_exhausted(d)
-                || crate::app::ignore::is_ignored(ignored, d.from.as_deref())
+            busy_or_exhausted(d) || crate::app::ignore::is_ignored(ignored, d.from.as_deref())
         })
     }
 
@@ -364,18 +364,151 @@ impl SdroxideApp {
         if auto::auto_block_reason(s.mode, s.config.tx_watchdog_min, tx_permitted).is_some() {
             return false;
         }
+        self.begin_auto_session(now, role);
+        true
+    }
+
+    /// **A fresh auto session**, from a clean slate.
+    ///
+    /// What the last run tried says nothing about this one. A station that did
+    /// not answer — and one whose contact broke off before the log — is left
+    /// alone for the rest of *that* run and is a candidate again in the next:
+    /// propagation does not turn in a few minutes, so calling it again minutes
+    /// later is chatter on the band and no contact, while the run that follows
+    /// may well hear it. The log is still what "worked" means, so a station in
+    /// it is never answered however clean the slate is.
+    ///
+    /// Apart from the gate above so this half can be read — and tested — without
+    /// an engine, a mode and a transmit permission in the room.
+    fn begin_auto_session(&mut self, now: f64, role: auto::AutoRole) {
+        // The blotter: stations this run has already called. It survived the
+        // end of the last run, which is why a station that did not answer was
+        // never tried again for the life of the program.
+        self.auto_tried.clear();
+        self.auto_attempts.clear();
         self.auto_role = Some(role);
         self.auto_cq = auto::CqCounter::default();
         self.auto_last_activity = now;
         self.auto_cooldown_until = 0.0;
         self.auto_resume_at = None;
         self.auto_armed_at = now;
-        self.auto_attempts.clear();
         self.auto_note = match role {
             auto::AutoRole::Rx => tr!("auto-rx-listening"),
             auto::AutoRole::Cq => tr!("auto-cq-calling"),
             auto::AutoRole::Continuous => tr!("auto-cont-running"),
         };
-        true
+    }
+}
+
+#[cfg(test)]
+mod auto_session_tests {
+    //! What an auto session remembers and what the next one forgets.
+
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    use eframe::egui;
+    use sdroxide_types::{Command, Decode, RadioController, RadioEvent, auto};
+
+    use super::*;
+
+    /// Keeps every command the app sends, and answers nothing: these tests read
+    /// the decision, not the engine.
+    struct Sent(Rc<RefCell<Vec<Command>>>);
+
+    impl RadioController for Sent {
+        fn send(&mut self, cmd: Command) {
+            self.0.borrow_mut().push(cmd);
+        }
+        fn poll_event(&mut self) -> Option<RadioEvent> {
+            None
+        }
+    }
+
+    fn app() -> SdroxideApp {
+        let dir =
+            std::env::temp_dir().join(format!("sdroxide-auto-session-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        unsafe { std::env::set_var("SDROXIDE_CONFIG_DIR", &dir) };
+        let ctx = egui::Context::default();
+        SdroxideApp::new_tab(
+            &ctx,
+            None,
+            None,
+            Box::new(Sent(Rc::new(RefCell::new(Vec::new())))),
+            0,
+            true,
+        )
+    }
+
+    fn cq(from: &str) -> Decode {
+        Decode {
+            slot_utc: 1,
+            snr_db: -7,
+            dt: 0.0,
+            audio_hz: 1200.0,
+            message: format!("CQ {from} FN42"),
+            to: None,
+            from: Some(from.to_string()),
+            grid: Some("FN42".to_string()),
+            is_cq: true,
+            cq_to: None,
+            free_text: false,
+            rr73_to: None,
+        }
+    }
+
+    /// The reported fault: a station auto called once — and did not answer, or
+    /// broke off before the log — was left alone for the life of the program,
+    /// because the blotter of "tried this session" was never emptied.
+    #[test]
+    fn a_station_tried_in_the_last_session_is_a_candidate_in_the_next() {
+        let _guard = crate::multi::frame_test_lock();
+        let mut app = app();
+        app.digi_decodes.push(cq("K1ABC"));
+        app.auto_tried.insert("K1ABC".to_string());
+
+        assert!(
+            app.auto_target("MM0ABC", "JO22").is_none(),
+            "the run that tried it leaves it alone: it did not answer"
+        );
+
+        app.begin_auto_session(0.0, auto::AutoRole::Rx);
+        let picked = app.auto_target("MM0ABC", "JO22").map(|t| t.call);
+        assert_eq!(picked.as_deref(), Some("K1ABC"), "a new session picks it up again");
+    }
+
+    /// And what a new session forgets is the blotter and the call budget, not
+    /// the log: a station already worked stays out, which is what "worked"
+    /// means.
+    #[test]
+    fn a_new_session_still_never_answers_a_station_already_in_the_log() {
+        let _guard = crate::multi::frame_test_lock();
+        let mut app = app();
+        app.digi_decodes.push(cq("K1ABC"));
+        app.auto_tried.insert("K1ABC".to_string());
+        app.auto_attempts.insert("K1ABC".to_string(), (2, crate::time::now_unix() as f64 + 600.0));
+        app.begin_auto_session(0.0, auto::AutoRole::Rx);
+
+        assert!(app.auto_tried.is_empty(), "the blotter is clean");
+        assert!(app.auto_attempts.is_empty(), "and so is the call budget");
+        assert_eq!(
+            app.auto_target("MM0ABC", "JO22").map(|t| t.call).as_deref(),
+            Some("K1ABC"),
+            "nothing in the log, so it is a candidate again"
+        );
+
+        // Log it: now it is worked, and no session start changes that.
+        app.qso_log.push(sdroxide_types::QsoRecord {
+            call: "K1ABC".to_string(),
+            mode: "FT8".to_string(),
+            ..Default::default()
+        });
+        app.begin_auto_session(1.0, auto::AutoRole::Rx);
+        assert!(
+            app.auto_target("MM0ABC", "JO22").is_none(),
+            "worked is worked: the log keeps it out"
+        );
     }
 }
