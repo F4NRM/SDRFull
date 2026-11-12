@@ -582,10 +582,10 @@ pub struct WefaxStatus {
     pub lpm: WefaxLpm,
     /// Smoothed in-band level, for the tuning meter.
     pub signal: f32,
-    /// Instantaneous subcarrier frequency, Hz. A correctly tuned receiver puts
-    /// a chart's black and white excursions around 1900 Hz; a receiver 200 Hz
-    /// off puts them around 1700 or 2100, which is what makes this the fastest
-    /// way to tune a fax by eye.
+    /// Where the chart's black and white excursions are centred, Hz: 1900 when
+    /// the receiver is tuned, 2100 when it is 200 Hz off, and 1900 as well when
+    /// no page is running (nothing to say). Read over the last lines of the
+    /// page, not the frequency of the pixel being decoded.
     pub subcarrier_hz: f32,
     /// The sample-clock trim in effect, parts per million.
     pub slant_ppm: f32,
