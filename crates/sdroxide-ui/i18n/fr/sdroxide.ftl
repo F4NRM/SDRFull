@@ -9688,3 +9688,9 @@ settings-ui-graphics-note = Pris en compte au prochain démarrage. Automatique u
 wefax-auto-slant = INCLINAISON AUTO
 
 wefax-auto-slant-hint = Redresse une carte qui penche, d'après son propre signal de phasage puis d'après l'image elle-même. Coupé : seul le réglage ci-dessous s'applique et rien ne le modifie. Le réglage et cet interrupteur sont mémorisés pour chaque radio sur le serveur.
+
+settings-ui-theme-file = Thème depuis un fichier
+
+settings-ui-theme-file-builtin = Le thème intégré
+
+settings-ui-theme-file-hint = Les fichiers sont lus dans themes/ du dossier de configuration.

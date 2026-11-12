@@ -33,6 +33,7 @@ sdroxide-meshtastic = { path = "../sdroxide-meshtastic" }
 serde.workspace = true
 # The relay's reply is JSON. Pure Rust, so it builds for wasm32 as well.
 serde_json.workspace = true
+toml = "1.1.4"
 # `accesskit` is one of eframe's defaults, and turning the defaults off
 # silently switched it back off: without it the whole widget tree is
 # invisible to NVDA, Orca and VoiceOver. It is native-only (it maps to

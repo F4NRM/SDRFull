@@ -1056,6 +1056,15 @@ impl Default for ProgramsFilters {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UiSettings {
+    /// **A theme read from a file**, by name, from `themes/*.toml` in the
+    /// config directory — `None` for one of the built-ins.
+    ///
+    /// Client-side and config-only: [`Self::theme`] stays the built-in choice,
+    /// so a browser or a remote screen that has no such file shows the
+    /// built-in instead of nothing. The two are not exclusive — the file theme
+    /// wins where it is set, and clearing this falls straight back.
+    #[serde(default)]
+    pub theme_file: Option<String>,
     /// Radios with the **docked band/mode selector** on screen, by roster id,
     /// and whether it was left *showing*.
     ///
@@ -1953,6 +1962,7 @@ impl UiSettings {
 impl Default for UiSettings {
     fn default() -> Self {
         UiSettings {
+            theme_file: None,
             band_dock_open: Default::default(),
             public_sdr_favourites: Vec::new(),
             // Off: the dial is what every other radio shows, and an operator
@@ -2278,7 +2288,26 @@ impl ClientAcks {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+/// **A look that came from a theme file**, as the two things a screen needs to
+/// wear it without having the file.
+///
+/// `text` is the file's own text and it is what the client parses, so both ends
+/// run the same validation and a theme that will not load is refused by name at
+/// both ends instead of drawn half-lit. `name` is carried beside it because it
+/// is what the picker shows and what [`UiSettings::theme_file`] stores — the
+/// screen would otherwise have to parse the text just to label a combo.
+///
+/// `UiSettings::theme_file` holds the name alone: it is config, read at start
+/// from a directory this screen has. This holds the whole thing because the
+/// wire is the only way a browser, with no `themes/` directory at all, is given
+/// one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ScreenThemeFile {
+    pub name: String,
+    pub text: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ClientScreen {
     pub frame_rate_fps: u32,
@@ -2351,6 +2380,15 @@ pub struct ClientScreen {
     /// server keeps it and replays it. Appended last: this struct rides the
     /// wire positionally.
     pub wide_strip_height: f32,
+    /// **The theme from a file**, when the stored look is one — its name and the
+    /// text it was read from. `None` for a built-in theme.
+    ///
+    /// A browser has no `themes/` directory, so the look cannot travel as a
+    /// name: the text comes with the screen and the client reads it with the
+    /// same loader. Filled by the app when the screen is sent — it is the one
+    /// place that can read the file — and `None` here in [`Self::from_settings`]
+    /// for that reason. Appended last: this struct rides the wire positionally.
+    pub theme_file: Option<ScreenThemeFile>,
 }
 
 impl Default for ClientScreen {
@@ -2400,6 +2438,10 @@ impl ClientScreen {
             smeter_view: s.smeter_view,
             // Filled by the client from its `ViewState`, like the two above.
             wide_strip_height: 96.0,
+            // The app fills this from the theme it has in force: reading a file
+            // is not something this crate can do, and a browser has none to
+            // read. `apply_to` takes the name back out of it.
+            theme_file: None,
         }
     }
 
@@ -2438,6 +2480,12 @@ impl ClientScreen {
         s.spectrum_fill_style = self.spectrum_fill_style;
         s.broadcast_scope = self.broadcast_scope;
         s.smeter_view = self.smeter_view;
+        // The name only: the text is the app's to install, and this crate knows
+        // nothing about parsing it. A stored look with no file leaves the
+        // client's own choice alone rather than clearing a theme it cannot see.
+        if let Some(file) = &self.theme_file {
+            s.theme_file = Some(file.name.clone());
+        }
     }
 }
 

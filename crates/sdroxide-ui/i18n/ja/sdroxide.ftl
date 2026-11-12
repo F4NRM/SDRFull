@@ -9633,3 +9633,9 @@ settings-ui-graphics-note = 次回の起動から有効になります。自動�
 wefax-auto-slant = 自動傾き補正
 
 wefax-auto-slant-hint = 傾いたチャートを、まず自身の位相信号から、次に画像そのものから補正します。オフの場合は下の調整値だけが適用され、それを変更するものはありません。調整値とこのスイッチは、サーバー上で無線機ごとに保存されます。
+
+settings-ui-theme-file = ファイルから読み込むテーマ
+
+settings-ui-theme-file-builtin = 組み込みテーマ
+
+settings-ui-theme-file-hint = ファイルは設定ディレクトリの themes/ から読み込みます。

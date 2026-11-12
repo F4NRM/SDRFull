@@ -236,7 +236,8 @@ one entry per work item.
 ## The wire
 
 `PROTO_VERSION` and `VERSION_BYTE` live in `crates/sdroxide-proto/src/lib.rs`,
-the only register kept current. Current on main: **256 / `0x4C`** (AGENTS.md
+the only register kept current. Current on main: **299 / `0x77`**; #697
+carries **300 / `0x78`** (AGENTS.md
 may lag; verify in code). Append last, always. A variant inserted mid-enum
 shifts every discriminant below it. Two people work this repository — the
 maintainer's agent and F4NRM's sessions — and `PROTO_VERSION` is one counter
@@ -306,7 +307,7 @@ are closed/unlicensed (research only). SDRuno look is parked.
 
 ## Where the work stands
 
-- `main` at crate 2.2.0, PROTO_VERSION 262 (0x52). Latest release
+- `main` at crate 2.3.0, PROTO_VERSION 299 (0x77). Latest release
   v2.2.3.6.2_brown (pre-release).
 - Open issues: 8 (re-measured 2026-11-04). Open PRs: 1 — #434 public-SDR
   favourites.

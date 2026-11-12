@@ -9714,3 +9714,9 @@ settings-ui-graphics-note = Takes effect at the next start. Automatic uses Direc
 wefax-auto-slant = AUTO SLANT
 
 wefax-auto-slant-hint = Straighten a chart that leans, from its own phasing signal and then from the picture itself. Off: only the trim below applies, and nothing moves it. The trim and this switch are kept for each radio on the server.
+
+settings-ui-theme-file = Theme from a file
+
+settings-ui-theme-file-builtin = The built-in theme
+
+settings-ui-theme-file-hint = Files are read from themes/ in the configuration directory.

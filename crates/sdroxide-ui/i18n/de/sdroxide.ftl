@@ -9677,3 +9677,9 @@ settings-ui-graphics-note = Wirkt beim nächsten Start. Automatisch nutzt Direct
 wefax-auto-slant = NEIGUNG AUTOMATISCH
 
 wefax-auto-slant-hint = Richtet eine schiefe Karte aus, zuerst nach ihrem eigenen Phasensignal und dann nach dem Bild selbst. Aus: Nur der Trimm darunter gilt, und nichts verändert ihn. Trimm und Schalter werden für jedes Funkgerät auf dem Server gespeichert.
+
+settings-ui-theme-file = Theme aus einer Datei
+
+settings-ui-theme-file-builtin = Das eingebaute Theme
+
+settings-ui-theme-file-hint = Dateien werden aus themes/ im Konfigurationsverzeichnis gelesen.

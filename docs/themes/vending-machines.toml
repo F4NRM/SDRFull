@@ -1,0 +1,98 @@
+# Vending machines — the desktop's palette, for sdroxide.
+#
+# Cool grey-green ground, one orange accent, and a soft amber for the things
+# that were cyan: the colours of a lit machine at night rather than a warm
+# room. Every role has to be here; one that is missing is refused by name and
+# the built-in theme stays in force.
+
+name = "Vending machines"
+
+[palette]
+light = false
+no_dim = false
+bg_deep = "#141a1a"
+panel = "#1e2424"
+input_bg = "#1a2020"
+fill = "#242c2b"
+fill_hover = "#333b39"
+fill_active = "#3e4744"
+line = "#586360"
+line_lit = "#b3b9b4"
+text = "#e6e3de"
+text_strong = "#efe7e0"
+cyan = "#c9803c"
+cyan_dim = "#d9b382"
+pink = "#c1918b"
+yellow = "#b6a07c"
+green = "#8cbe95"
+ink_on_cyan = "#221c1b"
+ink_on_bright = "#141a1a"
+red_deep = "#5a1f18"
+cq_bg = "#2a2321"
+tome_bg = "#2e2b22"
+done_bg = "#1f2a22"
+row_bg = "#1a2020"
+row_hover = "#262e2d"
+scroll_track = "#1a2020"
+scroll_handle = "#b3b9b4"
+scroll_handle_hover = "#c9cfca"
+scroll_handle_drag = "#c9803c"
+faint_bg = "#1a2020"
+alert = "#f0453a"
+hazard = "#d9b382"
+hazard_dark = "#2a2419"
+
+[meter]
+face = "Glass"
+needle_root = "#8a4a16"
+needle_mid = "#c9803c"
+needle_tip = "#f0d9be"
+needle_glow = "#c9803c"
+face_top = "#4a5352"
+face_bot = "#141a1a"
+glass = "#7a8481"
+backlight = "#b3b9b4"
+readout = "#e6e3de"
+subdued = "#b3b9b4"
+tick_minor = "#8a938f"
+tick_major = "#dde2dd"
+label = "#e6e3de"
+grid_line = "#586360"
+grid_label = "#9aa39e"
+rail_top = "#141a1a"
+rail_bot = "#1e2424"
+rail_edge = "#b3b9b4"
+ramp_lo = "#6e4a2a"
+ramp_mid = "#c9803c"
+ramp_hi = "#e8be92"
+
+[scope]
+ground = "#1e2424"
+shell = "#141a1a"
+ink = "#e6e3de"
+ink_strong = "#efe7e0"
+line = "#586360"
+accent = "#c9803c"
+accent_dim = "#d9b382"
+good = "#8cbe95"
+warn = "#b6a07c"
+chrome = "#c1918b"
+
+[map]
+sea = "#1e2424"
+land = "#2a3a36"
+border = "#586360"
+river = "#7f9fb0"
+city = "#b6a07c"
+city_label = "#9aa39e"
+station = "#e6e3de"
+trail = "#c9803c"
+comet = "#e8be92"
+home = "#8cbe95"
+dx = "#c0847c"
+hover = "#d9b382"
+preview = "#d9b382"
+hint = "#ffffff5a"
+frame = "#5a3a20"
+shell = "#141a1a"
+night_max = 0.78

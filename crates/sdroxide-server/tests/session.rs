@@ -280,6 +280,12 @@ async fn a_signed_in_clients_screen_lands_in_its_own_profile() {
 
     let mut screen = sdroxide_types::ClientScreen::from_settings(&Default::default());
     screen.theme = sdroxide_types::UiTheme::Rainbow;
+    // And a look from a file, which travels as its text so that a screen with no
+    // `themes/` directory of its own can wear it.
+    screen.theme_file = Some(sdroxide_types::ScreenThemeFile {
+        name: "Vending machines".into(),
+        text: "name = \"Vending machines\"\n".into(),
+    });
 
     /// Read until the wanted variant. Bounded, because the server streams state
     /// continuously and an unbounded loop never reaches `recv_msg`'s timeout.
@@ -325,7 +331,8 @@ async fn a_signed_in_clients_screen_lands_in_its_own_profile() {
         send(&mut ws, &ClientMsg::Auth { username: user.into(), password: "hunter2".into() }).await;
         assert!(matches!(recv_msg(&mut ws).await, ServerMsg::HelloAck { .. }), "signed in");
 
-        send(&mut ws, &ClientMsg::SetClientSettings { profile: None, settings: screen }).await;
+        send(&mut ws, &ClientMsg::SetClientSettings { profile: None, settings: screen.clone() })
+            .await;
         // Wait for the *stored* echo, not the name-only offer the connect sent
         // just before — the offer has `has_stored: false`.
         let reply = wait_for(&mut ws, |m| match m {
@@ -341,6 +348,7 @@ async fn a_signed_in_clients_screen_lands_in_its_own_profile() {
             "the screen is stored against the profile it signed in as"
         );
         assert_eq!(reply.settings.theme, screen.theme);
+        assert_eq!(reply.settings.theme_file, screen.theme_file);
     }
 
     // On disk, under the profile and not only the default.
@@ -361,6 +369,10 @@ async fn a_signed_in_clients_screen_lands_in_its_own_profile() {
         .await;
         assert_eq!(got.profile.as_deref(), Some(user));
         assert_eq!(got.settings.theme, screen.theme, "and it is the set that was saved");
+        assert_eq!(
+            got.settings.theme_file, screen.theme_file,
+            "with the theme file's text, which is how a browser is given one"
+        );
     }
 
     let _ = std::fs::remove_dir_all(&dir);
