@@ -3955,9 +3955,11 @@ mod tests {
         // were appended at the tail (PROTO_VERSION 262 → 263). Appended, so an
         // older peer reads the struct it knows and the new bytes are simply not
         // there.
+        // 482 since `wefax_auto_slant` (a bool) was appended at the tail for the
+        // weather-fax auto-slant switch (PROTO_VERSION 298 → 299, PR #703).
         assert_eq!(
             (digi.len(), fnv1a(&digi)),
-            (481, 5_599_147_536_364_706_919),
+            (482, 1_063_270_805_729_231_186),
             "DigiConfig's wire layout shifted — append fields, never insert them"
         );
         // 897 since `HpsdrConfig` gained its five Diversity fields (a bool, a
