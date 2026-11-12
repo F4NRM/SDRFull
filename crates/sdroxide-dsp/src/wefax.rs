@@ -1020,12 +1020,18 @@ const SLANT_PROBE_LINES: u32 = 12;
 /// million, under the twenty-five a twenty-line measurement can act on, so
 /// nothing was applied and the page leaned. Fitting the whole signal brings the
 /// measurement's own noise down to a couple of parts per million, and this is
-/// the floor that then becomes useful.
-const SLANT_MIN_PPM: f64 = 10.0;
+/// the floor that then becomes useful. Five now: the whole signal of the page
+/// of 2026-11-12 (54 lines) read +6.4 ppm and the page's clock was 6 off.
+const SLANT_MIN_PPM: f64 = 5.0;
 /// The smallest drift the auto-slant will act on from a short fit, in parts per
 /// million. Below this the pulse's own edge-wander swamps the measurement, and
 /// "correcting" it would only add a wobble the operator never asked for.
-const SLANT_COARSE_MIN_PPM: f64 = 25.0;
+///
+/// Sixty, not twenty-five: the first dozen lines of that page read +32 ppm
+/// while the signal as a whole said +6, the early lines being pulled by the
+/// receiver settling, and the trim they set leaned the first 880 lines of the
+/// page by 26 ppm. A slant worth acting on at a dozen lines is a large one.
+const SLANT_COARSE_MIN_PPM: f64 = 60.0;
 /// Phasing lines the fit must cover before a correction under
 /// [`SLANT_COARSE_MIN_PPM`] is believed. The phasing signal is thirty seconds —
 /// sixty lines at 120 LPM, and the lock takes five — so this is most of it.
@@ -1042,27 +1048,30 @@ const SLANT_FINE_LINES: u32 = 50;
 /// page of bands — issue #239, where the decoder was worse than leaving the
 /// clock alone.
 const SLANT_MAX_PPM: f64 = 2_000.0;
-/// Lines in a window the picture-based slant measures, and how far apart the
-/// two lines it correlates are. Eight lines apart a drift of ten parts per
-/// million is a fifth of a pixel across the width, which the correlation's peak
-/// resolves; forty-eight lines of it average out a chart's own diagonals.
-const LEAN_BLOCK: usize = 48;
-const LEAN_LAG: usize = 8;
-/// What the correlation's peak must stand at above its own average to be a
-/// frame or a meridian walking and not the chart's texture.
-const LEAN_CONFIDENCE: f64 = 1.5;
-/// Windows whose walks are averaged, the smallest average worth correcting
-/// (parts per million), how large the windows' spread may be against it, and
-/// the share of the average corrected at a time.
-const LEAN_WINDOWS: usize = 3;
-const LEAN_MIN_PPM: f64 = 25.0;
-/// The largest walk one window may name. A sound card or a receiver is a few
-/// hundred ppm off at the worst; a chart's header and its slanted meridians
-/// gave -280, -424 and -476 ppm in the first windows of a page (bench,
-/// 2026-11-12) and the trim was led 240 ppm the wrong way.
+/// Lines the picture-based slant measures over at the least. A lean of ten
+/// parts per million moves the last of them a pixel from the first, which the
+/// columns' sharpness resolves; a shorter stretch is a chart's texture.
+const LEAN_BLOCK: usize = 160;
+/// How much sharper than the typical candidate the best lean must score.
+const LEAN_CONFIDENCE: f64 = 1.15;
+/// Lines a stretch is measured from, how many more are added between two
+/// measurements, and the most it grows to.
+const LEAN_STEP_LINES: usize = 80;
+/// What each half of a stretch must score, and how far from the whole's lean
+/// (parts per million) its own may be.
+const LEAN_HALF_CONFIDENCE: f64 = 1.1;
+const LEAN_HALF_PPM: f64 = 30.0;
+const LEAN_MAX_LINES: usize = 480;
+/// Stretches whose leans are averaged, the smallest average worth correcting
+/// (parts per million), how far apart the stretches may be against it, the
+/// largest lean one may name and the grid it is searched on.
+const LEAN_WINDOWS: usize = 2;
+const LEAN_MIN_PPM: f64 = 10.0;
 const LEAN_MAX_PPM: f64 = 300.0;
-const LEAN_STEADY: f64 = 0.8;
-const LEAN_GAIN: f64 = 0.8;
+const LEAN_STEP_PPM: f64 = 10.0;
+const LEAN_STEADY: f64 = 0.5;
+/// The share of the average corrected at a time.
+const LEAN_GAIN: f64 = 0.9;
 /// The largest input clock error [`WefaxRx::set_clock_ppm`] follows.
 const CLOCK_MAX_PPM: f64 = 1_000.0;
 /// How many standard errors a fitted walk must stand above before it is
@@ -2050,7 +2059,7 @@ impl WefaxRx {
         }
     }
 
-    /// Correct the slant from the picture itself, a window of lines at a time.
+    /// Correct the slant from the picture itself, a stretch of lines at a time.
     ///
     /// The phasing signal is a second opinion about the line clock and not
     /// always a good one: a receiver whose gain moves during the thirty seconds
@@ -2058,31 +2067,33 @@ impl WefaxRx {
     /// reason that is not the clock, and the page that follows is leaned the
     /// wrong way by the very correction meant to straighten it. The picture
     /// says what is left: a frame's edge or a meridian that walks sideways from
-    /// one line to the next. Each window of [`LEAN_BLOCK`] lines is correlated
-    /// with itself [`LEAN_LAG`] lines on, and what is left of the walk is
-    /// taken off the trim, a part at a time.
+    /// one line to the next. Each stretch of [`LEAN_BLOCK`] lines or more is
+    /// measured by [`image_lean`], and what is left of the walk is taken off the
+    /// trim once two stretches agree.
     fn image_slant(&mut self, gray: &[u8]) {
         if self.lean_off || !self.auto_slant {
             return;
         }
         self.lean_rows.push(gray.to_vec());
-        if self.lean_rows.len() < LEAN_BLOCK + LEAN_LAG {
+        // A stretch is measured from LEAN_BLOCK lines on, every LEAN_STEP_LINES
+        // more, and grows while the picture has nothing vertical to go by (a
+        // title, a white margin) up to LEAN_MAX_LINES.
+        let n = self.lean_rows.len();
+        if n < LEAN_BLOCK || (n - LEAN_BLOCK) % LEAN_STEP_LINES != 0 {
             return;
         }
-        let measured = image_lean(&self.lean_rows, LEAN_LAG);
+        let measured = image_lean(&self.lean_rows);
+        let sharp = measured.is_some_and(|(_, sharpness)| sharpness >= LEAN_CONFIDENCE);
+        if !sharp {
+            if n >= LEAN_MAX_LINES {
+                self.lean_rows.clear();
+            }
+            return;
+        }
+        let Some((ppm, _)) = measured else { return };
         self.lean_rows.clear();
-        let Some((lag, confidence)) = measured else { return };
-        if confidence < LEAN_CONFIDENCE {
-            return;
-        }
-        // Content that moves right from line to line means lines cut too short.
-        let ppm = lag / LEAN_LAG as f64 / f64::from(self.ioc.width()) * 1e6;
-        if ppm.abs() > LEAN_MAX_PPM {
-            return;
-        }
-        // One window is a chart's texture as much as its clock: a coastline's
-        // diagonal moves the peak a few pixels either way. A walk that is the
-        // clock is there in window after window, on the same side.
+        // One stretch is a chart's texture as much as its clock. A walk that is
+        // the clock is there in stretch after stretch, on the same side.
         self.lean_hist.push(ppm);
         if self.lean_hist.len() < LEAN_WINDOWS {
             return;
@@ -2459,19 +2470,28 @@ fn picture_line(px: &[Complex32], origin: f64, spl: f64, width: usize) -> Vec<(C
     out
 }
 
-/// How far the picture's content walks sideways, in pixels, over `lag` lines,
-/// and how clear the measure is (the correlation's peak against its average).
+/// How far a stretch of picture leans, in parts per million of a line, and how
+/// sharply the picture says so.
 ///
-/// Every line of `rows` is correlated with the one `lag` lines later, the
-/// correlations are summed so what is common to the whole window stands out,
-/// and the peak is read to a fifth of a pixel. Positive is to the right.
-fn image_lean(rows: &[Vec<u8>], lag: usize) -> Option<(f64, f64)> {
+/// **The lean that makes the picture's columns sharpest.** A page cut on a wrong
+/// clock moves *everything* sideways by the same amount per line, so a frame's
+/// edge or a column of figures is smeared over as many pixels as the stretch
+/// has lines times the error; cut on the right clock it falls on one column.
+/// Each candidate lean shifts the lines back by what it says and the squares of
+/// the column sums are added up: the right one is the sum that peaks. A
+/// coastline, a meridian or a line of text moves with its own slope whatever
+/// the candidate, so it adds the same to all of them and does not pull the
+/// answer, which a correlation of one line against the next did (bench,
+/// 2026-11-12: -111, -62, -110, +203, +248 ppm from windows of a page whose
+/// clock was a few tens off).
+///
+/// The second number is the best score over the median one: near 1 the
+/// picture has nothing vertical to go by.
+fn image_lean_once(rows: &[Vec<u8>]) -> Option<(f64, f64)> {
     let width = rows.first()?.len();
-    if width == 0 || rows.len() <= lag {
+    if width == 0 || rows.len() < 8 {
         return None;
     }
-    // Ink as positive, the line's own mean taken out: a white margin says
-    // nothing, a black line is what moves.
     let ink: Vec<Vec<f32>> = rows
         .iter()
         .map(|r| {
@@ -2479,33 +2499,66 @@ fn image_lean(rows: &[Vec<u8>], lag: usize) -> Option<(f64, f64)> {
             r.iter().map(|&g| 255.0 - f32::from(g) - mean).collect()
         })
         .collect();
-    let reach = (lag as f64 * SLANT_MAX_PPM * 1e-6 * width as f64).ceil() as isize + 2;
-    let shifts = (2 * reach + 1) as usize;
-    let mut acc = vec![0.0f64; shifts];
-    for (a, b) in ink.iter().zip(ink.iter().skip(lag)) {
-        for (k, slot) in acc.iter_mut().enumerate() {
-            let s = k as isize - reach;
-            let (from, to) = (0.max(-s) as usize, (width as isize).min(width as isize - s) as usize);
-            let mut sum = 0.0f32;
-            for x in from..to {
-                sum += a[x] * b[(x as isize + s) as usize];
+    let mid = (rows.len() - 1) as f64 / 2.0;
+    let score = |ppm: f64| -> f64 {
+        let mut column = vec![0.0f32; width];
+        for (y, row) in ink.iter().enumerate() {
+            // Where this line's content has got to, in pixels, against the middle one.
+            let shift = ppm * 1e-6 * width as f64 * (y as f64 - mid);
+            let base = shift.floor();
+            let frac = (shift - base) as f32;
+            let base = base as isize;
+            for (x, c) in column.iter_mut().enumerate() {
+                let a = (x as isize + base).rem_euclid(width as isize) as usize;
+                let b = (a + 1) % width;
+                *c += row[a] * (1.0 - frac) + row[b] * frac;
             }
-            *slot += f64::from(sum);
         }
-    }
-    let (best, peak) = acc.iter().copied().enumerate().max_by(|a, b| a.1.total_cmp(&b.1))?;
-    let mean = acc.iter().map(|v| v.abs()).sum::<f64>() / shifts as f64;
-    if peak <= 0.0 || mean <= 0.0 {
+        column.iter().map(|&c| f64::from(c) * f64::from(c)).sum()
+    };
+    let steps = (2.0 * LEAN_MAX_PPM / LEAN_STEP_PPM).round() as usize;
+    let grid: Vec<(f64, f64)> = (0..=steps)
+        .map(|k| {
+            let ppm = -LEAN_MAX_PPM + k as f64 * LEAN_STEP_PPM;
+            (ppm, score(ppm))
+        })
+        .collect();
+    let (best, _) = grid.iter().enumerate().max_by(|a, b| a.1.1.total_cmp(&b.1.1))?;
+    // The edge of the grid is not a peak.
+    if best == 0 || best + 1 == grid.len() {
         return None;
     }
-    let offset = if best > 0 && best + 1 < shifts {
-        let (y1, y2, y3) = (acc[best - 1], acc[best], acc[best + 1]);
-        let den = y1 - 2.0 * y2 + y3;
-        if den.abs() > f64::EPSILON { (0.5 * (y1 - y3) / den).clamp(-0.5, 0.5) } else { 0.0 }
-    } else {
-        0.0
-    };
-    Some((best as f64 - reach as f64 + offset, peak / mean))
+    // Finer, around the coarse peak.
+    let centre = grid[best].0;
+    let fine: Vec<(f64, f64)> = (-5..=5)
+        .map(|k| {
+            let ppm = centre + f64::from(k) * LEAN_STEP_PPM / 5.0;
+            (ppm, score(ppm))
+        })
+        .collect();
+    let top = fine.iter().max_by(|a, b| a.1.total_cmp(&b.1))?;
+    let mut all: Vec<f64> = grid.iter().map(|g| g.1).collect();
+    all.sort_by(f64::total_cmp);
+    let median = all[all.len() / 2];
+    (median > 0.0 && top.1 > 0.0).then_some((top.0, top.1 / median))
+}
+
+/// [`image_lean_once`] over a stretch, **believed only if each half of it says
+/// the same**. A clock leans every line of the page alike, so both halves read
+/// it; a chart's long straight meridian or the edge of a title is a peak of its
+/// own that one half may find and the other does not (bench, 2026-11-12: -122
+/// and -186 ppm from stretches of a page whose clock was 27 off, sharp enough
+/// to pass on their own).
+fn image_lean(rows: &[Vec<u8>]) -> Option<(f64, f64)> {
+    let (ppm, sharpness) = image_lean_once(rows)?;
+    let (a, b) = rows.split_at(rows.len() / 2);
+    for half in [a, b] {
+        let (h, hs) = image_lean_once(half)?;
+        if hs < LEAN_HALF_CONFIDENCE || (h - ppm).abs() > LEAN_HALF_PPM {
+            return None;
+        }
+    }
+    Some((ppm, sharpness))
 }
 
 /// Where the phasing pulse ends, in samples from the start of `line`.
@@ -3234,6 +3287,29 @@ mod tests {
         let _ = drain(&mut rx, &modulate(&vec![1.0f32; per * 60]));
         let off = rx.subcarrier_hz() - 1900.0;
         assert!(off.abs() < 40.0, "sixty lines of paper moved the centre to {off:+.0} Hz");
+    }
+
+    /// **The phasing signal is believed over all its lines, not over the first
+    /// dozen.** The dozen read +32 ppm on the page of 2026-11-12 and the whole
+    /// signal (54 lines) +6: the page's clock was 6 off, and the dozen's trim
+    /// leaned its first 880 lines by 26 ppm. A short fit has to name a large
+    /// slant to be acted on; the whole signal may name a small one.
+    #[test]
+    fn a_short_stretch_of_phasing_does_not_set_a_small_trim() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.start_manual(&mut Vec::new());
+        // Forty lines: not enough for the fine floor, and 40 ppm is under the
+        // coarse one.
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 40, 40.0));
+        assert_eq!(rx.slant_ppm(), 0.0, "a short fit set the trim to {:+.1}", rx.slant_ppm());
+        let mut rx = WefaxRx::new(RATE);
+        rx.start_manual(&mut Vec::new());
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 60, 40.0));
+        assert!(
+            (rx.slant_ppm() - 40.0).abs() < 10.0,
+            "the whole signal should name 40 ppm, set {:+.1}",
+            rx.slant_ppm()
+        );
     }
 
     /// The operator can undo the auto-slant by hand, and it stays off for the
@@ -4973,6 +5049,61 @@ mod carrier_tests {
         assert!(l.len() >= 15, "only {} lines", l.len());
         let mean = l[0].1.iter().map(|&g| f64::from(g)).sum::<f64>() / l[0].1.len() as f64 / 255.0;
         assert!(mean > 0.3, "the page opens on the phasing signal: {mean:.2}");
+    }
+
+    /// 400 lines (480-879) of the DWD 3855 page of 2026-11-12, cut on a trim of
+    /// +32 ppm, one bit a pixel (1 is ink). Its frame and the box at the foot
+    /// walk left by 27 ppm of the line: the clock wants a trim of about +5.
+    fn real_lean_rows() -> Vec<Vec<u8>> {
+        let path = format!("{}/tests/testdata/wefax/lean_rows.bits", env!("CARGO_MANIFEST_DIR"));
+        let data = std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+        let width = usize::from(data[0]) | usize::from(data[1]) << 8;
+        let rows = usize::from(data[2]) | usize::from(data[3]) << 8;
+        let bit = |i: usize| (data[4 + i / 8] >> (7 - i % 8)) & 1;
+        (0..rows)
+            .map(|y| (0..width).map(|x| if bit(y * width + x) == 1 { 0u8 } else { 255 }).collect())
+            .collect()
+    }
+
+    /// **The lean of a real page is read to a few parts per million.** The
+    /// correlation of one line with the one eight on, window by window, read
+    /// -60, -23, -144, +53, +124, -48 ppm over the same kind of page; the
+    /// columns' sharpness over a stretch of 400 lines reads -27.
+    #[test]
+    fn the_lean_of_a_real_page_is_read_from_its_columns() {
+        let (ppm, sharpness) = image_lean(&real_lean_rows()).expect("no lean read");
+        assert!((ppm + 27.0).abs() <= 10.0, "read {ppm:+.0} ppm, the page leans -27");
+        assert!(sharpness >= LEAN_CONFIDENCE, "sharpness {sharpness:.2}");
+    }
+
+    /// **A stretch whose halves disagree is not believed.** The first 160 of
+    /// those lines, taken alone, read -186 ppm sharply enough to pass, and the
+    /// page leans -27: a meridian's own slope, not the clock. Its two halves
+    /// do not say the same, and nothing is read.
+    #[test]
+    fn a_stretch_whose_halves_disagree_reads_nothing() {
+        assert_eq!(image_lean(&real_lean_rows()[..160]), None);
+    }
+
+    /// A straight page is left as it is: the bars do not move, whatever else
+    /// crosses them.
+    #[test]
+    fn a_straight_page_is_read_as_straight() {
+        let width = Ioc::I576.width() as usize;
+        let rows: Vec<Vec<u8>> = (0..240)
+            .map(|y| {
+                let mut row = vec![255u8; width];
+                for x in [120, 700, 1500] {
+                    row[x..x + 4].fill(0);
+                }
+                // A meridian: a line walking 0.25 px a line (138 ppm) of its own.
+                let m = (900.0 + 0.25 * y as f64) as usize;
+                row[m..m + 3].fill(0);
+                row
+            })
+            .collect();
+        let (ppm, _) = image_lean(&rows).expect("no lean read");
+        assert!(ppm.abs() <= 10.0, "a straight page with a meridian read {ppm:+.0} ppm");
     }
 
     /// A page whose frame walks sideways line after line is straightened by
