@@ -529,6 +529,12 @@ pub struct WefaxRx {
     prev: Complex32,
     have_prev: bool,
     inst_hz: f64,
+    /// Where the chart's own excursions are centred, Hz: nominal until a
+    /// page has shown both black and white. See [`WefaxRx::subcarrier_hz`].
+    tune_hz: f64,
+    /// The darkest and brightest frequency of each of the last lines.
+    tune_lo: Vec<f32>,
+    tune_hi: Vec<f32>,
     in_level: f32,
 
     // The picture's own discriminator: a wider band-pass than the detection
@@ -844,6 +850,12 @@ const FLAT_MEAN: f32 = 0.45;
 const BLACK_RANGE_HZ: (f64, f64) = (1300.0, 1700.0);
 const WHITE_RANGE_HZ: (f64, f64) = (2100.0, 2500.0);
 const SPAN_RANGE_HZ: (f64, f64) = (600.0, 1000.0);
+/// Lines the tuning centre is read over, and the span between black and white
+/// (Hz) a reading must show to be believed. Black is 1500 Hz and white 2300:
+/// a window that shows less than 600 Hz of it has seen only paper or only ink,
+/// and its middle is not the subcarrier's.
+const TUNE_WINDOW_LINES: usize = 40;
+const TUNE_SPAN_HZ: (f64, f64) = (600.0, 1100.0);
 
 /// A calibration window widened — or narrowed — about its own centre by `k`.
 ///
@@ -1088,6 +1100,9 @@ impl WefaxRx {
             prev: Complex32::new(0.0, 0.0),
             have_prev: false,
             inst_hz: CENTRE_HZ,
+            tune_hz: CENTRE_HZ,
+            tune_lo: Vec::new(),
+            tune_hi: Vec::new(),
             in_level: 0.0,
             pic_lpf: ComplexFir::new(bandpass_taps(129, -PIC_HALF_BW_HZ, PIC_HALF_BW_HZ, rate)),
             pic_prev: Complex32::new(0.0, 0.0),
@@ -1322,11 +1337,50 @@ impl WefaxRx {
         self.in_level
     }
 
-    /// Instantaneous subcarrier frequency, for the tuning indicator: a
-    /// correctly tuned receiver puts a black-and-white chart's excursions
-    /// symmetrically about 1900 Hz.
+    /// Where the chart's excursions are centred, for the tuning indicator: a
+    /// correctly tuned receiver puts black at 1500 Hz and white at 2300, so
+    /// their middle at 1900. Read over the last [`TUNE_WINDOW_LINES`] lines of a
+    /// page that has shown both, and 1900 Hz (nothing to correct) when there is
+    /// no such page.
+    ///
+    /// It used to be the frequency of the pixel being decoded. That is the
+    /// picture's own content: +400 Hz on white paper, -400 on ink, +420 on a
+    /// carrier standing on the channel, and a dial moved by it chased the page
+    /// (bench, 2026-11-12: the dial walked 335 Hz and the lines it crossed came
+    /// out as grey and black bands).
     pub fn subcarrier_hz(&self) -> f64 {
-        self.inst_hz
+        self.tune_hz
+    }
+
+    /// Fold one line's frequencies into [`WefaxRx::subcarrier_hz`].
+    fn note_tuning(&mut self, hz: &[f32]) {
+        if hz.len() < 16 {
+            return;
+        }
+        let mut sorted: Vec<f32> = hz.to_vec();
+        sorted.sort_by(f32::total_cmp);
+        let at = |q: f64| sorted[((sorted.len() - 1) as f64 * q) as usize];
+        self.tune_lo.push(at(0.04));
+        self.tune_hi.push(at(0.96));
+        if self.tune_lo.len() > TUNE_WINDOW_LINES {
+            self.tune_lo.remove(0);
+            self.tune_hi.remove(0);
+        }
+        if self.tune_lo.len() < TUNE_WINDOW_LINES / 2 {
+            return;
+        }
+        // The window's dark end is the lowest tenth of the lines' darkest, its
+        // bright end the highest tenth of the brightest: a line of paper or of
+        // ink does not move either.
+        let end = |v: &[f32], q: f64| {
+            let mut v = v.to_vec();
+            v.sort_by(f32::total_cmp);
+            f64::from(v[((v.len() - 1) as f64 * q) as usize])
+        };
+        let (lo, hi) = (end(&self.tune_lo, 0.1), end(&self.tune_hi, 0.9));
+        if (TUNE_SPAN_HZ.0..=TUNE_SPAN_HZ.1).contains(&(hi - lo)) {
+            self.tune_hz = 0.5 * (lo + hi);
+        }
     }
 
     pub fn receiving(&self) -> bool {
@@ -1407,6 +1461,7 @@ impl WefaxRx {
         self.phasing_stack.reset();
         self.lock_lines = LOCK_LINES;
         self.hz_buf.clear();
+        self.reset_tuning();
         self.lead_phasing = None;
         self.lead_skipped = 0;
         self.lead_keep = 0;
@@ -1454,6 +1509,7 @@ impl WefaxRx {
         self.reset_audio_tones();
         self.reset_idle();
         self.hz_buf.clear();
+        self.reset_tuning();
         self.black_hz = BLACK_HZ;
         self.white_hz = WHITE_HZ;
         self.lead_phasing = None;
@@ -1461,6 +1517,13 @@ impl WefaxRx {
         if announced {
             out.push(WefaxEvent::Complete { lines, by_tone });
         }
+    }
+
+    /// Forget the tuning centre: a new page is read from scratch.
+    fn reset_tuning(&mut self) {
+        self.tune_hz = CENTRE_HZ;
+        self.tune_lo.clear();
+        self.tune_hi.clear();
     }
 
     /// Start the idle line, and the run of phasing lines counted on it, over.
@@ -1514,6 +1577,7 @@ impl WefaxRx {
         if ok(black, BLACK_RANGE_HZ) && ok(white, WHITE_RANGE_HZ) && ok(span, SPAN_RANGE_HZ) {
             self.black_hz = black;
             self.white_hz = white;
+            self.tune_hz = 0.5 * (black + white);
         }
     }
 
@@ -1817,6 +1881,9 @@ impl WefaxRx {
         };
         self.calibrate(&line, &hz);
         self.arm(self.ioc, true);
+        // `arm` starts the page over; the phasing just measured is its first
+        // reading of the tuning.
+        self.tune_hz = 0.5 * (self.black_hz + self.white_hz);
         self.phase = Phase::Image;
         self.line_start = self.sample_idx as f64 + f64::from(skew);
         self.lead_phasing = Some(self.aligned_pulse(pulse));
@@ -2196,6 +2263,7 @@ impl WefaxRx {
         // One line's worth of brightness is in hand.
         let line: Vec<f32> = std::mem::take(&mut self.line_buf);
         let line_hz: Vec<f32> = std::mem::take(&mut self.hz_buf);
+        self.note_tuning(&line_hz);
         let from = self.line_start;
         self.line_start = end;
         // Earlier lines are drawn and gone: keep this one and what follows.
@@ -2671,6 +2739,28 @@ mod tests {
             .collect()
     }
 
+    /// [`modulate`] with the whole subcarrier moved `offset_hz` up: a receiver
+    /// tuned that far below the signal.
+    fn modulate_off(levels: &[f32], offset_hz: f64) -> Vec<f32> {
+        let mut ph = 0.0f64;
+        levels
+            .iter()
+            .map(|&l| {
+                let hz = BLACK_HZ + offset_hz + (WHITE_HZ - BLACK_HZ) * l as f64;
+                ph = (ph + TAU * hz / RATE) % TAU;
+                (ph.sin() * 0.5) as f32
+            })
+            .collect()
+    }
+
+    /// `lines` lines of a ramp black → white, on a receiver `offset_hz` off.
+    fn ramp_off(lpm: Lpm, lines: usize, offset_hz: f64) -> Vec<f32> {
+        let per = (RATE * lpm.line_secs()) as usize;
+        let levels: Vec<f32> =
+            (0..lines).flat_map(|_| (0..per).map(move |i| i as f32 / per as f32)).collect();
+        modulate_off(&levels, offset_hz)
+    }
+
     /// `secs` of the subcarrier alternating black/white at `alt_hz` — the shape
     /// of the start and stop signals.
     fn tone(alt_hz: f64, secs: f64) -> Vec<f32> {
@@ -3098,6 +3188,52 @@ mod tests {
         let mut ev = into_image(&mut rx, Lpm::L120);
         ev.extend(drain(&mut rx, &audio));
         assert_eq!(rx.slant_ppm(), 0.0, "the picture correction followed a walk of 450 ppm");
+    }
+
+    /// **The tuning readout is the page's centre, not the pixel's frequency**
+    /// (bench, 2026-11-12: the readout swung with the picture, +691 on white,
+    /// -54 on grey, and the dial that followed it walked 335 Hz and broke the
+    /// page). A receiver 150 Hz off reads +150 whatever pixel is being drawn.
+    #[test]
+    fn the_tuning_centre_is_the_pages_and_not_the_pixels() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.start_manual(&mut Vec::new());
+        let audio = ramp_off(Lpm::L120, 80, 150.0);
+        let mut seen = Vec::new();
+        let mut out = Vec::new();
+        for (i, block) in audio.chunks(500).enumerate() {
+            rx.process(block, &mut out);
+            if i > audio.len() / 500 / 2 {
+                seen.push(rx.subcarrier_hz() - 1900.0);
+            }
+        }
+        let (lo, hi) = seen.iter().fold((f64::MAX, f64::MIN), |(l, h), &v| (l.min(v), h.max(v)));
+        assert!(lo > 110.0 && hi < 190.0, "the centre wandered over {lo:.0}..{hi:.0} Hz, not +150");
+    }
+
+    /// A carrier standing on the channel between charts is not a tuning error:
+    /// with no page there is nothing to centre.
+    #[test]
+    fn a_carrier_between_charts_does_not_read_as_a_tuning_error() {
+        let mut rx = WefaxRx::new(RATE);
+        let carrier: Vec<f32> = (0..(RATE * 6.0) as usize)
+            .map(|i| (TAU * 2320.0 * i as f64 / RATE).sin() as f32 * 0.5)
+            .collect();
+        let _ = drain(&mut rx, &carrier);
+        assert_eq!(rx.subcarrier_hz(), 1900.0, "the carrier was read as the subcarrier");
+    }
+
+    /// A stretch of white paper moves nothing: its middle is white, not the
+    /// subcarrier's.
+    #[test]
+    fn a_stretch_of_paper_does_not_move_the_tuning_centre() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.start_manual(&mut Vec::new());
+        let _ = drain(&mut rx, &ramp_off(Lpm::L120, 60, 0.0));
+        let per = (RATE * Lpm::L120.line_secs()) as usize;
+        let _ = drain(&mut rx, &modulate(&vec![1.0f32; per * 60]));
+        let off = rx.subcarrier_hz() - 1900.0;
+        assert!(off.abs() < 40.0, "sixty lines of paper moved the centre to {off:+.0} Hz");
     }
 
     /// The operator can undo the auto-slant by hand, and it stays off for the

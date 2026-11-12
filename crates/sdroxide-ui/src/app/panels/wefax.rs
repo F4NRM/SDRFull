@@ -15,6 +15,11 @@ use crate::app::SdroxideApp;
 /// it. The same figure the readout turns yellow at.
 pub(in crate::app) const CENTRE_THRESHOLD_HZ: f64 = 120.0;
 
+/// The most one press moves the dial, hertz. A chart is never further off than
+/// black at 1500 and white at 2300 allow; a bigger reading is not a tuning
+/// error, and the next press goes on from where the dial landed.
+pub(in crate::app) const CENTRE_MAX_STEP_HZ: f64 = 300.0;
+
 /// **The dial that puts the subcarrier back on 1900 Hz.**
 ///
 /// The published frequency is the carrier, the dial sits 1.9 kHz below it, and
@@ -26,7 +31,7 @@ pub(in crate::app) const CENTRE_THRESHOLD_HZ: f64 = 120.0;
 /// Pure, so the arithmetic can be tested without a receiver: a chart is not
 /// something to be wrong about by a sign on the air.
 pub(in crate::app) fn centred_dial_hz(dial_hz: f64, subcarrier_hz: f64) -> f64 {
-    dial_hz + (subcarrier_hz - 1900.0)
+    dial_hz + (subcarrier_hz - 1900.0).clamp(-CENTRE_MAX_STEP_HZ, CENTRE_MAX_STEP_HZ)
 }
 
 impl SdroxideApp {
@@ -115,8 +120,9 @@ impl SdroxideApp {
             } else {
                 (tr!("wefax-listening"), theme::LINE_LIT())
             };
-            ui.label(RichText::new(text).color(colour).size(11.0))
-                .on_hover_text(tr!("wefax-status-hint"));
+            // The text changes width with every minute and every line, so it is
+            // drawn last: anything after it on the row was pushed sideways by it.
+            let status = (text, colour);
 
             // The tuning readout. A correctly tuned receiver puts the
             // subcarrier's excursions around 1900 Hz; several hundred hertz off
@@ -136,7 +142,9 @@ impl SdroxideApp {
             // arrives as a white page with grey speckle. One press moves the dial
             // by exactly what the decoder is measuring, so the subcarrier lands
             // back on 1900 Hz.
-            let can_centre = off.abs() > CENTRE_THRESHOLD_HZ as f32;
+            // Only on a page: between charts the figure is the carrier on the
+            // channel and not a chart, and a dial moved by it goes the wrong way.
+            let can_centre = (st.receiving || st.phasing) && off.abs() > CENTRE_THRESHOLD_HZ as f32;
             ui.add_enabled_ui(can_centre, |ui| {
                 if crate::chrome::chip(ui, false, tr!("wefax-centre"))
                     .on_hover_text(tr!(
@@ -155,24 +163,9 @@ impl SdroxideApp {
                     });
                 }
             });
-            if crate::chrome::chip(ui, self.wefax.auto_centre, "AUTO CENTRE").clicked() {
-                self.wefax.auto_centre = !self.wefax.auto_centre;
-            }
-            if self.wefax.auto_centre {
-                if can_centre && self.wefax.auto_centre_armed {
-                    cmds.push(Command::SetVfo {
-                        vfo: self.state.active_vfo,
-                        hz: centred_dial_hz(
-                            self.state.active_freq_hz(),
-                            f64::from(st.subcarrier_hz),
-                        ),
-                    });
-                    self.wefax.auto_centre_armed = false;
-                } else if !can_centre {
-                    self.wefax.auto_centre_armed = true;
-                }
-            }
             self.digi_squelch_slider(ui, cmds);
+            ui.label(RichText::new(status.0).color(status.1).size(11.0))
+                .on_hover_text(tr!("wefax-status-hint"));
         });
 
         ui.add_space(4.0);
@@ -1031,8 +1024,10 @@ mod tests {
     /// chart is not something to be wrong about by a direction on the air.
     #[test]
     fn a_detuned_chart_can_be_centred_by_the_offset_it_reports() {
-        // A carrier 482 Hz high: dial up by 482.
-        assert_eq!(centred_dial_hz(13_880_600.0, 2382.0), 13_881_082.0);
+        // A carrier 182 Hz high: dial up by 182.
+        assert_eq!(centred_dial_hz(13_880_600.0, 2082.0), 13_880_782.0);
+        // 482 Hz high: one press moves it by no more than 300.
+        assert_eq!(centred_dial_hz(13_880_600.0, 2382.0), 13_880_900.0);
         // A carrier 300 Hz low: dial down by 300.
         assert_eq!(centred_dial_hz(13_880_600.0, 1600.0), 13_880_300.0);
         // Already centred: nothing moves.

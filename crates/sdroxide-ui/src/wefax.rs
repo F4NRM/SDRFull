@@ -109,9 +109,6 @@ pub struct WefaxUi {
     /// is still arriving is the whole point of being able to scroll — and
     /// scrolling back to the bottom turns it on again.
     pub follow: bool,
-    /// Automatically centre the dial when the subcarrier is more than 120 Hz off.
-    pub auto_centre: bool,
-    pub auto_centre_armed: bool,
     /// Saved charts, newest first.
     pub gallery: Vec<Chart>,
     /// Whether the engine's store has been listed this session.
@@ -166,8 +163,6 @@ impl Default for WefaxUi {
             zoom: Zoom::FitWidth,
             aspect: 1.0,
             follow: true,
-            auto_centre: false,
-            auto_centre_armed: true,
             gallery: Vec::new(),
             listed: false,
             total: 0,

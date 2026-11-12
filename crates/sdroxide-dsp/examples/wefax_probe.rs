@@ -160,6 +160,12 @@ fn decode(audio: &[f32], lpm: WefaxLpm, ioc: WefaxIoc, manual: bool) -> Option<V
                 WefaxEvent::Line { y, gray } => {
                     width = width.max(gray.len());
                     let y = *y as usize;
+                    if y % 100 == 0 {
+                        println!(
+                            "  {at:7.1}s line {y}: tuning centre {:+.0} Hz from 1900",
+                            rx.subcarrier_hz() - 1900.0
+                        );
+                    }
                     let picture = pictures.last_mut()?;
                     if picture.len() <= y {
                         picture.resize(y + 1, vec![255u8; width]);
