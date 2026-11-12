@@ -594,6 +594,9 @@ pub struct WefaxRx {
     /// No more auto-slant on this page: the last correction was undone, by the
     /// check above or by the operator.
     slant_locked: bool,
+    /// Windows in a row that walked the other way from the correction last
+    /// made; one is a mis-measure, two in a row undo the correction.
+    slant_contra: u8,
     /// The lines drawn since the picture-based slant last measured, kept to
     /// measure the next window from: see [`WefaxRx::image_slant`].
     lean_rows: Vec<Vec<u8>>,
@@ -1039,8 +1042,13 @@ const LEAN_CONFIDENCE: f64 = 1.5;
 /// Windows whose walks are averaged, the smallest average worth correcting
 /// (parts per million), how large the windows' spread may be against it, and
 /// the share of the average corrected at a time.
-const LEAN_WINDOWS: usize = 4;
-const LEAN_MIN_PPM: f64 = 80.0;
+const LEAN_WINDOWS: usize = 3;
+const LEAN_MIN_PPM: f64 = 25.0;
+/// The largest walk one window may name. A sound card or a receiver is a few
+/// hundred ppm off at the worst; a chart's header and its slanted meridians
+/// gave -280, -424 and -476 ppm in the first windows of a page (bench,
+/// 2026-11-12) and the trim was led 240 ppm the wrong way.
+const LEAN_MAX_PPM: f64 = 300.0;
 const LEAN_STEADY: f64 = 0.8;
 const LEAN_GAIN: f64 = 0.8;
 /// The largest input clock error [`WefaxRx::set_clock_ppm`] follows.
@@ -1101,6 +1109,7 @@ impl WefaxRx {
             slant_base: 0.0,
             slant_pending: None,
             slant_locked: false,
+            slant_contra: 0,
             lean_rows: Vec::new(),
             lean_hist: Vec::new(),
             lean_off: false,
@@ -1210,6 +1219,7 @@ impl WefaxRx {
     pub fn revert_slant(&mut self) {
         self.slant_ppm = self.slant_base;
         self.slant_pending = None;
+        self.slant_contra = 0;
         self.slant_locked = true;
         self.lean_off = true;
         self.slant_fit = SlantFit::default();
@@ -1386,6 +1396,7 @@ impl WefaxRx {
         self.slant_ppm = self.slant_base;
         self.slant_pending = None;
         self.slant_locked = false;
+        self.slant_contra = 0;
         self.last_slant = (0.0, 0);
         self.lean_rows.clear();
         self.lean_hist.clear();
@@ -1932,15 +1943,27 @@ impl WefaxRx {
         // that leaves a walk the other way, at least half as large, was made
         // from a mis-measure and has made the page worse: undo it and leave the
         // clock alone for the rest of the page.
-        if let Some((prev, applied, prev_last)) = self.slant_pending.take() {
+        if let Some((prev, applied, prev_last)) = self.slant_pending {
             if ppm * applied < 0.0 && ppm.abs() >= 0.5 * applied.abs() && ppm.abs() >= floor {
-                self.slant_ppm = prev;
-                self.last_slant = prev_last;
-                self.slant_locked = true;
+                // **One window against a correction is not enough to undo it.**
+                // A gain that moves during the phasing signal bends a single
+                // twelve-line window the other way (bench, 2026-11-12: +32 ppm,
+                // right, then -54 ppm, and the right one was thrown away).
+                // The window is left out and the next one decides.
+                self.slant_contra += 1;
                 self.slant_fit = SlantFit::default();
                 self.phasing_lines = 0;
+                if self.slant_contra >= 2 {
+                    self.slant_pending = None;
+                    self.slant_contra = 0;
+                    self.slant_ppm = prev;
+                    self.last_slant = prev_last;
+                    self.slant_locked = true;
+                }
                 return;
             }
+            self.slant_pending = None;
+            self.slant_contra = 0;
         }
         if (floor..=SLANT_MAX_PPM).contains(&ppm.abs()) {
             self.slant_pending = Some((self.slant_ppm, ppm, self.last_slant));
@@ -1987,7 +2010,7 @@ impl WefaxRx {
         }
         // Content that moves right from line to line means lines cut too short.
         let ppm = lag / LEAN_LAG as f64 / f64::from(self.ioc.width()) * 1e6;
-        if ppm.abs() > SLANT_MAX_PPM {
+        if ppm.abs() > LEAN_MAX_PPM {
             return;
         }
         // One window is a chart's texture as much as its clock: a coastline's
@@ -2813,6 +2836,13 @@ mod tests {
     /// line, cut on a clock `clock_ppm` long — what a stream whose real sample
     /// rate is off by that much hands a receiver that believes it is nominal.
     fn bar_picture_on_clock(lpm: Lpm, lines: usize, clock_ppm: f64) -> Vec<f32> {
+        bar_picture_bars(lpm, lines, clock_ppm, &[(0.4, 0.5)])
+    }
+
+    /// The same with several bars, each between its two fractions of the line:
+    /// a chart's frame and meridians. Several of them, so the picture is not
+    /// mistaken for a phasing line, and thin, so the correlation has a peak.
+    fn bar_picture_bars(lpm: Lpm, lines: usize, clock_ppm: f64, bars: &[(f64, f64)]) -> Vec<f32> {
         let slanted = RATE * lpm.line_secs() * (1.0 + clock_ppm * 1e-6);
         let mut levels = Vec::new();
         let (mut at, mut cut) = (0.0f64, 0usize);
@@ -2820,8 +2850,13 @@ mod tests {
             at += slanted;
             let end = at.round() as usize;
             let len = end - cut;
-            let (from, to) = ((len as f64 * 0.4) as usize, (len as f64 * 0.5) as usize);
-            levels.extend((0..len).map(|i| if (from..to).contains(&i) { 1.0f32 } else { 0.0 }));
+            let spans: Vec<_> = bars
+                .iter()
+                .map(|b| ((len as f64 * b.0) as usize)..((len as f64 * b.1) as usize))
+                .collect();
+            levels.extend(
+                (0..len).map(|i| if spans.iter().any(|r| r.contains(&i)) { 1.0f32 } else { 0.0 }),
+            );
             cut = end;
         }
         modulate(&levels)
@@ -3015,6 +3050,54 @@ mod tests {
         assert!(rx.slant_reverted(), "the bad correction was kept: {}", rx.slant_ppm());
         assert_eq!(rx.slant_ppm(), 0.0);
         assert_eq!(rx.slant_correction().1, 0);
+    }
+
+    /// **One window against a correction does not undo it** (bench,
+    /// 2026-11-12, DWD 3855 on an RSP1: +32 ppm from the first twelve lines,
+    /// right, then -54 ppm from the next twelve while the gain moved, and the
+    /// right correction was thrown away and the page leaned).
+    #[test]
+    fn one_window_against_a_correction_does_not_undo_it() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.start_manual(&mut Vec::new());
+        rx.slant_ppm = 600.0;
+        rx.slant_pending = Some((0.0, 600.0, (0.0, 0)));
+        // Twenty lines: one window of twelve, walking the other way.
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 20, -1000.0));
+        assert!(!rx.slant_reverted(), "a single window undid the correction");
+        assert_eq!(rx.slant_ppm(), 600.0);
+    }
+
+    const FRAME: [(f64, f64); 3] = [(0.20, 0.22), (0.45, 0.47), (0.70, 0.72)];
+
+    /// **A walk of fifty parts per million is corrected from the picture.**
+    /// The page of that bench recording walked its frame 68 px over 760 lines
+    /// (49 ppm), eight windows in a row on the same side, and the picture
+    /// correction ignored all of them because it only acted above 80 ppm.
+    #[test]
+    fn a_small_steady_walk_is_corrected_from_the_picture() {
+        let audio = bar_picture_bars(Lpm::L120, 420, 50.0, &FRAME);
+        let mut rx = WefaxRx::new(RATE);
+        let mut ev = into_image(&mut rx, Lpm::L120);
+        ev.extend(drain(&mut rx, &audio));
+        let pos = bar_positions(&ev);
+        assert!(pos.len() > 380, "only {} lines", pos.len());
+        let tail = &pos[pos.len() - 100..];
+        let walk = tail.last().unwrap() - tail.first().unwrap();
+        assert!(walk.abs() < 3.0, "the bar still walks {walk:.1} px over 100 lines");
+    }
+
+    /// A window that names more than a clock can be off by is a header, a
+    /// slanted meridian or a coastline, not the clock: the first windows of
+    /// that page read -280, -424 and -476 ppm and led the trim 240 ppm the
+    /// wrong way.
+    #[test]
+    fn a_walk_larger_than_any_clock_is_left_alone() {
+        let audio = bar_picture_bars(Lpm::L120, 300, 450.0, &FRAME);
+        let mut rx = WefaxRx::new(RATE);
+        let mut ev = into_image(&mut rx, Lpm::L120);
+        ev.extend(drain(&mut rx, &audio));
+        assert_eq!(rx.slant_ppm(), 0.0, "the picture correction followed a walk of 450 ppm");
     }
 
     /// The operator can undo the auto-slant by hand, and it stays off for the
