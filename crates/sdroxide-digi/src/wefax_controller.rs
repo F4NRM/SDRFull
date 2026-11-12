@@ -342,6 +342,10 @@ impl DigiEngine for WefaxController {
         self.digi_status()
     }
 
+    fn set_clock_ppm(&mut self, ppm: f64) {
+        self.rx.set_clock_ppm(ppm);
+    }
+
     fn set_config(&mut self, cfg: DigiConfig) {
         self.rx.set_ioc(to_ioc(cfg.wefax_ioc));
         self.rx.set_lpm(to_lpm(cfg.wefax_lpm));

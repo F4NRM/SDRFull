@@ -284,20 +284,41 @@ const IQ_RATE_REPORT_S: f64 = 10.0;
 const IQ_RATE_SPAN_S: f64 = 60.0;
 /// The least span, in seconds, a fit is reported for.
 const IQ_RATE_MIN_SPAN_S: f64 = 30.0;
+/// Seconds of arrivals the *live* estimate the decoders use is fitted over. A
+/// front-end gain step moves the real rate at once (an RSP1 at LNA state 0
+/// runs about 220 ppm slow), so this follows it in about half this time, where
+/// the 60 s diagnostic fit would take a minute; the noise of a fit grows as
+/// the span shrinks, and over 20 s it is about ±12 ppm.
+const IQ_RATE_LIVE_SPAN_S: f64 = 20.0;
+/// The least span, in seconds, the live estimate is given for.
+const IQ_RATE_LIVE_MIN_S: f64 = 15.0;
+/// Seconds between two live estimates.
+const IQ_RATE_LIVE_EVERY_S: f64 = 1.0;
+/// The largest live correction, in ppm either way. Beyond it the stream is not
+/// running slow, it is broken, and no line clock should follow it there.
+const IQ_RATE_LIVE_MAX_PPM: f64 = 1000.0;
+/// A gap between two blocks longer than this, in seconds, is a stall of the
+/// engine thread, not a rate: the fit starts again after it.
+const IQ_RATE_STALL_S: f64 = 1.5;
 
-/// The IQ stream's real rate against the PC's monotonic clock — a diagnostic
-/// for a slant that follows the front-end gain (WEFAX pages whose lines drift
-/// when the gain is moved).
+/// The IQ stream's real rate against the PC's clock — for a slant that follows
+/// the front-end gain (WEFAX pages whose lines drift when the gain is moved).
 ///
 /// The samples delivered so far are fitted against the instant each block
-/// arrived, over the last [`IQ_RATE_SPAN_S`] seconds, by least squares. A rate
-/// taken between two single arrivals is wrong by a block's worth of samples
-/// whenever one of them came early or late (a USB packet burst is worth about
-/// ±1500 ppm over ten seconds); a fit through every arrival averages that
-/// out. The PC clock's own offset is a constant, so the *change* of the figure
-/// over time is what means something. Reported at `debug` under
-/// `sdroxide_radio::iq_rate`, so nothing is printed by default:
-/// `RUST_LOG=info,sdroxide_radio::iq_rate=debug`.
+/// arrived, by least squares. A rate taken between two single arrivals is wrong
+/// by a block's worth of samples whenever one of them came early or late (a USB
+/// packet burst is worth about ±1500 ppm over ten seconds); a fit through every
+/// arrival averages that out.
+///
+/// The clock is `Instant`, which the time service disciplines: the figure is
+/// the stream's rate against *true* time, which is what a decoder cutting lines
+/// to a transmitter's clock needs. (A raw, undisciplined clock reads the PC's
+/// own oscillator error on top, about +30 ppm on the test machine.)
+///
+/// Two fits come out of it. The long one, over [`IQ_RATE_SPAN_S`], is only
+/// reported, at `debug` under `sdroxide_radio::iq_rate`, so nothing is printed
+/// by default: `RUST_LOG=info,sdroxide_radio::iq_rate=debug`. The short one,
+/// over [`IQ_RATE_LIVE_SPAN_S`], is returned for the decoders to follow.
 #[derive(Default)]
 struct IqRateMeter {
     start: Option<std::time::Instant>,
@@ -305,39 +326,63 @@ struct IqRateMeter {
     /// (seconds since the first block, samples delivered by then).
     points: std::collections::VecDeque<(f64, f64)>,
     next_report_s: f64,
+    next_live_s: f64,
+    last_t: f64,
     last_ppm: Option<f64>,
 }
 
+/// The slope, in samples per second, of the least-squares line through
+/// `points`, or `None` when they do not span any time.
+fn fit_rate_hz<'a>(points: impl Iterator<Item = &'a (f64, f64)> + Clone) -> Option<f64> {
+    let k = points.clone().count() as f64;
+    if k < 2.0 {
+        return None;
+    }
+    let (mt, mc) = points.clone().fold((0.0, 0.0), |(a, b), &(t, c)| (a + t / k, b + c / k));
+    let (num, den) = points.fold((0.0, 0.0), |(num, den), &(t, c)| {
+        (num + (t - mt) * (c - mc), den + (t - mt) * (t - mt))
+    });
+    (den > 0.0).then(|| num / den)
+}
+
 impl IqRateMeter {
-    fn feed(&mut self, n: usize, nominal_hz: f64) {
+    /// Count one block in. Returns the live estimate, in ppm against true
+    /// time, when a new one is due.
+    fn feed(&mut self, n: usize, nominal_hz: f64) -> Option<f64> {
         let now = std::time::Instant::now();
         let start = *self.start.get_or_insert(now);
         let t = now.duration_since(start).as_secs_f64();
+        if t - self.last_t > IQ_RATE_STALL_S {
+            self.points.clear();
+            self.next_live_s = t;
+        }
+        self.last_t = t;
         self.delivered += n as u64;
         self.points.push_back((t, self.delivered as f64));
         while self.points.front().is_some_and(|&(t0, _)| t - t0 > IQ_RATE_SPAN_S) {
             self.points.pop_front();
         }
-        if t < self.next_report_s {
-            return;
+        let mut live = None;
+        if t >= self.next_live_s {
+            let &(t_first, _) = self.points.front()?;
+            if t - t_first >= IQ_RATE_LIVE_MIN_S {
+                self.next_live_s = t + IQ_RATE_LIVE_EVERY_S;
+                let recent = self.points.iter().filter(|&&(t0, _)| t - t0 <= IQ_RATE_LIVE_SPAN_S);
+                if let Some(rate) = fit_rate_hz(recent) {
+                    let ppm = (rate / nominal_hz - 1.0) * 1e6;
+                    live = Some(ppm.clamp(-IQ_RATE_LIVE_MAX_PPM, IQ_RATE_LIVE_MAX_PPM));
+                }
+            }
         }
-        let Some(&(t_first, _)) = self.points.front() else { return };
+        if t < self.next_report_s {
+            return live;
+        }
+        let Some(&(t_first, _)) = self.points.front() else { return live };
         if t - t_first < IQ_RATE_MIN_SPAN_S {
-            return;
+            return live;
         }
         self.next_report_s = t + IQ_RATE_REPORT_S;
-        let k = self.points.len() as f64;
-        let (mt, mc) = self
-            .points
-            .iter()
-            .fold((0.0, 0.0), |(a, b), &(t, c)| (a + t / k, b + c / k));
-        let (num, den) = self.points.iter().fold((0.0, 0.0), |(num, den), &(t, c)| {
-            (num + (t - mt) * (c - mc), den + (t - mt) * (t - mt))
-        });
-        if den <= 0.0 {
-            return;
-        }
-        let rate = num / den;
+        let Some(rate) = fit_rate_hz(self.points.iter()) else { return live };
         let ppm = (rate / nominal_hz - 1.0) * 1e6;
         let step = self.last_ppm.map_or(0.0, |p| ppm - p);
         tracing::debug!(
@@ -346,6 +391,7 @@ impl IqRateMeter {
             t - t_first
         );
         self.last_ppm = Some(ppm);
+        live
     }
 }
 
@@ -353,10 +399,13 @@ thread_local! {
     static IQ_RATE: std::cell::RefCell<IqRateMeter> = std::cell::RefCell::new(IqRateMeter::default());
 }
 
-/// Count one IQ block into the rate meter of the engine thread.
-fn iq_rate_meter(n: usize, nominal_hz: f64) {
+/// Count one IQ block into the rate meter of the engine thread. Returns the
+/// live rate error, in ppm, when a new one is due.
+fn iq_rate_meter(n: usize, nominal_hz: f64) -> Option<f64> {
     if nominal_hz > 0.0 {
-        IQ_RATE.with(|m| m.borrow_mut().feed(n, nominal_hz));
+        IQ_RATE.with(|m| m.borrow_mut().feed(n, nominal_hz))
+    } else {
+        None
     }
 }
 
@@ -2763,6 +2812,34 @@ fn recording_filename_for(
 }
 
 #[cfg(test)]
+mod iq_rate_tests {
+    use super::*;
+
+    /// The fit through block arrivals reads the stream's real rate through the
+    /// bursts of a USB link: blocks that come early or late by up to 8 ms do
+    /// not move a 20 s fit by more than the noise a decoder can live with.
+    #[test]
+    fn the_rate_fit_reads_a_slow_stream_through_arrival_jitter() {
+        let nominal = 2_500_000.0f64;
+        for ppm in [-220.0f64, 0.0, 35.0] {
+            let rate = nominal * (1.0 + ppm * 1e-6);
+            let block = 4096.0;
+            let mut seed = 12345u64;
+            let mut points = Vec::new();
+            let mut n = 0.0;
+            while n * block / rate < 20.0 {
+                n += 1.0;
+                seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                let jitter = ((seed >> 33) as f64 / (1u64 << 31) as f64 - 0.5) * 0.016;
+                points.push((n * block / rate + jitter, n * block));
+            }
+            let got = (fit_rate_hz(points.iter()).unwrap() / nominal - 1.0) * 1e6;
+            assert!((got - ppm).abs() < 30.0, "{ppm} ppm read as {got:.1}");
+        }
+    }
+}
+
+#[cfg(test)]
 mod recording_filename_tests {
     use super::*;
 
@@ -3285,6 +3362,10 @@ struct Engine {
     /// Set while a recording is being played back in place of the radio
     /// (fork discussion #10): where the radio was, so stopping can put it back.
     playback_return: Option<PlaybackReturn>,
+    /// How far the IQ stream's real rate is from its nominal one, in ppm
+    /// (negative: slow), from the live fit of [`IqRateMeter`]. Handed to a
+    /// decoder whose time base is that stream.
+    iq_clock_ppm: f64,
     cal_offset_db: f32,
     stacks: BandStacks,
     memories: Vec<MemoryChannel>,
@@ -5342,6 +5423,7 @@ fn engine_thread(
         audio_out_rate,
         recorder: None,
         playback_return: None,
+        iq_clock_ppm: 0.0,
         cal_offset_db: engine_cfg.cal_offset_db,
         stacks,
         memories,
@@ -6823,7 +6905,10 @@ impl Engine {
     /// fifteenth one); on a slow one it is most of them, and there is nothing
     /// there to win anyway.
     fn process_block(&mut self, iq: &[Complex32], pool: Option<&rayon::ThreadPool>) {
-        iq_rate_meter(iq.len(), self.radio_fs);
+        if let Some(ppm) = iq_rate_meter(iq.len(), self.radio_fs) {
+            self.iq_clock_ppm = ppm;
+            self.sync_digi_clock();
+        }
         self.capture_iq(iq);
         // Read while the chain is certainly in hand, and on both paths: the
         // frame builder asks for it and must never be answered with the
@@ -9211,12 +9296,27 @@ impl Engine {
     /// keyer's speed, so the panel's WPM means nothing on the air until the rig
     /// has been told it — including the speed carried over from the last
     /// session, which the operator never touches this time round.
+    /// Tell the digital-mode decoder how far its sample clock is from true
+    /// time.
+    ///
+    /// Only a decoder fed from the IQ chain has the stream's clock as its time
+    /// base. One fed from a transceiver's sound card, or from a recording
+    /// being played back, runs on a clock of its own and is told zero.
+    fn sync_digi_clock(&mut self) {
+        let from_iq = !self.audio_mode && !self.caps.rx_audio_external && self.playback_return.is_none();
+        let ppm = if from_iq { self.iq_clock_ppm } else { 0.0 };
+        if let Some(d) = self.digi.as_mut() {
+            d.set_clock_ppm(ppm);
+        }
+    }
+
     fn start_digi(&mut self, mode: Mode, tap_rate: f64) {
         // The old controller owns the far end of any existing link, and is
         // about to be dropped. Clear the handle first so nothing hands a
         // session a port whose other end has gone.
         self.packet_port = None;
         self.digi = Some(self.make_digi(mode, tap_rate));
+        self.sync_digi_clock();
         // The new controller starts at the mode's default 1500 Hz whatever the
         // last one was on, so the band's stored offset has to be applied again.
         // Clearing this leaves that to `follow_band_tx_offset` on the next poll

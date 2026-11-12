@@ -177,6 +177,14 @@ pub trait DigiEngine: Send {
     fn abort(&mut self);
     fn abort_tx(&mut self);
     fn set_config(&mut self, cfg: DigiConfig);
+    /// How far the receive tap's real sample rate is from its nominal one, in
+    /// parts per million (negative: the stream runs slow), measured by the
+    /// engine against the PC's clock. Called about once a second while the
+    /// tap comes from the IQ chain, and with zero when it comes from elsewhere.
+    ///
+    /// Only a decoder that cuts its input to a transmitter's clock has any use
+    /// for it (WEFAX lines, say); the default ignores it.
+    fn set_clock_ppm(&mut self, _ppm: f64) {}
     fn set_audio_hz(&mut self, hz: f32);
     /// Put the transmit tone back where the operator last left it on this band.
     ///
