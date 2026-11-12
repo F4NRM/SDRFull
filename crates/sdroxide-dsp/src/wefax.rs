@@ -1682,6 +1682,21 @@ impl WefaxRx {
         self.idle_phasing(level, out);
     }
 
+    /// A phasing pulse found by a lock, moved into the coordinates of the lines
+    /// cut from the lock on, which begin right after it: the pulse ends such a
+    /// line, as far back from the end as the picture's start sits beyond the
+    /// pulse's own start (see [`PulseRegion::picture_start`]).
+    ///
+    /// Taken against a whole line, not against the one that locked: the first
+    /// line of a start-tone page carries the samples that came before the
+    /// signal and is longer.
+    fn aligned_pulse(&self, pulse: PulseRegion) -> PulseRegion {
+        let n = (self.samples_per_line().round() as usize).max(1);
+        let standard = (n as f64 * 0.05).round() as usize;
+        let back = (pulse.width / 2 + standard / 2 + pulse.width % 2) % n;
+        PulseRegion { start: (n - back) % n, width: pulse.width }
+    }
+
     /// Listening for the phasing signal itself, with no start tone needed.
     ///
     /// The line going by is cut at the line rate on a clock of its own and
@@ -1714,7 +1729,7 @@ impl WefaxRx {
         self.arm(self.ioc, true);
         self.phase = Phase::Image;
         self.line_start = self.sample_idx as f64 + f64::from(skew);
-        self.lead_phasing = Some(pulse);
+        self.lead_phasing = Some(self.aligned_pulse(pulse));
         out.push(WefaxEvent::Start { ioc: self.ioc, lpm: self.lpm, auto: true });
         out.push(WefaxEvent::Phased { skew });
     }
@@ -2046,13 +2061,7 @@ impl WefaxRx {
                     // The phasing signal runs for half a minute and the lock
                     // takes a few lines of it: the rest are still phasing, not
                     // chart, and are dropped as they pass (see `lead_phasing`).
-                    // The region is moved into the coordinates of the lines cut
-                    // from here on, which begin right after the pulse.
-                    let n = line.len().max(1);
-                    self.lead_phasing = Some(PulseRegion {
-                        start: (pulse.start + n - (mean as usize % n)) % n,
-                        width: pulse.width,
-                    });
+                    self.lead_phasing = Some(self.aligned_pulse(pulse));
                     self.lead_skipped = 0;
                     self.lead_keep = LEAD_PHASING_KEEP;
                     if self.start_pending {
@@ -4494,6 +4503,24 @@ mod carrier_tests {
         let l = lines(&ev);
         assert!(l.len() >= 15, "only {} lines", l.len());
         // The first row is the ramp, not a black phasing line.
+        let mean = l[0].1.iter().map(|&g| f64::from(g)).sum::<f64>() / l[0].1.len() as f64 / 255.0;
+        assert!(mean > 0.3, "the page opens on the phasing signal: {mean:.2}");
+    }
+
+    /// The rest of a phasing signal is told from the chart by where its pulse
+    /// sits in the lines cut after the lock, and the lock finds it wherever it
+    /// fell in the line it locked on — here 40 % of the way along, not at the
+    /// end. The dropped lines must be judged against the pulse as the aligned
+    /// lines show it, or none of them is taken for phasing and all fifty are
+    /// drawn as a black band (the DWD page of 2026-10-31).
+    #[test]
+    fn the_phasing_signal_is_dropped_whatever_part_of_the_line_its_pulse_fell_in() {
+        let mut rx = WefaxRx::new(RATE);
+        let mut audio = fm(&phasing(60, 0.40, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
+        audio.extend(fm(&ramp(20), BLACK_HZ, WHITE_HZ));
+        let ev = feed(&mut rx, &audio);
+        let l = lines(&ev);
+        assert!(l.len() >= 15, "only {} lines", l.len());
         let mean = l[0].1.iter().map(|&g| f64::from(g)).sum::<f64>() / l[0].1.len() as f64 / 255.0;
         assert!(mean > 0.3, "the page opens on the phasing signal: {mean:.2}");
     }
