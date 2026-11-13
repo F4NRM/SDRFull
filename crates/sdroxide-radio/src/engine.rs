@@ -6771,6 +6771,12 @@ impl RigDigest {
 
 impl Drop for Engine {
     fn drop(&mut self) {
+        // **Hand the device back before anything else.** The source's own
+        // `Drop` does this, but leaving it to a drop order for something the
+        // service has to be told is how an operator closes the program, opens
+        // it again, and finds their receiver "in use" (issue #727). An
+        // exclusively-claimed front end has to be let go explicitly.
+        self.source.release();
         // A picture held for its FSK ID goes now rather than not at all, and
         // the web page is told the station has gone (QSSTV's offline marker).
         // Bounded: closing never waits more than a few seconds on a server.
@@ -20184,7 +20190,21 @@ impl Engine {
                     // A stand-in, not an open: the front end refused the
                     // frequency it was asked for (#72), so it is not recorded as
                     // one that tuned, and the next attempt goes to the fallback.
+                    //
+                    // **The first attempt of an outage is said out loud.** The
+                    // stand-in carries its own reason, and while it is in place
+                    // nothing above sends a notice — so a receiver that stays
+                    // away for hours used to leave one banner on screen and not
+                    // one line in the log (issue #727).
                     let first_refusal = self.refused_center_hz.is_none();
+                    if self.retry_every == RETRY_FIRST
+                        && let Some(why) = source.open_status()
+                    {
+                        warn!(
+                            "radio interface still unavailable ({why}) — retrying, and every {:.0} s at most",
+                            RETRY_MAX.as_secs_f32()
+                        );
+                    }
                     self.note_open_refused(self.retry_asked_hz);
                     self.retry_fell_back_to = None;
                     self.adopt_source(source, caps);
@@ -20215,9 +20235,21 @@ impl Engine {
                     self.retry_fell_back_to = None;
                     // Back off: a rig that isn't there yet is the normal case
                     // here, so this must not turn into a busy retry loop.
+                    //
+                    // Said once per outage at `warn` and then at `debug`: the
+                    // first attempt is the one an operator (or a log read the
+                    // next morning) has to be able to find, and after that the
+                    // backoff would only repeat itself (issue #727).
+                    if self.retry_every == RETRY_FIRST {
+                        warn!(
+                            "radio interface could not be opened again ({e}) — retrying, and every {:.0} s at most",
+                            RETRY_MAX.as_secs_f32()
+                        );
+                    } else {
+                        debug!("radio interface still unavailable: {e}");
+                    }
                     self.retry_every = (self.retry_every * 2).min(RETRY_MAX);
                     self.retry_at = Some(Instant::now() + self.retry_every);
-                    debug!("radio interface still unavailable: {e}");
                 }
                 // The worker died without answering (a panic inside a backend's
                 // open). Count it as a failed attempt; the backoff keeps that
