@@ -13764,8 +13764,14 @@ into:
   on screen**, local or reached over `--connect`, and in a split view the one
   that has the focus; a tab that loses the focus lets go of what it keyed. The
   setup is saved on this computer (`operator_ptt.json`, beside `input.json`) and
-  **APPLY** opens the devices. **Native app only**: a browser cannot yet read a
-  serial port, a HID device or a MIDI port, and says so.
+  **APPLY** opens the devices. In a **browser** the page reads the switch
+  through Web Serial, WebHID and Web MIDI (**Chrome and Edge**; Firefox and
+  Safari have no Serial and no HID and say so): press **Allow a serial port…**
+  (or **Allow a USB HID device…**, **Allow MIDI inputs…**), pick the device in
+  the browser's own window, then choose it in the list. The browser keeps that
+  permission for the site; the server keeps your choices, per login, so they
+  come back on the next visit. The page must stay open and visible to the
+  browser for the switch to be read.
 - **On the station's computer** (Settings → T/R switch, under the relay): for a
   microphone wired to the machine that runs the radio. It is read there whether
   the screen is the native app or a browser. The setup is saved there

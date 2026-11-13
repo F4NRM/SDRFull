@@ -9762,4 +9762,11 @@ ptt-here-heading = AN DIESEM RECHNER
 
 ptt-station-heading = AM RECHNER DER STATION
 
-ptt-web-unavailable = Der Browser kann hier noch keine serielle Schnittstelle, kein HID-Gerät und keinen MIDI-Port lesen. Nutzen Sie die Desktop-App auf diesem Rechner oder das an der Station verdrahtete Paar auf der Seite für den Sende-/Empfangsumschalter.
+
+ptt-grant-serial = Serielle Schnittstelle freigeben…
+
+ptt-grant-hid = USB-HID-Gerät freigeben…
+
+ptt-grant-midi = MIDI-Eingänge freigeben…
+
+ptt-grant-hint = Der Browser zeigt einer Seite nur, was Sie freigeben. Wählen Sie das Gerät im Fenster des Browsers; er merkt sich Ihre Wahl für diese Seite. Nur Chrome und Edge (seriell und HID).
