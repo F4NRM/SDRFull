@@ -292,6 +292,13 @@ const IQ_RATE_MIN_SPAN_S: f64 = 30.0;
 const IQ_RATE_LIVE_SPAN_S: f64 = 20.0;
 /// The least span, in seconds, the live estimate is given for.
 const IQ_RATE_LIVE_MIN_S: f64 = 15.0;
+/// The live estimate stays on the 60 s fit while the 20 s fit is within
+/// `IQ_RATE_STEP_LO_PPM` of it, and is the 20 s fit from `IQ_RATE_STEP_HI_PPM`
+/// apart (a front-end gain step moves the rate by about 220 ppm); in between it
+/// blends. Noise on the short fit is a few tens of ppm and must not reach the
+/// line clock.
+const IQ_RATE_STEP_LO_PPM: f64 = 40.0;
+const IQ_RATE_STEP_HI_PPM: f64 = 100.0;
 /// Seconds between two live estimates.
 const IQ_RATE_LIVE_EVERY_S: f64 = 1.0;
 /// The largest live correction, in ppm either way. Beyond it the stream is not
@@ -351,7 +358,11 @@ impl IqRateMeter {
     fn feed(&mut self, n: usize, nominal_hz: f64) -> Option<f64> {
         let now = std::time::Instant::now();
         let start = *self.start.get_or_insert(now);
-        let t = now.duration_since(start).as_secs_f64();
+        self.feed_at(now.duration_since(start).as_secs_f64(), n, nominal_hz)
+    }
+
+    /// [`Self::feed`] for a block that arrived `t` seconds after the first.
+    fn feed_at(&mut self, t: f64, n: usize, nominal_hz: f64) -> Option<f64> {
         if t - self.last_t > IQ_RATE_STALL_S {
             self.points.clear();
             self.next_live_s = t;
@@ -369,7 +380,20 @@ impl IqRateMeter {
                 self.next_live_s = t + IQ_RATE_LIVE_EVERY_S;
                 let recent = self.points.iter().filter(|&&(t0, _)| t - t0 <= IQ_RATE_LIVE_SPAN_S);
                 if let Some(rate) = fit_rate_hz(recent) {
-                    let ppm = (rate / nominal_hz - 1.0) * 1e6;
+                    let mut ppm = (rate / nominal_hz - 1.0) * 1e6;
+                    // The short fit is noisy (tens of ppm on a bursty USB
+                    // link), and a line clock that follows it makes a page's
+                    // frame wander by pixels. The long fit is steady: stay on
+                    // it, and move to the short one only as far as the two
+                    // disagree by more than noise can, i.e. a real step.
+                    if t - t_first >= IQ_RATE_MIN_SPAN_S {
+                        if let Some(long) = fit_rate_hz(self.points.iter()) {
+                            let long = (long / nominal_hz - 1.0) * 1e6;
+                            let w = ((ppm - long).abs() - IQ_RATE_STEP_LO_PPM)
+                                / (IQ_RATE_STEP_HI_PPM - IQ_RATE_STEP_LO_PPM);
+                            ppm = long + w.clamp(0.0, 1.0) * (ppm - long);
+                        }
+                    }
                     live = Some(ppm.clamp(-IQ_RATE_LIVE_MAX_PPM, IQ_RATE_LIVE_MAX_PPM));
                 }
             }
@@ -2836,6 +2860,52 @@ mod iq_rate_tests {
             let got = (fit_rate_hz(points.iter()).unwrap() / nominal - 1.0) * 1e6;
             assert!((got - ppm).abs() < 30.0, "{ppm} ppm read as {got:.1}");
         }
+    }
+}
+
+#[cfg(test)]
+mod iq_rate_live_tests {
+    use super::*;
+
+    /// Blocks of a stream whose rate follows `ppm_at(t)`, arriving with up to
+    /// 8 ms of jitter each way; the live estimates it makes, as (t, ppm).
+    fn run(secs: f64, ppm_at: impl Fn(f64) -> f64) -> Vec<(f64, f64)> {
+        let nominal = 2_500_000.0f64;
+        let block = 4096.0;
+        let mut m = IqRateMeter::default();
+        let (mut seed, mut true_t, mut count, mut out) = (99u64, 0.0f64, 0.0f64, Vec::new());
+        while true_t < secs {
+            true_t += block / (nominal * (1.0 + ppm_at(true_t) * 1e-6));
+            count += block;
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            let jitter = ((seed >> 33) as f64 / (1u64 << 31) as f64 - 0.5) * 0.016;
+            if let Some(ppm) = m.feed_at(true_t + jitter, block as usize, nominal) {
+                out.push((true_t, ppm));
+            }
+        }
+        let _ = count;
+        out
+    }
+
+    /// A steady stream: the estimate a line clock follows moves by a few ppm,
+    /// not tens (a page's frame wandered by pixels at tens).
+    #[test]
+    fn the_live_estimate_is_steady_on_a_steady_stream() {
+        let est = run(400.0, |_| -50.0);
+        let late: Vec<f64> = est.iter().filter(|e| e.0 > 80.0).map(|e| e.1).collect();
+        let (lo, hi) = late.iter().fold((f64::MAX, f64::MIN), |(l, h), &v| (l.min(v), h.max(v)));
+        assert!(hi - lo < 12.0, "live estimate wandered {lo:.1}..{hi:.1} ppm");
+        assert!((late.iter().sum::<f64>() / late.len() as f64 + 50.0).abs() < 6.0);
+    }
+
+    /// A front-end gain step (about 220 ppm) is still followed within a
+    /// quarter of a minute.
+    #[test]
+    fn a_gain_step_is_still_followed_quickly() {
+        let est = run(200.0, |t| if t < 100.0 { 0.0 } else { -220.0 });
+        let at = |t0: f64| est.iter().filter(|e| e.0 <= t0).last().unwrap().1;
+        assert!(at(99.0).abs() < 12.0);
+        assert!((at(100.0 + 22.0) + 220.0).abs() < 40.0, "{:.1}", at(122.0));
     }
 }
 
