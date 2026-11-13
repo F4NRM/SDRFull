@@ -307,6 +307,9 @@ const IQ_RATE_LIVE_MAX_PPM: f64 = 1000.0;
 /// A gap between two blocks longer than this, in seconds, is a stall of the
 /// engine thread, not a rate: the fit starts again after it.
 const IQ_RATE_STALL_S: f64 = 1.5;
+/// A block counted in more than this many seconds off the fitted line is late
+/// (the engine's thread was busy), not a sign of the rate: see [`fit_rate_hz`].
+const IQ_RATE_LATE_S: f64 = 0.05;
 
 /// The IQ stream's real rate against the PC's clock — for a slant that follows
 /// the front-end gain (WEFAX pages whose lines drift when the gain is moved).
@@ -338,9 +341,11 @@ struct IqRateMeter {
     last_ppm: Option<f64>,
 }
 
-/// The slope, in samples per second, of the least-squares line through
-/// `points`, or `None` when they do not span any time.
-fn fit_rate_hz<'a>(points: impl Iterator<Item = &'a (f64, f64)> + Clone) -> Option<f64> {
+/// The slope and intercept (samples per second, samples) of the least-squares
+/// line through `points`, or `None` when they do not span any time.
+fn least_squares<'a>(
+    points: impl Iterator<Item = &'a (f64, f64)> + Clone,
+) -> Option<(f64, f64)> {
     let k = points.clone().count() as f64;
     if k < 2.0 {
         return None;
@@ -349,7 +354,26 @@ fn fit_rate_hz<'a>(points: impl Iterator<Item = &'a (f64, f64)> + Clone) -> Opti
     let (num, den) = points.fold((0.0, 0.0), |(num, den), &(t, c)| {
         (num + (t - mt) * (c - mc), den + (t - mt) * (t - mt))
     });
-    (den > 0.0).then(|| num / den)
+    (den > 0.0).then(|| (num / den, mc - num / den * mt))
+}
+
+/// The slope, in samples per second, of the line through `points`.
+///
+/// A block is counted when the engine gets to it, not when it arrived, and the
+/// engine gets to it late whenever its thread was busy: a decoder that computes
+/// for a quarter of a second stops the count, then the backlog is counted in at
+/// once. Those blocks sit tens or hundreds of milliseconds off the line, a
+/// fraction of the points and a large part of the leverage, and a fit through
+/// them moves by hundreds of ppm. So the line is fitted, the blocks counted
+/// more than [`IQ_RATE_LATE_S`] off it are set aside, and the line is fitted
+/// again through the rest.
+fn fit_rate_hz<'a>(points: impl Iterator<Item = &'a (f64, f64)> + Clone) -> Option<f64> {
+    let (rate, icpt) = least_squares(points.clone())?;
+    if rate <= 0.0 {
+        return Some(rate);
+    }
+    let kept = points.filter(move |&&(t, c)| ((c - icpt) / rate - t).abs() < IQ_RATE_LATE_S);
+    least_squares(kept).map(|(r, _)| r).or(Some(rate))
 }
 
 impl IqRateMeter {
@@ -2896,6 +2920,42 @@ mod iq_rate_live_tests {
         let (lo, hi) = late.iter().fold((f64::MAX, f64::MIN), |(l, h), &v| (l.min(v), h.max(v)));
         assert!(hi - lo < 12.0, "live estimate wandered {lo:.1}..{hi:.1} ppm");
         assert!((late.iter().sum::<f64>() / late.len() as f64 + 50.0).abs() < 6.0);
+    }
+
+    /// The same steady stream read by a consumer that stops for `stall_s` every
+    /// `every_s` seconds (a decoder that computes on the audio thread): the
+    /// blocks wait their turn and are counted in when it is back, in a burst.
+    fn run_stalled(secs: f64, every_s: f64, stall_s: f64) -> Vec<(f64, f64)> {
+        let nominal = 2_500_000.0f64;
+        let block = 4096.0;
+        let mut m = IqRateMeter::default();
+        let (mut true_t, mut busy_until, mut next_stall, mut out) = (0.0f64, 0.0f64, every_s, Vec::new());
+        while true_t < secs {
+            true_t += block / (nominal * (1.0 - 50e-6));
+            if true_t >= next_stall {
+                busy_until = next_stall + stall_s;
+                next_stall += every_s;
+            }
+            let at = true_t.max(busy_until);
+            if busy_until > true_t {
+                busy_until += 0.0002;
+            }
+            if let Some(ppm) = m.feed_at(at, block as usize, nominal) {
+                out.push((true_t, ppm));
+            }
+        }
+        out
+    }
+
+    /// A consumer that stalls a quarter of a second every forty seconds must
+    /// not move the line clock by more than a few ppm.
+    #[test]
+    fn a_stalled_consumer_does_not_move_the_live_estimate() {
+        let est = run_stalled(600.0, 40.0, 0.25);
+        let late: Vec<f64> = est.iter().filter(|e| e.0 > 100.0).map(|e| e.1).collect();
+        let (lo, hi) = late.iter().fold((f64::MAX, f64::MIN), |(l, h), &v| (l.min(v), h.max(v)));
+        eprintln!("STALL estimate range {lo:.1}..{hi:.1} ppm");
+        assert!(hi - lo < 12.0, "live estimate wandered {lo:.1}..{hi:.1} ppm");
     }
 
     /// A front-end gain step (about 220 ppm) is still followed within a

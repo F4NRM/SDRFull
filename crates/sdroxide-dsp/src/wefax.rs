@@ -612,6 +612,15 @@ pub struct WefaxRx {
     /// stays off as well. A pulse-based correction undone by its own check does
     /// not turn it off.
     lean_off: bool,
+    /// Measure the picture's lean on a thread of its own. The measurement is
+    /// a few hundred milliseconds of arithmetic every 80 lines; run inside
+    /// [`WefaxRx::process`] it stops the audio for that long, and a decoder fed
+    /// live has its samples arrive late (the stream's clock is read from when
+    /// they do) and a radio's buffers overrun. Off by default, so a recording
+    /// decoded offline gives the same picture every time.
+    lean_background: bool,
+    /// The measurement running on that thread, if one is.
+    lean_job: Option<std::sync::mpsc::Receiver<Option<(f64, f64)>>>,
     /// Whether the receiver corrects the slant by itself at all, from the
     /// phasing signal and from the picture. On unless the operator turned it off.
     auto_slant: bool,
@@ -1137,6 +1146,8 @@ impl WefaxRx {
             lean_rows: Vec::new(),
             lean_hist: Vec::new(),
             lean_off: false,
+            lean_background: false,
+            lean_job: None,
             auto_slant: true,
             last_line: Vec::new(),
             lost_run: 0,
@@ -1261,6 +1272,22 @@ impl WefaxRx {
     /// follows at once, on top of the trim and whatever the auto-slant found.
     pub fn set_clock_ppm(&mut self, ppm: f64) {
         self.clock_ppm = ppm.clamp(-CLOCK_MAX_PPM, CLOCK_MAX_PPM);
+    }
+
+    /// Measure the picture's lean on a thread of its own instead of inside
+    /// [`Self::process`]. For a decoder fed live: see the field `lean_background`.
+    pub fn set_background_lean(&mut self, on: bool) {
+        self.lean_background = on;
+    }
+
+    /// Wait for the measurement on its thread and take it in (tests).
+    #[cfg(test)]
+    fn wait_for_lean(&mut self) {
+        if let Some(job) = self.lean_job.take() {
+            if let Ok(measured) = job.recv() {
+                self.take_lean(measured);
+            }
+        }
     }
 
     /// The input clock error last given to [`Self::set_clock_ppm`].
@@ -1464,6 +1491,7 @@ impl WefaxRx {
         self.lean_rows.clear();
         self.lean_hist.clear();
         self.lean_off = false;
+        self.lean_job = None;
         self.last_line.clear();
         self.lost_run = 0;
         self.auto_begun = auto;
@@ -2074,6 +2102,17 @@ impl WefaxRx {
         if self.lean_off || !self.auto_slant {
             return;
         }
+        // A measurement that ran on its own thread, taken in when it is done.
+        if let Some(job) = &self.lean_job {
+            match job.try_recv() {
+                Ok(measured) => {
+                    self.lean_job = None;
+                    self.take_lean(measured);
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => self.lean_job = None,
+            }
+        }
         self.lean_rows.push(gray.to_vec());
         // A stretch is measured from LEAN_BLOCK lines on, every LEAN_STEP_LINES
         // more, and grows while the picture has nothing vertical to go by (a
@@ -2082,7 +2121,28 @@ impl WefaxRx {
         if n < LEAN_BLOCK || (n - LEAN_BLOCK) % LEAN_STEP_LINES != 0 {
             return;
         }
+        if self.lean_job.is_some() {
+            // The last one has not finished: the next step will do.
+            return;
+        }
+        if self.lean_background {
+            let rows = self.lean_rows.clone();
+            let (tx, rx) = std::sync::mpsc::channel();
+            let spawned = std::thread::Builder::new().name("wefax-lean".into()).spawn(move || {
+                let _ = tx.send(image_lean(&rows));
+            });
+            if spawned.is_ok() {
+                self.lean_job = Some(rx);
+                return;
+            }
+        }
         let measured = image_lean(&self.lean_rows);
+        self.take_lean(measured);
+    }
+
+    /// What one stretch's measured walk comes to: see [`WefaxRx::image_slant`].
+    fn take_lean(&mut self, measured: Option<(f64, f64)>) {
+        let n = self.lean_rows.len();
         let sharp = measured.is_some_and(|(_, sharpness)| sharpness >= LEAN_CONFIDENCE);
         if !sharp {
             if n >= LEAN_MAX_LINES {
@@ -3349,6 +3409,30 @@ mod tests {
         ev.extend(drain(&mut rx, &audio));
         let pos = bar_positions(&ev);
         assert!(pos.len() > 380, "only {} lines", pos.len());
+        let tail = &pos[pos.len() - 100..];
+        let walk = tail.last().unwrap() - tail.first().unwrap();
+        assert!(walk.abs() < 3.0, "the bar still walks {walk:.1} px over 100 lines");
+    }
+
+    /// The same measurement made on its own thread, so the audio is not held
+    /// for it, lands on the same trim as the one made in line.
+    #[test]
+    fn a_lean_measured_on_a_thread_is_applied_like_one_measured_in_line() {
+        let audio = bar_picture_bars(Lpm::L120, 420, 50.0, &FRAME);
+        let run = |background: bool| {
+            let mut rx = WefaxRx::new(RATE);
+            rx.set_background_lean(background);
+            let mut ev = into_image(&mut rx, Lpm::L120);
+            for block in audio.chunks(500) {
+                rx.process(block, &mut ev);
+                rx.wait_for_lean();
+            }
+            (rx.slant_ppm(), bar_positions(&ev))
+        };
+        let (inline, _) = run(false);
+        let (threaded, pos) = run(true);
+        assert!(inline.abs() > 20.0, "the fixture has nothing to correct ({inline:.1} ppm)");
+        assert!((inline - threaded).abs() < 3.0, "in line {inline:.1} ppm, on a thread {threaded:.1}");
         let tail = &pos[pos.len() - 100..];
         let walk = tail.last().unwrap() - tail.first().unwrap();
         assert!(walk.abs() < 3.0, "the bar still walks {walk:.1} px over 100 lines");

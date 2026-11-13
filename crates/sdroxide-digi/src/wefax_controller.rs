@@ -107,6 +107,9 @@ fn from_lpm(v: Lpm) -> WefaxLpm {
 impl WefaxController {
     pub fn new(cfg: DigiConfig, tap_rate: f64) -> Self {
         let mut rx = WefaxRx::new(tap_rate);
+        // Live: the picture's lean is measured off the audio thread (see
+        // `WefaxRx::set_background_lean`).
+        rx.set_background_lean(true);
         rx.set_ioc(to_ioc(cfg.wefax_ioc));
         rx.set_lpm(to_lpm(cfg.wefax_lpm));
         rx.set_auto_start(cfg.wefax_auto_start);
