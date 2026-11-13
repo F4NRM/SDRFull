@@ -43,7 +43,7 @@ or a PR exists**, not after it is written. In particular:
   tick;
 - the USB sound card as a radio interface — how it is opened, buffered, paced
   and named, and anything that changes which device or which rate is used;
-- the FT modes (FT8, FT4, FT2, JS8) and anything in the record or transmit
+- the FT modes (FT8, FT4, FT2, JS8, olivia, satnag) and anything in the record or transmit
   audio chain under them.
 
 No "improvement" and no tidy-up under those three without that conversation. A
@@ -85,9 +85,10 @@ Rules for an agent:
 
 ## F4NRM's areas (PR required, never straight to main)
 
-F4NRM owns: decoders Bands plans, SSTV, DAB, NAVTEX, APRS, WFM, DSC, Olivia, RTTY, WEFAX,
-FT8, RDS and backends HackRF, PlutoSDR. RSP1 is NOT on his list (bench receiver).
-Confirmed on air by his radio group: WEFAX, DAB, SSTV, DSC, radio classic, aircraft.
+F4NRM owns: decoders Bands plans, DAB, NAVTEX, APRS, WFM, DSC, RTTY, WEFAX,
+FT8, APRS, RDS and backends HackRF, PlutoSDR.
+Confirmed on air by his radio group: WEFAX, DAB, SSTV, DSC, radio classic, aircraft,
+wheather, programes, sondes, meshtastics, ism868, ism433, meteosat.
 
 Anything touching these — a fault fix, a wire change, a panel change — goes up as
 a PR, never straight to `main`. No refactor or "improvement" without a report
@@ -300,10 +301,8 @@ crates' tests passing, rustfmt clean on touched files, one complete thing per PR
 No UI work unless a new mode needs a panel or something is very off. The
 programme is the modes that did not finish in 2.1.0: 8PSK filter, wide PSK
 banks, speeds that lose a word, MT63/Contestia/DominoEX variants. STANAG 4285
-is finished. F4NRM's list (SSTV, DAB, NAVTEX, APRS, WFM, DSC, Olivia, RTTY,
-WEFAX, FT8, RDS, HackRF, PlutoSDR) is his — report faults as PRs, never
-unrequested tidy-ups. RSP1 is ours. DMR is out (patent). ATS Mini/DiamondRadio
-are closed/unlicensed (research only). SDRuno look is parked.
+is finished. F4NRM's list (SSTV, DAB, NAVTEX, APRS, WFM, DSC, meshtastic, sondes, aéronefs, ctr, zoom, radio classic, RTTY,
+WEFAX, FT8, RDS, HackRF, PlutoSDR, CAT) is his — report faults as PRs. SDRuno look is parked.
 
 ## Where the work stands
 
