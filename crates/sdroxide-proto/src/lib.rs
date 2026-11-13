@@ -4038,13 +4038,15 @@ mod tests {
         let digi = postcard::to_allocvec(&sdroxide_types::DigiConfig::default()).unwrap();
         let radio = postcard::to_allocvec(&sdroxide_types::RadioConfig::default()).unwrap();
         let net = postcard::to_allocvec(&sdroxide_types::NetworkConfig::default()).unwrap();
-        // 481 since SSTV's sync-pulse setting and its save-everything switch
-        // were appended at the tail (PROTO_VERSION 262 → 263). Appended, so an
+        // 482 since `wefax_auto_slant` (a bool) was appended at the tail
+        // (PROTO_VERSION 298 → 299); 481 before, since SSTV's sync-pulse
+        // setting and its save-everything switch were appended at the tail
+        // (PROTO_VERSION 262 → 263). Appended, so an
         // older peer reads the struct it knows and the new bytes are simply not
         // there.
         assert_eq!(
             (digi.len(), fnv1a(&digi)),
-            (481, 5_599_147_536_364_706_919),
+            (482, 1_063_270_805_729_231_186),
             "DigiConfig's wire layout shifted — append fields, never insert them"
         );
         // 897 since `HpsdrConfig` gained its five Diversity fields (a bool, a
