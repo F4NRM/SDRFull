@@ -189,7 +189,7 @@ impl WefaxController {
         }
         self.saved = self.saved.wrapping_add(1);
         let (image_id, w, h) = (self.image_id, self.width, self.height);
-        let mut gray = std::mem::take(&mut self.image);
+        let gray = std::mem::take(&mut self.image);
         self.height = 0;
         if usize::from(h) < sdroxide_dsp::wefax::STRAIGHTEN_MIN_ROWS {
             self.queued.push(DigiAction::WefaxImage { image_id, w, h, gray });
