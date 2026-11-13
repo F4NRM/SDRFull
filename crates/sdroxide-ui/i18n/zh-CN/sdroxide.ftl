@@ -9708,4 +9708,11 @@ ptt-here-heading = 本机
 
 ptt-station-heading = 电台的计算机
 
-ptt-web-unavailable = 浏览器目前还不能在此读取串口、HID设备或MIDI端口。请在本机使用桌面应用,或使用“收发切换”页面中接到电台的那一组。
+
+ptt-grant-serial = 允许串口…
+
+ptt-grant-hid = 允许USB HID设备…
+
+ptt-grant-midi = 允许MIDI输入…
+
+ptt-grant-hint = 浏览器只让页面看到您允许的设备。请在浏览器自己的窗口中选择设备,它会为此网站记住您的选择。仅限Chrome和Edge(串口和HID)。

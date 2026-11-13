@@ -9770,4 +9770,11 @@ ptt-here-heading = NESTE COMPUTADOR
 
 ptt-station-heading = NO COMPUTADOR DA ESTAÇÃO
 
-ptt-web-unavailable = O navegador ainda não consegue ler aqui uma porta serial, um dispositivo HID nem uma porta MIDI. Use o aplicativo de desktop neste computador, ou o par ligado à estação na página da chave T/R.
+
+ptt-grant-serial = Permitir uma porta serial…
+
+ptt-grant-hid = Permitir um dispositivo USB HID…
+
+ptt-grant-midi = Permitir entradas MIDI…
+
+ptt-grant-hint = O navegador mostra a uma página apenas o que você permite. Escolha o dispositivo na janela do navegador; ele lembra a escolha para este site. Somente Chrome e Edge (serial e HID).

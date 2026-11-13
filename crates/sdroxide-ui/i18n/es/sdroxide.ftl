@@ -9761,4 +9761,11 @@ ptt-here-heading = EN ESTE ORDENADOR
 
 ptt-station-heading = EN EL ORDENADOR DE LA ESTACIÓN
 
-ptt-web-unavailable = El navegador aún no puede leer aquí un puerto serie, un dispositivo HID ni un puerto MIDI. Use la aplicación de escritorio en este ordenador, o el par conectado a la estación en la página del conmutador T/R.
+
+ptt-grant-serial = Permitir un puerto serie…
+
+ptt-grant-hid = Permitir un dispositivo USB HID…
+
+ptt-grant-midi = Permitir entradas MIDI…
+
+ptt-grant-hint = El navegador solo muestra a una página lo que usted permite. Elija el dispositivo en la ventana del navegador; recordará su elección para este sitio. Solo Chrome y Edge (serie y HID).

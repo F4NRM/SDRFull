@@ -437,6 +437,11 @@ pub enum RadioEvent {
     /// profile — sent on connect, and echoed after a change. Client-local: it
     /// rides `ServerMsg::ClientAcks`, not the engine.
     ClientAcks(crate::ClientAcks),
+    /// The browser's own desk microphone and pedal, as the server keeps them for
+    /// this login (issue #636). Client-local: it rides `ServerMsg::OperatorPtt`,
+    /// not the engine. Only a browser acts on it; a native client keeps its own
+    /// in `operator_ptt.json`.
+    OperatorPtt(Box<crate::PttInputsConfig>),
     /// The answer to a [`crate::Command::GetKnownCalls`]: the callsigns the
     /// digital decoder's hash table can currently resolve, newest first — or
     /// `None` when there is no such table to ask, or the worker did not answer
@@ -575,6 +580,11 @@ pub trait RadioController {
     /// against its profile. Defaulted to nothing: the in-process engine has no
     /// server, and its answers live in its own `config.toml`.
     fn send_client_acks(&mut self, _acks: crate::ClientAcks) {}
+
+    /// Hand a remote server the browser's microphone and pedal to keep against
+    /// this login (issue #636). Defaulted to nothing: a native client keeps its
+    /// own file.
+    fn send_operator_ptt(&mut self, _cfg: crate::PttInputsConfig) {}
 
     /// Non-blocking; the UI drains this each frame until `None`.
     fn poll_event(&mut self) -> Option<RadioEvent>;

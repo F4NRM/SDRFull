@@ -1894,6 +1894,11 @@ pub struct ClientSettingsStore {
     /// rule: once answered, a login is not asked again on that browser; on a
     /// new browser it answers once more. No fallback between keys.
     pub acks: std::collections::BTreeMap<String, sdroxide_types::ClientAcks>,
+    /// The desk microphone and pedal of a browser (issue #636), per login. A
+    /// browser may not keep it in its own storage, and the device itself is
+    /// found again by the permission the browser holds, so only the choices live
+    /// here. The empty login is a station with no password.
+    pub operator_ptt: std::collections::BTreeMap<String, sdroxide_types::PttInputsConfig>,
 }
 
 impl ClientSettingsStore {
@@ -1962,6 +1967,17 @@ impl ClientSettingsStore {
             }
             None => self.bindings_default = Some(bindings),
         }
+    }
+}
+
+impl ClientSettingsStore {
+    /// The browser microphone and pedal kept for `login`, if any.
+    pub fn operator_ptt_for(&self, login: &str) -> Option<sdroxide_types::PttInputsConfig> {
+        self.operator_ptt.get(login).cloned()
+    }
+
+    pub fn set_operator_ptt(&mut self, login: &str, cfg: sdroxide_types::PttInputsConfig) {
+        self.operator_ptt.insert(login.to_string(), cfg);
     }
 }
 
@@ -4253,6 +4269,24 @@ mod tests {
     /// The opt-in bindings sit beside the screen, with the same profile/default
     /// fallback, and are absent until a client actually sends some — an older
     /// `clientsettings.json` has neither key and still loads.
+    #[test]
+    fn a_browsers_microphone_and_pedal_are_kept_per_login() {
+        let mut store = ClientSettingsStore::default();
+        assert!(store.operator_ptt_for("ana").is_none());
+        let mut cfg = sdroxide_types::PttInputsConfig::default();
+        cfg.pedal.enabled = true;
+        cfg.pedal.port = "usb:0403:6001".into();
+        store.set_operator_ptt("ana", cfg.clone());
+        assert_eq!(store.operator_ptt_for("ana"), Some(cfg.clone()));
+        assert!(store.operator_ptt_for("bob").is_none(), "one login's setup is not another's");
+        // A store written before the field existed still loads.
+        let old: ClientSettingsStore = serde_json::from_str("{}").unwrap();
+        assert!(old.operator_ptt.is_empty());
+        let back: ClientSettingsStore =
+            serde_json::from_str(&serde_json::to_string(&store).unwrap()).unwrap();
+        assert_eq!(back.operator_ptt_for("ana"), Some(cfg));
+    }
+
     #[test]
     fn the_client_settings_store_holds_bindings_only_when_given() {
         let mut store = ClientSettingsStore::default();
