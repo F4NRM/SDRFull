@@ -9763,3 +9763,11 @@ ptt-pressed = PRESSIONADO
 ptt-released = solto
 
 cw-neural-heavy-small-machine = Pesado em uma máquina pequena: com quatro núcleos ou menos (um Raspberry Pi, por exemplo), o decodificador de tempo é a escolha leve.
+
+ptt-intro-local = A tecla PTT de um microfone ou um pedal ligado a este computador pode colocar em transmissão a estação à sua frente, local ou remota. Ligue o interruptor de RTS a CTS, DSR ou DCD em uma porta serial (um adaptador USB-serial basta), ou use um dispositivo USB HID ou uma nota MIDI. Qualquer entrada aciona o transmissor; ele cai quando ambas são soltas. O dispositivo é lido neste computador, não na estação.
+
+ptt-here-heading = NESTE COMPUTADOR
+
+ptt-station-heading = NO COMPUTADOR DA ESTAÇÃO
+
+ptt-web-unavailable = O navegador ainda não consegue ler aqui uma porta serial, um dispositivo HID nem uma porta MIDI. Use o aplicativo de desktop neste computador, ou o par ligado à estação na página da chave T/R.

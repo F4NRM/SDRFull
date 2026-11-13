@@ -128,6 +128,9 @@ sdroxide-dsp = { path = "../sdroxide-dsp" }
 # MIDI control surfaces (VFO knob, PTT button, faders). Native-only: it links
 # the host MIDI stack, so it must never reach the wasm dependency path.
 sdroxide-midi = { path = "../sdroxide-midi" }
+# The desk microphone and pedal of this computer (issue #636): the same readers
+# the station uses, owned here by the interface. Native-only, like MIDI.
+sdroxide-pttin = { path = "../sdroxide-pttin" }
 # Drives the one-shot adapter probe in `wgpu_options` to completion. wgpu's
 # enumeration is a future for the browser's sake only, and this is the executor
 # wgpu and eframe already pull in, so it adds no build time.

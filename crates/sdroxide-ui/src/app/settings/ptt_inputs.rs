@@ -33,12 +33,21 @@ pub(in crate::app) struct PttView<'a> {
     pub learn: &'a mut PttLearn,
     pub apply: &'a mut bool,
     pub rescan: &'a mut bool,
+    /// The devices of the computer the operator sits at, not the station's.
+    pub local: bool,
 }
 
 pub(in crate::app) fn settings_ptt_inputs_section(ui: &mut egui::Ui, v: PttView<'_>) {
     ui.add_space(10.0);
     ui.separator();
     ui.add_space(6.0);
+    let heading = if v.local { tr!("ptt-here-heading") } else { tr!("ptt-station-heading") };
+    ui.label(RichText::new(heading).size(11.0).strong().weak());
+    ui.add_space(4.0);
+    if v.local && !crate::operator_ptt::AVAILABLE {
+        super::note(ui, &tr!("ptt-web-unavailable"));
+        return;
+    }
     if !v.seeded {
         ui.label(
             RichText::new(tr!("ptt-desk-title")).size(14.0).strong().color(crate::theme::CYAN()),
@@ -46,7 +55,7 @@ pub(in crate::app) fn settings_ptt_inputs_section(ui: &mut egui::Ui, v: PttView<
         super::note(ui, &tr!("ptt-waiting"));
         return;
     }
-    super::note(ui, &tr!("ptt-intro"));
+    super::note(ui, &if v.local { tr!("ptt-intro-local") } else { tr!("ptt-intro") });
     for (i, slot) in PttSlot::ALL.into_iter().enumerate() {
         if i > 0 {
             ui.add_space(10.0);

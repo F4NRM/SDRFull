@@ -1,0 +1,16 @@
+[package]
+name = "sdroxide-pttin"
+version.workspace = true
+edition.workspace = true
+
+# The desk microphone and the pedal that key the transmitter (issue #636): the
+# serial, HID and MIDI readers and the hub that debounces them. Shared by the
+# station (`sdroxide-radio`) and by the operator's own computer
+# (`sdroxide-ui`, native), so it carries none of the radio's dependencies.
+# Native-only, like `sdroxide-relay` and `sdroxide-midi`.
+[dependencies]
+sdroxide-types.workspace = true
+sdroxide-relay.workspace = true
+sdroxide-midi.workspace = true
+serialport = { version = "4.10", default-features = false }
+tracing.workspace = true

@@ -13749,17 +13749,31 @@ by itself when you plug it back in.
 
 #### 6.4.4 Desk microphone and pedal (external PTT)
 
-Under the MIDI controller, behind a rule, two identical blocks let a table
-microphone's PTT bar or a footswitch key the transmitter: **Desk or external
-microphone** and **Pedal or microphone switch**. Two blocks, so that a
-microphone on one USB port and a pedal on another each have a place. Either one
-keys; the transmitter drops when both are released. A press is refused, like a
-TCI client's, while you, a digital-mode burst or TUNE already has the
-transmitter, and a release only unkeys what an input keyed.
+Two identical blocks let a table microphone's PTT bar or a footswitch key the
+transmitter: **Desk or external microphone** and **Pedal or microphone switch**.
+Two blocks, so that a microphone on one USB port and a pedal on another each
+have a place. Either one keys; the transmitter drops when both are released. A
+press is refused, like a TCI client's, while you, a digital-mode burst or TUNE
+already has the transmitter, and a release only unkeys what an input keyed.
 
-Unlike the bindings above, **the device is read on the station's computer** —
-the one that runs the radio — whether the screen is the native app or a
-browser. The setup is saved there (`ptt_inputs.json`) and **APPLY** sends it.
+The pair exists twice, and the question is which computer the switch is plugged
+into:
+
+- **On this computer** (Settings → Controls, under the MIDI controller, behind a
+  rule): the microphone or pedal on **your** desk. The press keys **the station
+  on screen**, local or reached over `--connect`, and in a split view the one
+  that has the focus; a tab that loses the focus lets go of what it keyed. The
+  setup is saved on this computer (`operator_ptt.json`, beside `input.json`) and
+  **APPLY** opens the devices. **Native app only**: a browser cannot yet read a
+  serial port, a HID device or a MIDI port, and says so.
+- **On the station's computer** (Settings → T/R switch, under the relay): for a
+  microphone wired to the machine that runs the radio. It is read there whether
+  the screen is the native app or a browser. The setup is saved there
+  (`ptt_inputs.json`) and **APPLY** sends it.
+
+Use the first for a desk microphone and the second for a station with its own
+microphone. If both read the same device, the first to open it keeps it and the
+other shows the port as busy.
 
 Choose a **Source**:
 
@@ -17436,6 +17450,7 @@ and not the station's.
 | `remote_login.json` | JSON | A sign-in to *somebody else's* server that you asked this client to remember ([§8.3](#83-sign-in-who-may-operate-the-station)). Written only when the **Remember on this device** box is ticked, holds the password in plaintext, and deleted when you untick it or the server refuses it. Belongs to the user interface, like `input.json`; the browser client keeps the same thing in local storage instead. |
 | `satellites.json` | JSON | Satellite additions for the 3D tracker: subscribed element-set listings, element sets pasted in by hand, and frequency entries that override the built-in table. Belongs to the engine, like `net.json`: the listings are fetched and cached where the radio is, so remote and browser clients track the same satellites. |
 | `ptt_inputs.json` | JSON | The desk microphone and the pedal that key the transmitter ([§6.4.4](#644-desk-microphone-and-pedal-external-ptt)): for each of the two, serial port and lines, USB HID device and bit, or MIDI port and control, polarity, debounce and hold or toggle. Belongs to the engine — the devices are plugged into the station's computer. |
+| `operator_ptt.json` | JSON | The same pair for the computer you sit at, keying the station on screen. Belongs to the client, like `input.json`. |
 | `relay.json` | JSON | The station's external transmit/receive switch ([§6.11](#611-tr-switch-protecting-the-receiver-on-transmit)): which relay board or contact closure, the contact table, the sequencer's lead and hold times, what to do if it stops answering, and the transmit sense input. Belongs to the engine — the relay is bolted to the antenna — so remote and browser clients set up the real one. |
 | `broadcast_stations.json` | JSON | *Your own* broadcast stations and corrections, merged over the downloaded schedule ([§10.6](#106-broadcast-stations-on-longwave-and-shortwave)). Never written by sdroxide, and absent until you create it. |
 | `broadcast/` | CSV | The broadcasting season's schedule as downloaded from eibispace.de, one file per season. Managed by sdroxide: refetched when the season changes, and safe to delete. |

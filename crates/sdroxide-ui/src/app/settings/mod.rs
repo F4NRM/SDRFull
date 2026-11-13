@@ -669,6 +669,12 @@ pub(in crate::app) struct SettingsIo<'a> {
     ptt_learn: &'a mut self::ptt_inputs::PttLearn,
     ptt_apply: &'a mut bool,
     ptt_rescan: &'a mut bool,
+    /// The same pair for the computer the operator sits at (read here, keys the
+    /// station on screen).
+    op_ptt_edit: &'a mut sdroxide_types::PttInputsConfig,
+    op_ptt_learn: &'a mut self::ptt_inputs::PttLearn,
+    op_ptt_apply: &'a mut bool,
+    op_ptt_rescan: &'a mut bool,
     /// Control-input bindings, plus the row (if any) waiting to capture a
     /// keypress. Persisted on close, since a rebind has no APPLY step.
     input_edit: &'a mut sdroxide_types::InputSettings,
@@ -1886,6 +1892,10 @@ impl SdroxideApp {
         let mut ptt_learn = self.ptt_learn.clone();
         let mut ptt_apply = false;
         let mut ptt_rescan = false;
+        let mut op_ptt_edit = self.op_ptt_edit.clone();
+        let mut op_ptt_learn = self.op_ptt_learn.clone();
+        let mut op_ptt_apply = false;
+        let mut op_ptt_rescan = false;
         let mut input_edit = self.input.cfg.clone();
         let mut key_capture = self.input.key_capture;
         let mut midi_learn = self.input.midi_learn;
@@ -2104,6 +2114,10 @@ impl SdroxideApp {
                                 ptt_learn: &mut ptt_learn,
                                 ptt_apply: &mut ptt_apply,
                                 ptt_rescan: &mut ptt_rescan,
+                                op_ptt_edit: &mut op_ptt_edit,
+                                op_ptt_learn: &mut op_ptt_learn,
+                                op_ptt_apply: &mut op_ptt_apply,
+                                op_ptt_rescan: &mut op_ptt_rescan,
                                 input_edit: &mut input_edit,
                                 key_capture: &mut key_capture,
                                 midi_learn: &mut midi_learn,
@@ -2236,9 +2250,20 @@ impl SdroxideApp {
             // devices are on its machine, not on this screen's.
             cmds.push(Command::SetPttInputs(Box::new(self.ptt_edit.clone())));
         }
-        // Once when the Controls tab first shows the section, so the lists are
-        // the station's and not whatever was there at start-up.
-        if ptt_rescan || (self.settings_tab == SettingsTab::Controls && !self.ptt_scanned) {
+        self.op_ptt_edit = op_ptt_edit;
+        self.op_ptt_learn = op_ptt_learn;
+        if op_ptt_apply {
+            // Saved in this computer's own config and opened here: the switch
+            // is on this desk, whichever station is on screen.
+            self.op_ptt.apply(&self.op_ptt_edit);
+        }
+        if op_ptt_rescan || (self.settings_tab == SettingsTab::Controls && !self.op_ptt_scanned) {
+            self.op_ptt_scanned = true;
+            self.op_ptt.rescan();
+        }
+        // Once when the T/R switch tab first shows the section, so the lists
+        // are the station's and not whatever was there at start-up.
+        if ptt_rescan || (self.settings_tab == SettingsTab::TrSwitch && !self.ptt_scanned) {
             self.ptt_scanned = true;
             cmds.push(Command::RescanPttInputs);
         }
@@ -4879,8 +4904,7 @@ impl SdroxideApp {
                 &self.midi_out_ports,
                 &self.input.midi_status(),
                 self.input.last_midi,
-                self.ptt_seeded,
-                &self.ptt_status,
+                &self.op_ptt.status(),
             ),
             SettingsTab::Servers => {
                 settings_rigctld_tab(
@@ -4944,6 +4968,21 @@ impl SdroxideApp {
                     &self.relay_devices,
                     io.relay_apply,
                     io.relay_test,
+                );
+                // Behind a rule: the microphone and pedal wired to the
+                // station's own computer (issue #636). The ones on the
+                // operator's desk are in Controls.
+                ptt_inputs::settings_ptt_inputs_section(
+                    ui,
+                    ptt_inputs::PttView {
+                        edit: io.ptt_edit,
+                        seeded: self.ptt_seeded,
+                        status: &self.ptt_status,
+                        learn: io.ptt_learn,
+                        apply: io.ptt_apply,
+                        rescan: io.ptt_rescan,
+                        local: false,
+                    },
                 );
             }
             SettingsTab::Tle => settings_tle_tab(ui, io),

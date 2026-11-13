@@ -2590,6 +2590,19 @@ pub fn load_ptt_inputs_config() -> sdroxide_types::PttInputsConfig {
     load_json("ptt_inputs.json")
 }
 
+/// The desk microphone and pedal of the operator's *own* computer (issue #636,
+/// DK8JV's comment). Like `input.json` it belongs to the client: the hardware is
+/// on the desk in front of the operator, whichever station is on screen.
+pub fn load_operator_ptt_config() -> sdroxide_types::PttInputsConfig {
+    load_json("operator_ptt.json")
+}
+
+pub fn save_operator_ptt_config(
+    cfg: &sdroxide_types::PttInputsConfig,
+) -> Result<(), ConfigError> {
+    save_json("operator_ptt.json", cfg)
+}
+
 pub fn save_ptt_inputs_config(cfg: &sdroxide_types::PttInputsConfig) -> Result<(), ConfigError> {
     save_json("ptt_inputs.json", cfg)
 }

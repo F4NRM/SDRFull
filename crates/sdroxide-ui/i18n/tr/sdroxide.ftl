@@ -9763,3 +9763,11 @@ ptt-pressed = BASILI
 ptt-released = bırakıldı
 
 cw-neural-heavy-small-machine = Küçük bir makinede ağırdır: dört çekirdek veya daha azında (örneğin bir Raspberry Pi) zamanlama çözücü hafif seçimdir.
+
+ptt-intro-local = Bu bilgisayara bağlı bir mikrofonun PTT tuşu veya bir ayak pedalı, karşınızdaki istasyonu (yerel ya da uzak) vericiye alabilir. Anahtarı seri bir portta RTS'den CTS, DSR veya DCD'ye bağlayın (bir USB-seri adaptör yeterlidir) ya da bir USB HID cihazı veya MIDI notası kullanın. Her iki giriş de vericiyi açar; ikisi de bırakılınca düşer. Cihaz istasyonda değil, bu bilgisayarda okunur.
+
+ptt-here-heading = BU BİLGİSAYARDA
+
+ptt-station-heading = İSTASYONUN BİLGİSAYARINDA
+
+ptt-web-unavailable = Tarayıcı burada henüz bir seri portu, HID cihazını veya MIDI portunu okuyamıyor. Bu bilgisayarda masaüstü uygulamasını ya da T/R anahtarı sayfasındaki istasyona bağlı çifti kullanın.

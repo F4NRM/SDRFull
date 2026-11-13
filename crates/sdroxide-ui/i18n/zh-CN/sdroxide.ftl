@@ -9701,3 +9701,11 @@ ptt-pressed = 已按下
 ptt-released = 已松开
 
 cw-neural-heavy-small-machine = 在小型设备上负载较重：四核或更少（例如树莓派）时，时序解码器是轻量之选。
+
+ptt-intro-local = 接在本机上的话筒PTT键或脚踏开关可以让您面前的电台(本地或远程)发射。将开关接在串口的RTS与CTS、DSR或DCD之间(USB转串口适配器即可),或使用USB HID设备或MIDI音符。任一输入都会使发射机发射;两者都松开时才停止。设备在本机读取,而不是在电台上读取。
+
+ptt-here-heading = 本机
+
+ptt-station-heading = 电台的计算机
+
+ptt-web-unavailable = 浏览器目前还不能在此读取串口、HID设备或MIDI端口。请在本机使用桌面应用,或使用“收发切换”页面中接到电台的那一组。

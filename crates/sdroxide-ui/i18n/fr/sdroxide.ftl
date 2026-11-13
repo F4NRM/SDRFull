@@ -9766,3 +9766,11 @@ ptt-pressed = APPUYÉ
 ptt-released = relâché
 
 cw-neural-heavy-small-machine = Lourd sur une petite machine : à quatre cœurs ou moins (un Raspberry Pi, par exemple), le décodeur temporel est le choix léger.
+
+ptt-intro-local = La touche PTT d'un micro ou une pédale branchée sur cet ordinateur peut mettre en émission la station affichée, locale ou distante. Câblez l'interrupteur de RTS vers CTS, DSR ou DCD sur un port série (un adaptateur USB-série suffit), ou utilisez un appareil USB HID ou une note MIDI. L'une ou l'autre entrée met en émission ; elle retombe quand les deux sont relâchées. L'appareil est lu sur cet ordinateur, pas sur la station.
+
+ptt-here-heading = SUR CET ORDINATEUR
+
+ptt-station-heading = SUR L'ORDINATEUR DE LA STATION
+
+ptt-web-unavailable = Le navigateur ne sait pas encore lire un port série, un appareil HID ou un port MIDI ici. Utilisez l'application de bureau sur cet ordinateur, ou la paire câblée à la station sur la page Commutateur E/R.

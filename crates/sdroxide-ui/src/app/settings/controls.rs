@@ -171,8 +171,7 @@ pub(in crate::app) fn settings_controls_tab(
     midi_out: &[(String, String)],
     midi_status: &crate::input::MidiStatusView,
     last_midi: Option<(sdroxide_types::MidiMsg, u8)>,
-    ptt_seeded: bool,
-    ptt_status: &sdroxide_types::PttInputsStatus,
+    op_status: &sdroxide_types::PttInputsStatus,
 ) {
     use sdroxide_types::{
         Action, ActionKind, ButtonMode, KeyBinding, MouseButton, MouseButtonBinding, WheelAction,
@@ -448,16 +447,19 @@ pub(in crate::app) fn settings_controls_tab(
         last_midi,
     );
     // Under the MIDI controller, behind a rule: the desk microphone and the
-    // pedal that key the transmitter (issue #636).
+    // pedal on this computer's desk, which key whichever station is on screen
+    // (issue #636). The ones wired to the station's own computer are on the
+    // T/R switch page.
     super::ptt_inputs::settings_ptt_inputs_section(
         ui,
         super::ptt_inputs::PttView {
-            edit: io.ptt_edit,
-            seeded: ptt_seeded,
-            status: ptt_status,
-            learn: io.ptt_learn,
-            apply: io.ptt_apply,
-            rescan: io.ptt_rescan,
+            edit: io.op_ptt_edit,
+            seeded: true,
+            status: op_status,
+            learn: io.op_ptt_learn,
+            apply: io.op_ptt_apply,
+            rescan: io.op_ptt_rescan,
+            local: true,
         },
     );
 }

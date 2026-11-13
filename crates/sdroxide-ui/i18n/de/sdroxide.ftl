@@ -9755,3 +9755,11 @@ ptt-pressed = GEDRÜCKT
 ptt-released = losgelassen
 
 cw-neural-heavy-small-machine = Rechenintensiv auf kleinen Rechnern: bei vier Kernen oder weniger (z. B. ein Raspberry Pi) ist der Takt-Decoder die leichte Wahl.
+
+ptt-intro-local = Die PTT-Taste eines Mikrofons oder ein Fußschalter an diesem Rechner kann die Station vor Ihnen tasten, lokal oder entfernt. Verdrahten Sie den Schalter von RTS nach CTS, DSR oder DCD an einer seriellen Schnittstelle (ein USB-Seriell-Adapter genügt), oder nutzen Sie ein USB-HID-Gerät oder eine MIDI-Note. Jeder Eingang tastet den Sender; er fällt ab, wenn beide losgelassen sind. Das Gerät wird an diesem Rechner gelesen, nicht an der Station.
+
+ptt-here-heading = AN DIESEM RECHNER
+
+ptt-station-heading = AM RECHNER DER STATION
+
+ptt-web-unavailable = Der Browser kann hier noch keine serielle Schnittstelle, kein HID-Gerät und keinen MIDI-Port lesen. Nutzen Sie die Desktop-App auf diesem Rechner oder das an der Station verdrahtete Paar auf der Seite für den Sende-/Empfangsumschalter.

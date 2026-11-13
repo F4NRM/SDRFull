@@ -9763,3 +9763,11 @@ ptt-pressed = INGEDRUKT
 ptt-released = losgelaten
 
 cw-neural-heavy-small-machine = Zwaar voor een kleine computer: bij vier kernen of minder (bijvoorbeeld een Raspberry Pi) is de timingdecoder de lichte keuze.
+
+ptt-intro-local = De PTT-toets van een microfoon of een voetschakelaar op deze computer kan het station voor u op zenden zetten, lokaal of op afstand. Bedraad de schakelaar van RTS naar CTS, DSR of DCD op een seriële poort (een USB-seriële adapter volstaat), of gebruik een USB-HID-apparaat of een MIDI-noot. Elke ingang zet de zender aan; hij valt weg als beide zijn losgelaten. Het apparaat wordt op deze computer gelezen, niet op het station.
+
+ptt-here-heading = OP DEZE COMPUTER
+
+ptt-station-heading = OP DE COMPUTER VAN HET STATION
+
+ptt-web-unavailable = De browser kan hier nog geen seriële poort, HID-apparaat of MIDI-poort lezen. Gebruik de desktop-app op deze computer, of het paar dat op het station is aangesloten op de pagina van de T/R-schakelaar.
