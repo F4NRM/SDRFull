@@ -272,23 +272,11 @@ impl SdroxideApp {
                 cmds.push(Command::WefaxRevertSlant);
             }
 
-            if changed && seeded {
-                cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
-            }
-        });
-
-        // The picture controls get their own row. They are not the decoder's:
-        // nothing here touches what is being received, only how it is shown, and
-        // keeping them in the row above put the inversion chip past the right
-        // edge of a 600 pt window — where the row cannot wrap, because the
-        // inset blocks below it (the enable scope and the height box) are laid
-        // out as one item each.
-        ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing.x = 4.0;
             // How the chart in progress is displayed. Nothing here touches the
             // decoder — a chart takes a quarter of an hour, and waiting for it
             // to finish before being allowed to look at the top of it is the
             // single most irritating thing about receiving fax.
+            ui.add_space(8.0);
             ui.label(RichText::new(tr!("wefax-view")).color(theme::CYAN_DIM()).size(9.5).strong());
             use crate::wefax::Zoom;
             let zoom = self.wefax.zoom;
@@ -373,6 +361,10 @@ impl SdroxideApp {
                 if let Some((name, png)) = &payload {
                     crate::download::save_as(name, png, crate::download::Mime::Png);
                 }
+            }
+
+            if changed && seeded {
+                cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
             }
         });
 
