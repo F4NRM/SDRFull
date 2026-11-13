@@ -131,7 +131,9 @@ jobs:
           # AppImage step and existing dispatches keep working. Windows and macOS
           # carry no `container` key, which `build` reads as the empty string and
           # GitHub as "no container".
-          # macos-aarch64 is pinned to `macos-14` rather than `macos-latest`: the
+          # macos-aarch64 is pinned to `macos-15` rather than `macos-latest` (`macos-14`
+          # is refused on this account: "configuration macos-14-arm64-us-default is
+          # not supported", run 43329084021): the
           # `macos-latest` ARM pool was never given a runner on 2026-11-12 (runs
           # 43293208818 and 43298625493: "The job was not acquired by Runner of
           # type hosted", cancelled after 15 min) while the Intel one built fine.
@@ -139,7 +141,7 @@ jobs:
           platforms='[
             {"label": "linux-x86_64",         "os": "ubuntu-24.04",      "container": "ubuntu:22.04"},
             {"label": "windows-x86_64",       "os": "windows-latest"},
-            {"label": "macos-aarch64",        "os": "macos-14"},
+            {"label": "macos-aarch64",        "os": "macos-15"},
             {"label": "macos-x86_64",         "os": "macos-15-intel"}
           ]'
           # Not in a release by default; reachable by naming them in a manual
