@@ -74,6 +74,7 @@ sdroxide-relay = { path = "../sdroxide-relay" }
 # The desk microphone and pedal that key the transmitter (issue #636): a serial
 # port's handshake lines, and a MIDI note, read on the engine's machine.
 sdroxide-midi.workspace = true
+sdroxide-pttin.workspace = true
 serialport = { version = "4.10", default-features = false }
 sdroxide-wsjtx = { path = "../sdroxide-wsjtx" }
 # SSTV: encode received images to PNG for the config store, decode composed

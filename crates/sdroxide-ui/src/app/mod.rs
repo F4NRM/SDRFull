@@ -1807,6 +1807,12 @@ pub struct SdroxideApp {
     ptt_status: sdroxide_types::PttInputsStatus,
     ptt_learn: settings::ptt_inputs::PttLearn,
     ptt_scanned: bool,
+    /// The desk microphone and pedal of **this computer** (issue #636): read
+    /// here, keying the station on screen. Its dialog copy and learn baselines.
+    op_ptt: crate::operator_ptt::OperatorPtt,
+    op_ptt_edit: sdroxide_types::PttInputsConfig,
+    op_ptt_learn: settings::ptt_inputs::PttLearn,
+    op_ptt_scanned: bool,
     /// The switching devices the engine's machine can see, from
     /// [`sdroxide_types::DeviceProbe::Relays`].
     relay_devices: Vec<sdroxide_types::RelayDevice>,
@@ -2245,6 +2251,7 @@ impl SdroxideApp {
         // its transmit controls until something happened to ask for the config
         // — which is exactly the flicker a click used to fix.
         let radio_cfg = ctrl.radio_config();
+        let op_ptt = crate::operator_ptt::OperatorPtt::new(egui_ctx);
         SdroxideApp {
             ctrl,
             display_class,
@@ -2856,6 +2863,10 @@ impl SdroxideApp {
             ptt_status: Default::default(),
             ptt_learn: Default::default(),
             ptt_scanned: false,
+            op_ptt_edit: op_ptt.cfg.clone(),
+            op_ptt,
+            op_ptt_learn: Default::default(),
+            op_ptt_scanned: false,
             relay_devices: Vec::new(),
             rot_cfg_seeded: false,
             // Whatever this process is already on: the binary applies the

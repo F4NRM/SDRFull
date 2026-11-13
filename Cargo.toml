@@ -136,6 +136,7 @@ sdroxide-config = { path = "crates/sdroxide-config" }
 sdroxide-ui = { path = "crates/sdroxide-ui" }
 sdroxide-cat = { path = "crates/sdroxide-cat" }
 sdroxide-midi = { path = "crates/sdroxide-midi" }
+sdroxide-pttin = { path = "crates/sdroxide-pttin" }
 sdroxide-rigctld = { path = "crates/sdroxide-rigctld" }
 sdroxide-rotator = { path = "crates/sdroxide-rotator" }
 sdroxide-picup = { path = "crates/sdroxide-picup" }

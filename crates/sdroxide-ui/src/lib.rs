@@ -45,6 +45,7 @@ mod sonde_map;
 mod sonde_online;
 mod i18n;
 mod input;
+mod operator_ptt;
 /// Which layout the window wears — desktop strip, tablet menus, or the compact
 /// phone strip — and the metrics that follow from it.
 pub mod layout;

@@ -5861,6 +5861,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdroxide-pttin"
+version = "2.3.0"
+dependencies = [
+ "sdroxide-midi",
+ "sdroxide-relay",
+ "sdroxide-types",
+ "serialport",
+ "tracing",
+]
+
+[[package]]
 name = "sdroxide-qo100"
 version = "2.3.0"
 dependencies = [
@@ -5923,6 +5934,7 @@ dependencies = [
  "sdroxide-net",
  "sdroxide-nrsc5",
  "sdroxide-picup",
+ "sdroxide-pttin",
  "sdroxide-qo100",
  "sdroxide-relay",
  "sdroxide-rigctld",
@@ -6205,6 +6217,7 @@ dependencies = [
  "sdroxide-meshtastic",
  "sdroxide-midi",
  "sdroxide-proto",
+ "sdroxide-pttin",
  "sdroxide-solar",
  "sdroxide-speech",
  "sdroxide-types",
