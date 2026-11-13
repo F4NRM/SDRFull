@@ -2488,6 +2488,12 @@ fn picture_line(px: &[Complex32], origin: f64, spl: f64, width: usize) -> Vec<(C
 /// The second number is the best score over the median one: near 1 the
 /// picture has nothing vertical to go by.
 fn image_lean_once(rows: &[Vec<u8>]) -> Option<(f64, f64)> {
+    lean_search(rows, LEAN_MAX_PPM, LEAN_STEP_PPM)
+}
+
+/// [`image_lean_once`] over `±max_ppm` in steps of `step_ppm`, then a fifth of a
+/// step around the coarse peak.
+fn lean_search(rows: &[Vec<u8>], max_ppm: f64, step_ppm: f64) -> Option<(f64, f64)> {
     let width = rows.first()?.len();
     if width == 0 || rows.len() < 8 {
         return None;
@@ -2516,10 +2522,10 @@ fn image_lean_once(rows: &[Vec<u8>]) -> Option<(f64, f64)> {
         }
         column.iter().map(|&c| f64::from(c) * f64::from(c)).sum()
     };
-    let steps = (2.0 * LEAN_MAX_PPM / LEAN_STEP_PPM).round() as usize;
+    let steps = (2.0 * max_ppm / step_ppm).round() as usize;
     let grid: Vec<(f64, f64)> = (0..=steps)
         .map(|k| {
-            let ppm = -LEAN_MAX_PPM + k as f64 * LEAN_STEP_PPM;
+            let ppm = -max_ppm + k as f64 * step_ppm;
             (ppm, score(ppm))
         })
         .collect();
@@ -2532,7 +2538,7 @@ fn image_lean_once(rows: &[Vec<u8>]) -> Option<(f64, f64)> {
     let centre = grid[best].0;
     let fine: Vec<(f64, f64)> = (-5..=5)
         .map(|k| {
-            let ppm = centre + f64::from(k) * LEAN_STEP_PPM / 5.0;
+            let ppm = centre + f64::from(k) * step_ppm / 5.0;
             (ppm, score(ppm))
         })
         .collect();
@@ -2559,6 +2565,124 @@ fn image_lean(rows: &[Vec<u8>]) -> Option<(f64, f64)> {
         }
     }
     Some((ppm, sharpness))
+}
+
+/// Rows in one stretch of [`straighten_page`], at least; a page shorter than
+/// this is left alone.
+const PAGE_SEGMENT_ROWS: usize = 500;
+/// The shortest page [`straighten_page`] looks at.
+pub const STRAIGHTEN_MIN_ROWS: usize = PAGE_SEGMENT_ROWS;
+/// The leans a finished page is searched over, parts per million, and the step
+/// of the coarse search (a fifth of it is the fine one).
+const PAGE_MAX_PPM: f64 = 60.0;
+const PAGE_STEP_PPM: f64 = 4.0;
+/// How sharply the picture must say it: [`lean_search`]'s best score over its
+/// median. Measured on four real pages, a whole page with a frame reads 1.4 to
+/// 2.4 and a stretch that is nothing but a white margin or a chart's sea 1.0.
+const PAGE_SHARP: f64 = 1.15;
+const PAGE_SHARP_WHOLE: f64 = 1.3;
+/// How far a stretch's lean may be from the whole page's and still be its own
+/// (parts per million): a clock that moved during the page is a few parts per
+/// million, a chart's meridian that tricked one stretch is tens.
+const PAGE_STRETCH_PPM: f64 = 25.0;
+/// Pages that would move less than this, in pixels, are left as they are.
+const PAGE_MIN_MOVE_PX: f64 = 3.0;
+
+/// What [`straighten_page`] did to a page.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Straightened {
+    /// The whole page's lean, parts per million of a line.
+    pub lean_ppm: f64,
+    /// The most any row was moved, in pixels.
+    pub max_move_px: f64,
+    /// The lean taken out of each stretch of the page, top to bottom.
+    pub stretch_ppm: Vec<f64>,
+}
+
+/// Straighten a finished page from what the picture says of its own clock.
+///
+/// A line clock is fixed by the phasing signal and by what the receiver says of
+/// its own sample rate, and neither is good to better than a few parts per
+/// million; a page is 1300 lines of 1809 pixels, so five parts per million is a
+/// frame edge that walks twelve pixels, and the clock that moved during the page
+/// bends it. The finished page is the best witness there is: [`lean_search`]
+/// finds the shear that makes its columns sharpest, over the whole page and
+/// over stretches of it, and each row is moved back by what the walk up to it
+/// came to, to a fraction of a pixel, so a frame edge comes out a straight line.
+///
+/// A stretch with nothing vertical in it (a title, a white margin) says nothing
+/// and takes the page's lean; one that disagrees with the page by more than
+/// [`PAGE_STRETCH_PPM`] is a chart's meridian and takes it too. A page that says
+/// nothing at all is left alone.
+pub fn straighten_page(image: &mut [u8], width: usize, height: usize) -> Option<Straightened> {
+    if width < 64 || height < PAGE_SEGMENT_ROWS || image.len() < width * height {
+        return None;
+    }
+    let rows: Vec<Vec<u8>> = image.chunks(width).take(height).map(<[u8]>::to_vec).collect();
+    let (whole, sharp) = lean_search(&rows, PAGE_MAX_PPM, PAGE_STEP_PPM)?;
+    if sharp < PAGE_SHARP_WHOLE {
+        return None;
+    }
+    let stretches = (height / PAGE_SEGMENT_ROWS).clamp(1, 8);
+    let measured: Vec<Option<f64>> = (0..stretches)
+        .map(|k| {
+            let part = &rows[k * height / stretches..(k + 1) * height / stretches];
+            lean_search(part, PAGE_MAX_PPM, PAGE_STEP_PPM)
+                .filter(|&(ppm, sharp)| {
+                    sharp >= PAGE_SHARP && (ppm - whole).abs() <= PAGE_STRETCH_PPM
+                })
+                .map(|(ppm, _)| ppm)
+        })
+        .collect();
+    // A stretch that said nothing is joined to the ones that did, so the page
+    // keeps bending the way its neighbours say instead of snapping to the mean.
+    let known: Vec<(usize, f64)> =
+        measured.iter().enumerate().filter_map(|(i, m)| m.map(|v| (i, v))).collect();
+    let lean: Vec<f64> = (0..stretches)
+        .map(|i| match (known.iter().rev().find(|k| k.0 <= i), known.iter().find(|k| k.0 >= i)) {
+            (Some(&(a, va)), Some(&(b, vb))) if a != b => {
+                va + (vb - va) * (i - a) as f64 / (b - a) as f64
+            }
+            (Some(&(_, v)), _) | (_, Some(&(_, v))) => v,
+            _ => whole,
+        })
+        .collect();
+    // Each stretch's lean holds at its middle row and is joined to its
+    // neighbours' linearly, so the page bends smoothly where the clock moved.
+    let at = |y: f64| -> f64 {
+        let pos = (y / height as f64 * stretches as f64 - 0.5).clamp(0.0, (stretches - 1) as f64);
+        let (i, f) = (pos.floor() as usize, pos.fract());
+        let j = (i + 1).min(stretches - 1);
+        lean[i] * (1.0 - f) + lean[j] * f
+    };
+    // The walk up to row `y`, in pixels: the sum of the lean of the rows above.
+    let per_ppm = width as f64 * 1e-6;
+    let mut walk = Vec::with_capacity(height);
+    let mut sum = 0.0;
+    for y in 0..height {
+        walk.push(sum);
+        sum += at(y as f64 + 0.5) * per_ppm;
+    }
+    // Centred, so the page keeps its middle where it was.
+    let mean = walk.iter().sum::<f64>() / height as f64;
+    let max_move = walk.iter().map(|w| (w - mean).abs()).fold(0.0, f64::max);
+    if max_move < PAGE_MIN_MOVE_PX {
+        return None;
+    }
+    let mut row = vec![0u8; width];
+    for (y, line) in image.chunks_mut(width).take(height).enumerate() {
+        let d = walk[y] - mean;
+        let base = d.floor();
+        let f = (d - base) as f32;
+        let base = base as isize;
+        for (x, o) in row.iter_mut().enumerate() {
+            let i = (x as isize + base).rem_euclid(width as isize) as usize;
+            let j = (i + 1) % width;
+            *o = (f32::from(line[i]) * (1.0 - f) + f32::from(line[j]) * f).round() as u8;
+        }
+        line.copy_from_slice(&row);
+    }
+    Some(Straightened { lean_ppm: whole, max_move_px: max_move, stretch_ppm: lean })
 }
 
 /// Where the phasing pulse ends, in samples from the start of `line`.
@@ -5356,4 +5480,70 @@ fn a_thick_black_bar_with_a_narrow_border_is_not_phasing() {
     );
 }
 
+
+    /// A page of vertical rules, a frame and some text-like blocks, cut on a
+    /// clock `lean_ppm` out: every row's content has walked `lean_ppm * width`
+    /// pixels more than the row above, with a pixel of wobble on each.
+    fn leaning_page(width: usize, height: usize, lean_ppm: f64) -> Vec<u8> {
+        let mut img = vec![255u8; width * height];
+        let mut seed = 11u32;
+        for y in 0..height {
+            seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+            let wobble = f64::from(seed >> 30) / 3.0 - 0.5;
+            let d = lean_ppm * 1e-6 * width as f64 * y as f64 + wobble;
+            for x in 0..width {
+                let u = (x as f64 - d).rem_euclid(width as f64);
+                let frame = (u - 200.0).abs() < 4.0 || (u - 1600.0).abs() < 4.0;
+                let rule = [520.0, 900.0, 1250.0].iter().any(|r| (u - r).abs() < 2.0);
+                let text = y % 90 < 14 && (u as usize / 7) % 3 == 0 && u > 300.0 && u < 1500.0;
+                if frame || rule || text {
+                    img[y * width + x] = 0;
+                }
+            }
+        }
+        img
+    }
+
+    /// Column of the left frame, averaged over `rows` rows from `y`.
+    fn frame_at(img: &[u8], width: usize, y: usize, rows: usize) -> f64 {
+        let (mut sum, mut n) = (0.0, 0.0);
+        for r in y..y + rows {
+            for x in 100..300 {
+                let w = f64::from(255 - img[r * width + x]);
+                sum += w * x as f64;
+                n += w;
+            }
+        }
+        sum / n
+    }
+
+    #[test]
+    fn a_leaning_page_comes_out_with_its_frame_straight() {
+        for lean in [9.0, -7.0, 25.0] {
+            let (w, h) = (1809, 1300);
+            let mut img = leaning_page(w, h, lean);
+            let before = frame_at(&img, w, 1100, 50) - frame_at(&img, w, 100, 50);
+            let done = straighten_page(&mut img, w, h)
+                .unwrap_or_else(|| panic!("a page leaning {lean} ppm was left alone"));
+            assert!((done.lean_ppm - lean).abs() < 2.0, "lean {lean} read as {}", done.lean_ppm);
+            let after = frame_at(&img, w, 1100, 50) - frame_at(&img, w, 100, 50);
+            assert!(before.abs() > 10.0, "the fixture does not lean ({before:.1} px)");
+            assert!(after.abs() < 2.0, "lean {lean}: the frame still walks {after:.1} px");
+        }
+    }
+
+    #[test]
+    fn a_straight_page_and_a_blank_one_are_left_alone() {
+        let (w, h) = (1809, 1300);
+        let mut img = leaning_page(w, h, 0.0);
+        let before = img.clone();
+        let moved = straighten_page(&mut img, w, h);
+        assert!(moved.is_none(), "a straight page was moved: {moved:?}");
+        assert_eq!(img, before);
+        let mut blank = vec![255u8; w * h];
+        assert_eq!(straighten_page(&mut blank, w, h), None);
+        // And a page too short to say anything.
+        let mut short = leaning_page(w, 300, 20.0);
+        assert_eq!(straighten_page(&mut short, w, 300), None);
+    }
 }

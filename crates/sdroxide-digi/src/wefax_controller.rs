@@ -39,8 +39,33 @@ pub struct WefaxController {
     saved: u32,
 
     queued: Vec<DigiAction>,
+    /// Finished charts being straightened on another thread.
+    straightening: Vec<Straightening>,
     status_dirty: bool,
     last_status: Option<SystemTime>,
+}
+
+/// A finished chart, straightened by what its own picture says of the line
+/// clock (see [`sdroxide_dsp::straighten_page`]).
+fn straightened(mut gray: Vec<u8>, w: u16, h: u16) -> Vec<u8> {
+    if let Some(done) = sdroxide_dsp::straighten_page(&mut gray, usize::from(w), usize::from(h)) {
+        let stretches: Vec<f64> =
+            done.stretch_ppm.iter().map(|v| (v * 10.0).round() / 10.0).collect();
+        tracing::info!(
+            "wefax: page straightened — leaned {:+.1} ppm, rows moved up to {:.0} px, by stretch {stretches:?} ppm",
+            done.lean_ppm,
+            done.max_move_px
+        );
+    }
+    gray
+}
+
+/// A finished chart on its way through [`sdroxide_dsp::straighten_page`].
+struct Straightening {
+    image_id: u32,
+    w: u16,
+    h: u16,
+    done: std::sync::mpsc::Receiver<Vec<u8>>,
 }
 
 /// Translate the wire enums to the DSP's. Two copies exist because
@@ -98,6 +123,7 @@ impl WefaxController {
             image_id: 0,
             saved: 0,
             queued: Vec::new(),
+            straightening: Vec::new(),
             status_dirty: true,
             last_status: None,
         }
@@ -162,13 +188,47 @@ impl WefaxController {
             return;
         }
         self.saved = self.saved.wrapping_add(1);
-        self.queued.push(DigiAction::WefaxImage {
-            image_id: self.image_id,
-            w: self.width,
-            h: self.height,
-            gray: std::mem::take(&mut self.image),
-        });
+        let (image_id, w, h) = (self.image_id, self.width, self.height);
+        let gray = std::mem::take(&mut self.image);
         self.height = 0;
+        if usize::from(h) < sdroxide_dsp::wefax::STRAIGHTEN_MIN_ROWS {
+            self.queued.push(DigiAction::WefaxImage { image_id, w, h, gray });
+            return;
+        }
+        // Whatever lean the line clock left in the page, the finished picture
+        // knows: take it out, so the frame stands straight in the saved chart.
+        // It is a second of arithmetic on a big page, and this runs on the
+        // thread that also carries the audio, so it goes on a thread of its own
+        // and the chart is handed over by `poll` when it is done.
+        let (tx, rx) = std::sync::mpsc::channel();
+        let spawned = std::thread::Builder::new()
+            .name("wefax-straighten".into())
+            .spawn(move || drop(tx.send(straightened(gray, w, h))));
+        if spawned.is_ok() {
+            self.straightening.push(Straightening { image_id, w, h, done: rx });
+        }
+    }
+
+    /// Charts whose straightening has finished, handed over in the order they
+    /// were begun.
+    fn collect_straightened(&mut self) {
+        while let Some(first) = self.straightening.first() {
+            match first.done.try_recv() {
+                Ok(gray) => {
+                    let s = self.straightening.remove(0);
+                    self.queued.push(DigiAction::WefaxImage {
+                        image_id: s.image_id,
+                        w: s.w,
+                        h: s.h,
+                        gray,
+                    });
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => break,
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    self.straightening.remove(0);
+                }
+            }
+        }
     }
 
     fn digi_status(&self) -> DigiStatus {
@@ -288,6 +348,7 @@ impl DigiEngine for WefaxController {
     }
 
     fn poll(&mut self, _now: SystemTime, _dial_hz: f64) -> Vec<DigiAction> {
+        self.collect_straightened();
         let mut actions = std::mem::take(&mut self.queued);
         // Status on change, and a few times a second regardless so the tuning
         // meter and the subcarrier readout stay live while hunting.
@@ -478,6 +539,64 @@ mod tests {
         });
         assert_eq!(img, Some((100, 64, 100 * 64)));
         assert_eq!(c.saved, 1);
+    }
+
+    /// A long page leaves the controller straightened, and the audio thread is
+    /// not the one that did the work: the chart arrives from `poll` a moment
+    /// after the page ends.
+    #[test]
+    fn a_long_leaning_page_is_handed_over_straightened() {
+        let (w, h) = (1809usize, 1300usize);
+        let mut img = vec![255u8; w * h];
+        for y in 0..h {
+            let d = 12e-6 * w as f64 * y as f64;
+            for x in 0..w {
+                let u = (x as f64 - d).rem_euclid(w as f64);
+                let ink = (u - 200.0).abs() < 4.0
+                    || (u - 1600.0).abs() < 4.0
+                    || [520.0, 900.0, 1250.0].iter().any(|r| (u - r).abs() < 2.0)
+                    || (y % 90 < 14 && (u as usize / 7) % 3 == 0 && u > 300.0 && u < 1500.0);
+                if ink {
+                    img[y * w + x] = 0;
+                }
+            }
+        }
+        let mut c = ctrl();
+        c.wefax_start();
+        c.width = w as u16;
+        c.image = img;
+        c.height = h as u16;
+        c.emit_image();
+        // Not there yet, or there already: either way it comes from poll.
+        let mut got = None;
+        for _ in 0..400 {
+            for a in c.poll(SystemTime::UNIX_EPOCH, 0.0) {
+                if let DigiAction::WefaxImage { w, h, gray, .. } = a {
+                    got = Some((w, h, gray));
+                }
+            }
+            if got.is_some() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(25));
+        }
+        let (gw, gh, gray) = got.expect("the chart never arrived");
+        // The blank rows at the foot of the page are trimmed, as for any chart.
+        assert_eq!(usize::from(gw), w);
+        assert!(usize::from(gh) >= 1200 && usize::from(gh) <= h, "{gh} rows");
+        let frame = |y: usize| {
+            let (mut sum, mut n) = (0.0, 0.0);
+            for r in y..y + 50 {
+                for x in 100..300 {
+                    let v = f64::from(255 - gray[r * w + x]);
+                    sum += v * x as f64;
+                    n += v;
+                }
+            }
+            sum / n
+        };
+        let walk = frame(1100) - frame(100);
+        assert!(walk.abs() < 2.0, "the frame still walks {walk:.1} px (12 ppm is 15 px)");
     }
 
     /// White rows left by a carrier after the chart are not saved with it.

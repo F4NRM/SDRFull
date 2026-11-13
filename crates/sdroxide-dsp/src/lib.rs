@@ -149,7 +149,7 @@ pub use tonegen::{BURST_LEVEL, SUB_TONE_LEVEL, SubToneGen, ToneBurst};
 pub use vad::SpeechDetector;
 pub use wbddc::{WbDdc, clamp_center_hz, reachable_range_hz};
 pub use wbspectrum::WideSpectrum;
-pub use wefax::{Ioc as WefaxIoc, Lpm as WefaxLpm, WefaxEvent, WefaxRx};
+pub use wefax::{Ioc as WefaxIoc, Lpm as WefaxLpm, Straightened, WefaxEvent, WefaxRx, straighten_page};
 pub use window::blackman_harris;
 
 pub type Complex32 = num_complex::Complex<f32>;
