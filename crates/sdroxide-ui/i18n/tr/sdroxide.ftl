@@ -9770,11 +9770,4 @@ ptt-here-heading = BU BİLGİSAYARDA
 
 ptt-station-heading = İSTASYONUN BİLGİSAYARINDA
 
-
-ptt-grant-serial = Bir seri porta izin ver…
-
-ptt-grant-hid = Bir USB HID cihazına izin ver…
-
-ptt-grant-midi = MIDI girişlerine izin ver…
-
-ptt-grant-hint = Tarayıcı bir sayfaya yalnızca izin verdiklerinizi gösterir. Cihazı tarayıcının kendi penceresinde seçin; bu site için seçiminizi hatırlar. Yalnızca Chrome ve Edge (seri ve HID).
+ptt-web-unavailable = Tarayıcı burada henüz bir seri portu, HID cihazını veya MIDI portunu okuyamıyor. Bu bilgisayarda masaüstü uygulamasını ya da T/R anahtarı sayfasındaki istasyona bağlı çifti kullanın.

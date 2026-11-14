@@ -675,8 +675,6 @@ pub(in crate::app) struct SettingsIo<'a> {
     op_ptt_learn: &'a mut self::ptt_inputs::PttLearn,
     op_ptt_apply: &'a mut bool,
     op_ptt_rescan: &'a mut bool,
-    /// A browser only: the kind of device the operator asked it to allow.
-    op_ptt_grant: &'a mut Option<sdroxide_types::PttInputSource>,
     /// Control-input bindings, plus the row (if any) waiting to capture a
     /// keypress. Persisted on close, since a rebind has no APPLY step.
     input_edit: &'a mut sdroxide_types::InputSettings,
@@ -1898,7 +1896,6 @@ impl SdroxideApp {
         let mut op_ptt_learn = self.op_ptt_learn.clone();
         let mut op_ptt_apply = false;
         let mut op_ptt_rescan = false;
-        let mut op_ptt_grant: Option<sdroxide_types::PttInputSource> = None;
         let mut input_edit = self.input.cfg.clone();
         let mut key_capture = self.input.key_capture;
         let mut midi_learn = self.input.midi_learn;
@@ -2121,7 +2118,6 @@ impl SdroxideApp {
                                 op_ptt_learn: &mut op_ptt_learn,
                                 op_ptt_apply: &mut op_ptt_apply,
                                 op_ptt_rescan: &mut op_ptt_rescan,
-                                op_ptt_grant: &mut op_ptt_grant,
                                 input_edit: &mut input_edit,
                                 key_capture: &mut key_capture,
                                 midi_learn: &mut midi_learn,
@@ -2260,14 +2256,6 @@ impl SdroxideApp {
             // Saved in this computer's own config and opened here: the switch
             // is on this desk, whichever station is on screen.
             self.op_ptt.apply(&self.op_ptt_edit);
-            // A browser keeps nothing of its own: the server holds it, per
-            // login, and every tab of that login hears it back.
-            if crate::operator_ptt::NEEDS_GRANT {
-                self.ctrl.send_operator_ptt(self.op_ptt_edit.clone());
-            }
-        }
-        if let Some(kind) = op_ptt_grant {
-            self.op_ptt.grant(kind);
         }
         if op_ptt_rescan || (self.settings_tab == SettingsTab::Controls && !self.op_ptt_scanned) {
             self.op_ptt_scanned = true;
@@ -4994,7 +4982,6 @@ impl SdroxideApp {
                         apply: io.ptt_apply,
                         rescan: io.ptt_rescan,
                         local: false,
-                        grant: None,
                     },
                 );
             }

@@ -361,23 +361,6 @@ pub fn midi_pressed(cfg: &PttInputConfig, msg: &MidiMsg, value: u8, off: bool) -
     Some(on == cfg.active_high)
 }
 
-/// A raw MIDI message as a browser's Web MIDI delivers it (status byte first),
-/// in this crate's terms: the identity, the value, and whether it is a
-/// note-off. `None` for anything that is not a note or a controller.
-pub fn midi_from_bytes(bytes: &[u8]) -> Option<(MidiMsg, u8, bool)> {
-    let status = *bytes.first()?;
-    let channel = status & 0x0F;
-    let d1 = bytes.get(1).copied().unwrap_or(0);
-    let d2 = bytes.get(2).copied().unwrap_or(0);
-    let msg = |kind| MidiMsg { kind, channel, data1: d1 };
-    match status & 0xF0 {
-        0x90 => Some((msg(crate::MidiMsgKind::Note), d2, false)),
-        0x80 => Some((msg(crate::MidiMsgKind::Note), d2, true)),
-        0xB0 => Some((msg(crate::MidiMsgKind::Cc), d2, false)),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -480,18 +463,5 @@ mod tests {
     fn the_default_is_off_and_keys_nothing() {
         let c = PttInputsConfig::default();
         assert!(!c.desk_mic.enabled && !c.pedal.enabled);
-    }
-
-    #[test]
-    fn raw_midi_bytes_become_a_note_a_release_or_a_controller() {
-        let (m, v, off) = midi_from_bytes(&[0x93, 60, 0]).unwrap();
-        assert_eq!(
-            (m.kind, m.channel, m.data1, v, off),
-            (crate::MidiMsgKind::Note, 3, 60, 0, false)
-        );
-        assert!(midi_from_bytes(&[0x80, 60, 64]).unwrap().2);
-        assert_eq!(midi_from_bytes(&[0xB0, 7, 100]).unwrap().0.kind, crate::MidiMsgKind::Cc);
-        assert!(midi_from_bytes(&[0xF8]).is_none(), "a clock tick is not a control");
-        assert!(midi_from_bytes(&[]).is_none());
     }
 }
