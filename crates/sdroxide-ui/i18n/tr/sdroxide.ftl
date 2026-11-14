@@ -9790,3 +9790,17 @@ ptt-web-permission = Erişim reddedildi. Cihazi yetkilendirmek için İzin ver d
 ptt-web-not-authorized = Cihaz yetkilendirilmedi veya bağlantısı kesildi. İzin verip listeden seçin.
 
 ptt-web-error = Cihaz hatası: { $detail }
+
+remote-cert-untrusted = Sunucu sertifikası güvenilir değil. Sertifika parmak izi (SHA-256):
+
+remote-cert-compare = Bu parmak izini sunucunuzun sertifikasıyla karşılaştırın. Yalnızca eşleşiyorlarsa güvenin. Bu sunucu için yalnızca bu sertifikanın aynısı istisna olarak kabul edilir.
+
+remote-cert-connect = Bu sertifikaya güven ve bağlan
+
+remote-cert-trusted = Güvenilen sertifikalar
+
+remote-cert-forget = Unut
+
+remote-cert-forget-hint = Normal sertifika denetimlerini geri yükle. Sunucu bu sertifikayı kullanmaya devam ederse yeniden güven onayı istenir.
+
+remote-cert-save-failed = Sertifika seçimi bu oturumda geçerli, ancak kaydedilemedi: { $error }

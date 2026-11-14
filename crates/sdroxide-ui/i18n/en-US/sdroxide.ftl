@@ -9819,3 +9819,17 @@ ptt-web-permission = Access refused. Use the Allow button to authorize the devic
 ptt-web-not-authorized = Device not authorized or disconnected. Allow it, then select it in the list.
 
 ptt-web-error = Device error: { $detail }
+
+remote-cert-untrusted = The server certificate is not trusted. Certificate fingerprint (SHA-256):
+
+remote-cert-compare = Compare this fingerprint with your server’s certificate. Trust it only if they match. Only this exact certificate will be accepted as an exception for this server.
+
+remote-cert-connect = Trust this certificate and connect
+
+remote-cert-trusted = Trusted certificates
+
+remote-cert-forget = Forget
+
+remote-cert-forget-hint = Restore normal certificate checks. A server still using this certificate will ask to be trusted again.
+
+remote-cert-save-failed = The certificate choice applies for this run, but could not be saved: { $error }

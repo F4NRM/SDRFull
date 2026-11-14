@@ -149,4 +149,43 @@ pub(in crate::app) fn settings_remote_tab(
         ui,
         &tr!("settings-remote-tab-note"),
     );
+    #[cfg(all(feature = "remote", not(target_arch = "wasm32")))]
+    trusted_certs(ui);
+}
+
+/// The `wss://` certificates trusted on this machine, each with a way back to
+/// ordinary checking — for a server that has since been given a proper
+/// certificate, or one whose certificate was renewed and now needs trusting
+/// afresh.
+#[cfg(all(feature = "remote", not(target_arch = "wasm32")))]
+fn trusted_certs(ui: &mut egui::Ui) {
+    let certs = crate::remote_tls::all_trusted();
+    if certs.is_empty() {
+        return;
+    }
+    ui.add_space(10.0);
+    ui.label(
+        RichText::new(tr!("remote-cert-trusted")).size(14.0).strong().color(crate::theme::CYAN()),
+    );
+    ui.add_space(4.0);
+    for (authority, sha256) in certs {
+        ui.horizontal(|ui| {
+            ui.label(RichText::new(&authority).strong());
+            if ui
+                .small_button(tr!("remote-cert-forget"))
+                .on_hover_text(tr!("remote-cert-forget-hint"))
+                .clicked()
+                && let Err(e) = crate::remote_tls::forget(&authority)
+            {
+                tracing::warn!("forgetting the certificate for {authority}: {e}");
+                ui.colored_label(crate::theme::ALERT(), tr!("remote-cert-save-failed", error = e));
+            }
+        });
+        ui.add(
+            egui::Label::new(
+                RichText::new(sdroxide_types::fingerprint_display(&sha256)).monospace().size(10.0),
+            )
+            .wrap(),
+        );
+    }
 }

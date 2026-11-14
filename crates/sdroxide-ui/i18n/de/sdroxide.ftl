@@ -9782,3 +9782,17 @@ ptt-web-permission = Zugriff verweigert. Geben Sie das Gerät mit der Schaltflä
 ptt-web-not-authorized = Gerät nicht freigegeben oder getrennt. Geben Sie es frei und wählen Sie es in der Liste.
 
 ptt-web-error = Gerätefehler: { $detail }
+
+remote-cert-untrusted = Das Serverzertifikat ist nicht vertrauenswürdig. Zertifikat-Fingerabdruck (SHA-256):
+
+remote-cert-compare = Vergleiche diesen Fingerabdruck mit dem Zertifikat deines Servers. Vertraue ihm nur bei Übereinstimmung. Nur genau dieses Zertifikat wird für diesen Server als Ausnahme akzeptiert.
+
+remote-cert-connect = Diesem Zertifikat vertrauen und verbinden
+
+remote-cert-trusted = Vertrauenswürdige Zertifikate
+
+remote-cert-forget = Vergessen
+
+remote-cert-forget-hint = Normale Zertifikatsprüfung wiederherstellen. Verwendet der Server dieses Zertifikat weiterhin, wird erneut nach Vertrauen gefragt.
+
+remote-cert-save-failed = Die Zertifikatsauswahl gilt für diese Sitzung, konnte aber nicht gespeichert werden: { $error }

@@ -9790,3 +9790,17 @@ ptt-web-permission = Toegang geweigerd. Gebruik de knop Toestaan om het apparaat
 ptt-web-not-authorized = Apparaat niet toegestaan of losgekoppeld. Sta het toe en kies het in de lijst.
 
 ptt-web-error = Apparaatfout: { $detail }
+
+remote-cert-untrusted = Het servercertificaat wordt niet vertrouwd. Certificaatvingerafdruk (SHA-256):
+
+remote-cert-compare = Vergelijk deze vingerafdruk met het certificaat van je server. Vertrouw het alleen als ze overeenkomen. Alleen dit exacte certificaat wordt voor deze server als uitzondering geaccepteerd.
+
+remote-cert-connect = Dit certificaat vertrouwen en verbinden
+
+remote-cert-trusted = Vertrouwde certificaten
+
+remote-cert-forget = Vergeten
+
+remote-cert-forget-hint = Normale certificaatcontrole herstellen. Als de server dit certificaat blijft gebruiken, wordt opnieuw om vertrouwen gevraagd.
+
+remote-cert-save-failed = De certificaatkeuze geldt voor deze sessie, maar kon niet worden opgeslagen: { $error }

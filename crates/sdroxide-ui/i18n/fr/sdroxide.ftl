@@ -9793,3 +9793,17 @@ ptt-web-permission = Accès refusé. Utilisez le bouton Autoriser pour autoriser
 ptt-web-not-authorized = Appareil non autorisé ou débranché. Autorisez-le, puis choisissez-le dans la liste.
 
 ptt-web-error = Erreur de l'appareil : { $detail }
+
+remote-cert-untrusted = Le certificat du serveur n’est pas reconnu. Empreinte du certificat (SHA-256) :
+
+remote-cert-compare = Compare cette empreinte à celle du certificat de ton serveur. Accepte-le uniquement si elles correspondent. Seul ce certificat précis sera accepté en exception pour ce serveur.
+
+remote-cert-connect = Accepter ce certificat et se connecter
+
+remote-cert-trusted = Certificats acceptés
+
+remote-cert-forget = Oublier
+
+remote-cert-forget-hint = Rétablir la vérification normale des certificats. Si le serveur utilise encore ce certificat, son acceptation sera redemandée.
+
+remote-cert-save-failed = Le choix du certificat s’applique pour cette session, mais son enregistrement a échoué : { $error }
