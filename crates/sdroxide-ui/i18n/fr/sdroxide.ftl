@@ -9807,3 +9807,15 @@ remote-cert-forget = Oublier
 remote-cert-forget-hint = Rétablir la vérification normale des certificats. Si le serveur utilise encore ce certificat, son acceptation sera redemandée.
 
 remote-cert-save-failed = Le choix du certificat s’applique pour cette session, mais son enregistrement a échoué : { $error }
+
+playback-open-file = Ouvrir un fichier
+
+playback-import-hint = Choisir un fichier audio sur cet ordinateur, le copier sur la station et le lire dans cette radio (32 Mio maximum).
+
+playback-import-invalid = Choisir un fichier WAV, MP3, OGG ou FLAC non vide, de 32 Mio maximum, avec un nom simple.
+
+playback-import-read-error = Impossible de lire le fichier audio sélectionné.
+
+playback-import-collisions = Trop de fichiers importés portent ce nom. Renommer le fichier et réessayer.
+
+playback-import-failed = Impossible d’importer le fichier audio : { $error }

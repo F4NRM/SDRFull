@@ -9742,3 +9742,15 @@ remote-cert-forget = 忘记
 remote-cert-forget-hint = 恢复正常的证书验证。如果服务器仍使用此证书，将再次请求信任。
 
 remote-cert-save-failed = 证书选择在本次运行中有效，但无法保存：{ $error }
+
+playback-open-file = 打开文件
+
+playback-import-hint = 选择本机音频，复制到电台并在此收音机中播放（最大32 MiB）。
+
+playback-import-invalid = 请选择名称简单、非空的WAV、MP3、OGG或FLAC文件，最大32 MiB。
+
+playback-import-read-error = 无法读取所选音频文件。
+
+playback-import-collisions = 同名导入文件过多。请重命名后重试。
+
+playback-import-failed = 无法导入音频：{ $error }

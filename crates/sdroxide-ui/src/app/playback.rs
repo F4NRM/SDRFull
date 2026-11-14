@@ -14,6 +14,7 @@
 use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, PlaybackCommand, PlaybackStatus, RecordingFile, RecordingListing};
+use std::sync::{Arc, Mutex};
 
 /// The window's state and the last list the station sent.
 #[derive(Default)]
@@ -29,6 +30,9 @@ pub(in crate::app) struct PlaybackUi {
     /// The file whose CLEAR has been pressed once. Deleting is for good, so it
     /// takes a second press on the same row, which then reads DELETE?.
     clear_armed: Option<String>,
+    import: AudioInbox,
+    picking: bool,
+    import_error: Option<String>,
 }
 
 impl PlaybackUi {
@@ -54,6 +58,91 @@ impl PlaybackUi {
         self.show = true;
         self.asked = false;
     }
+}
+
+/// Import diagnostics cross the wire as notices, like existing playback errors.
+/// Keep operator wording in the client's selected language.
+pub(in crate::app) fn import_notice(notice: String) -> String {
+    match notice.strip_prefix("Playback import: ") {
+        Some("invalid") => tr!("playback-import-invalid"),
+        Some("iq") => tr!("playback-iq-hint"),
+        Some("collisions") => tr!("playback-import-collisions"),
+        Some(error) => tr!("playback-import-failed", error = error),
+        None => notice,
+    }
+}
+
+type AudioInbox = Arc<Mutex<Option<Result<Option<(String, Vec<u8>)>, String>>>>;
+
+fn selected_audio(name: String, bytes: Vec<u8>) -> Result<Option<(String, Vec<u8>)>, String> {
+    if bytes.is_empty()
+        || bytes.len() > sdroxide_types::playback::MAX_PLAYBACK_IMPORT_BYTES
+        || !sdroxide_types::playback::playable_name(&name)
+    {
+        return Err(tr!("playback-import-invalid"));
+    }
+    Ok(Some((name, bytes)))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn pick_audio(inbox: AudioInbox, ctx: egui::Context) {
+    if cfg!(test) {
+        return;
+    }
+    std::thread::spawn(move || {
+        let result = match rfd::FileDialog::new()
+            .add_filter("WAV / MP3 / OGG / FLAC", &sdroxide_types::playback::PLAYABLE_EXTENSIONS)
+            .pick_file()
+        {
+            None => Ok(None),
+            Some(path) => (|| {
+                let name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .ok_or_else(|| tr!("playback-import-invalid"))?
+                    .to_owned();
+                // Read at most the ceiling plus one byte, even if the file grows.
+                use std::io::Read;
+                let mut bytes = Vec::new();
+                std::fs::File::open(path)
+                    .and_then(|file| {
+                        file.take(sdroxide_types::playback::MAX_PLAYBACK_IMPORT_BYTES as u64 + 1)
+                            .read_to_end(&mut bytes)
+                    })
+                    .map_err(|_| tr!("playback-import-read-error"))?;
+                selected_audio(name, bytes)
+            })(),
+        };
+        if let Ok(mut slot) = inbox.lock() {
+            *slot = Some(result);
+        }
+        ctx.request_repaint();
+    });
+}
+
+#[cfg(target_arch = "wasm32")]
+fn pick_audio(inbox: AudioInbox, ctx: egui::Context) {
+    wasm_bindgen_futures::spawn_local(async move {
+        let result = match rfd::AsyncFileDialog::new()
+            .add_filter("WAV / MP3 / OGG / FLAC", &sdroxide_types::playback::PLAYABLE_EXTENSIONS)
+            .pick_file()
+            .await
+        {
+            None => Ok(None),
+            Some(file) => {
+                if file.inner().size() > sdroxide_types::playback::MAX_PLAYBACK_IMPORT_BYTES as f64
+                {
+                    Err(tr!("playback-import-invalid"))
+                } else {
+                    selected_audio(file.file_name(), file.read().await)
+                }
+            }
+        };
+        if let Ok(mut slot) = inbox.lock() {
+            *slot = Some(result);
+        }
+        ctx.request_repaint();
+    });
 }
 
 /// `m:ss`, or `h:mm:ss` past the hour.
@@ -87,7 +176,11 @@ fn describe(file: &RecordingFile) -> (String, String) {
                 "{:.4} MHz · {}{}",
                 st.freq_hz / 1e6,
                 st.mode.map_or("?", |m| m.label()),
-                if st.radio > 0 { tr!("playback-radio-n", n = st.radio + 1) } else { String::new() }
+                if st.radio > 0 {
+                    tr!("playback-radio-n", n = st.radio + 1)
+                } else {
+                    String::new()
+                }
             );
             (format!("{when}Z"), what)
         }
@@ -119,6 +212,17 @@ fn matches(file: &RecordingFile, find: &str) -> bool {
 impl super::SdroxideApp {
     /// Ask the station for its recordings when the window has just opened.
     pub(in crate::app) fn poll_playback_list(&mut self, cmds: &mut Vec<Command>) {
+        let selected = self.playback.import.lock().ok().and_then(|mut slot| slot.take());
+        if let Some(selected) = selected {
+            self.playback.picking = false;
+            match selected {
+                Ok(Some((name, bytes))) => {
+                    cmds.push(Command::Playback(PlaybackCommand::Import { name, bytes }))
+                }
+                Ok(None) => {}
+                Err(e) => self.playback.import_error = Some(e),
+            }
+        }
         if self.playback.show && !self.playback.asked {
             self.playback.asked = true;
             cmds.push(Command::ListRecordings);
@@ -144,16 +248,33 @@ impl super::SdroxideApp {
 
     fn playback_body(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
         crate::chrome::window_body_bg(ui);
-        ui.label(
-            RichText::new(tr!("playback-intro"))
-            .size(11.0)
-            .color(crate::theme::gray(160)),
-        );
+        ui.label(RichText::new(tr!("playback-intro")).size(11.0).color(crate::theme::gray(160)));
         ui.add_space(4.0);
         if let Some(st) = self.state.playback.clone() {
             self.playback_transport(ui, &st, cmds, true);
             ui.add_space(4.0);
         }
+        if let Some(error) = &self.playback.import_error {
+            ui.label(RichText::new(error).color(crate::theme::ALERT()));
+        }
+        ui.horizontal(|ui| {
+            let enabled = !self.playback.picking && !self.state.tx.ptt && !self.state.tx.tune;
+            if ui
+                .add_enabled_ui(enabled, |ui| {
+                    crate::chrome::chip(ui, false, tr!("playback-open-file"))
+                })
+                .inner
+                .on_hover_text(tr!("playback-import-hint"))
+                .clicked()
+            {
+                self.playback.picking = true;
+                self.playback.import_error = None;
+                pick_audio(self.playback.import.clone(), ui.ctx().clone());
+            }
+            if self.playback.picking {
+                ui.spinner();
+            }
+        });
         ui.horizontal(|ui| {
             ui.label(RichText::new(tr!("signalid-find")).size(11.0).color(crate::theme::gray(150)));
             crate::chrome::field(
@@ -191,10 +312,7 @@ impl super::SdroxideApp {
             ui,
             |ui| {
                 if listing.files.is_empty() {
-                    ui.label(
-                        RichText::new(tr!("playback-none"))
-                        .color(crate::theme::gray(150)),
-                    );
+                    ui.label(RichText::new(tr!("playback-none")).color(crate::theme::gray(150)));
                 }
                 let find = self.playback.find.clone();
                 for file in listing.files.iter().filter(|f| matches(f, &find)) {
@@ -245,7 +363,11 @@ impl super::SdroxideApp {
                                 crate::chrome::chip_accent(
                                     ui,
                                     armed,
-                                    if armed { tr!("playback-delete-ask") } else { tr!("decodes-clear") },
+                                    if armed {
+                                        tr!("playback-delete-ask")
+                                    } else {
+                                        tr!("decodes-clear")
+                                    },
                                     crate::theme::ALERT(),
                                     egui::Color32::WHITE,
                                 )
@@ -310,11 +432,11 @@ impl super::SdroxideApp {
         full: bool,
     ) {
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new(tr!("playback-strip-label")).strong().color(crate::theme::ALERT()));
             ui.label(
-                RichText::new(tr!("playback-not-live"))
-                    .size(11.0)
-                    .color(crate::theme::gray(170)),
+                RichText::new(tr!("playback-strip-label")).strong().color(crate::theme::ALERT()),
+            );
+            ui.label(
+                RichText::new(tr!("playback-not-live")).size(11.0).color(crate::theme::gray(170)),
             );
             let (label, hover) = if st.paused || st.ended {
                 (tr!("playback-play"), tr!("playback-carry-on"))
@@ -354,7 +476,8 @@ impl super::SdroxideApp {
             {
                 cmds.push(Command::Playback(PlaybackCommand::Stop));
             }
-            if !full && crate::chrome::chip(ui, self.playback.show, tr!("playback-files")).clicked() {
+            if !full && crate::chrome::chip(ui, self.playback.show, tr!("playback-files")).clicked()
+            {
                 if self.playback.show {
                     self.playback.show = false;
                 } else {
@@ -388,9 +511,15 @@ impl super::SdroxideApp {
                 }
             }
             if st.ended {
-                ui.label(RichText::new(tr!("playback-end-of-file")).size(11.0).color(crate::theme::gray(160)));
+                ui.label(
+                    RichText::new(tr!("playback-end-of-file"))
+                        .size(11.0)
+                        .color(crate::theme::gray(160)),
+                );
             } else if st.paused {
-                ui.label(RichText::new(tr!("playback-paused")).size(11.0).color(crate::theme::gray(160)));
+                ui.label(
+                    RichText::new(tr!("playback-paused")).size(11.0).color(crate::theme::gray(160)),
+                );
             }
         });
         let mut line = st.name.clone();
@@ -418,7 +547,9 @@ impl super::SdroxideApp {
         ui.label(RichText::new(line).size(10.5).color(crate::theme::CYAN_DIM()));
         if let Some(f) = &st.fault {
             ui.label(
-                RichText::new(tr!("playback-stopped", fault = f)).size(11.0).color(crate::theme::ALERT()),
+                RichText::new(tr!("playback-stopped", fault = f))
+                    .size(11.0)
+                    .color(crate::theme::ALERT()),
             );
         }
     }
@@ -427,6 +558,93 @@ impl super::SdroxideApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn open_file_is_visible_and_queues_audio_on_each_radio() {
+        let _guard = crate::multi::frame_test_lock();
+        struct Controller;
+        impl sdroxide_types::RadioController for Controller {
+            fn send(&mut self, _: Command) {}
+            fn poll_event(&mut self) -> Option<sdroxide_types::RadioEvent> {
+                None
+            }
+        }
+        for radio in [0, 2] {
+            let ctx = egui::Context::default();
+            let mut app = super::super::SdroxideApp::new_tab(
+                &ctx,
+                None,
+                None,
+                Box::new(Controller),
+                radio,
+                true,
+            );
+            let mut textures = crate::test_raster::Textures::default();
+            let mut last = None;
+            for _ in 0..3 {
+                let input = egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(640.0, 520.0),
+                    )),
+                    ..Default::default()
+                };
+                let mut frame = ctx.run_ui(input, |ui| app.playback_body(ui, &mut Vec::new()));
+                textures.apply(&frame.textures_delta);
+                frame.textures_delta.clear();
+                if let Some(old) = last.take() {
+                    egui::FullOutput::drop_without_applying_deltas(old);
+                }
+                last = Some(frame);
+            }
+            fn contains(shape: &egui::Shape, text: &str) -> bool {
+                match shape {
+                    egui::Shape::Text(t) => t.galley.text() == text,
+                    egui::Shape::Vec(v) => v.iter().any(|s| contains(s, text)),
+                    _ => false,
+                }
+            }
+            let frame = last.unwrap();
+            assert!(frame.shapes.iter().any(|s| contains(&s.shape, &tr!("playback-open-file"))));
+            if let Ok(path) = std::env::var("PLAYBACK_PREVIEW") {
+                crate::test_raster::rasterize(
+                    &ctx,
+                    frame,
+                    &textures,
+                    egui::vec2(640.0, 520.0),
+                    crate::theme::BG_DEEP(),
+                )
+                .save(format!("{path}-{radio}.png"))
+                .unwrap();
+            } else {
+                frame.drop_without_applying_deltas();
+            }
+            *app.playback.import.lock().unwrap() =
+                Some(Ok(Some(("external.wav".into(), vec![1, 2, 3]))));
+            let mut cmds = Vec::new();
+            app.poll_playback_list(&mut cmds);
+            assert_eq!(
+                cmds,
+                vec![Command::Playback(PlaybackCommand::Import {
+                    name: "external.wav".into(),
+                    bytes: vec![1, 2, 3]
+                })]
+            );
+        }
+    }
+
+    #[test]
+    fn selected_audio_is_sent_with_its_original_name_and_bytes() {
+        let name = "sdroxide_2026-11-13_21-00-06Z_3.853100MHz_WEFAX_SDRplay-RSP1.wav";
+        assert_eq!(
+            selected_audio(name.into(), vec![1, 2, 3]),
+            Ok(Some((name.into(), vec![1, 2, 3])))
+        );
+        assert!(selected_audio("../bad.wav".into(), vec![1]).is_err());
+        assert!(selected_audio("test.txt".into(), vec![1]).is_err());
+        assert!(selected_audio("test.wav".into(), vec![]).is_err());
+    }
 
     /// Deleting is for good, so one press only arms it: the second press on
     /// the same file deletes, and a press on another file moves the arming

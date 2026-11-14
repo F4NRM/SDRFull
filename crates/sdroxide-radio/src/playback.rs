@@ -35,6 +35,47 @@ use symphonia::core::units::Time;
 use crate::source::Throttle;
 use crate::{Complex32, IqSource, RadioError, Result};
 
+/// Store a selected audio file without replacing another radio's recording.
+/// Validation happens before playback changes the running radio.
+pub(crate) fn import_recording(name: &str, bytes: &[u8]) -> Result<String> {
+    let dir = sdroxide_config::recordings_dir().map_err(|e| err(e.to_string()))?;
+    import_recording_into(&dir, name, bytes)
+}
+
+fn import_recording_into(dir: &Path, name: &str, bytes: &[u8]) -> Result<String> {
+    if !sdroxide_types::playback::playable_name(name)
+        || bytes.is_empty()
+        || bytes.len() > sdroxide_types::playback::MAX_PLAYBACK_IMPORT_BYTES
+    {
+        return Err(err("invalid"));
+    }
+    let (stem, ext) = name.rsplit_once('.').expect("validated audio extension");
+    // create_new is atomic across engines, including simultaneous imports.
+    for n in 0..10_000 {
+        let candidate = if n == 0 { name.to_owned() } else { format!("import-{n}-{stem}.{ext}") };
+        let path = dir.join(&candidate);
+        let mut file = match std::fs::OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(f) => f,
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e.into()),
+        };
+        use std::io::Write;
+        let result = file.write_all(bytes).map_err(RadioError::from).and_then(|()| {
+            drop(file);
+            if crate::iq_wav::probe(&path).is_some() || name.ends_with("_IQ.wav") {
+                return Err(err("iq"));
+            }
+            AudioReader::open(&path).map(|_| ())
+        });
+        if let Err(e) = result {
+            let _ = std::fs::remove_file(&path);
+            return Err(e);
+        }
+        return Ok(candidate);
+    }
+    Err(err("collisions"))
+}
+
 /// How much of the audio spectrum the waterfall shows: the same as a sound-card
 /// radio's, which is where every audio decoder's tones sit.
 const DISPLAY_BW_HZ: f64 = 4000.0;
@@ -289,7 +330,8 @@ impl PlaybackSource {
             }
             PlaybackCommand::Open { .. }
             | PlaybackCommand::Stop
-            | PlaybackCommand::Delete { .. } => {}
+            | PlaybackCommand::Delete { .. }
+            | PlaybackCommand::Import { .. } => {}
         }
         Ok(())
     }
@@ -456,6 +498,30 @@ pub fn playback_caps(name: &str) -> sdroxide_types::DeviceCaps {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn imports_preserve_existing_audio_and_remove_invalid_copies() {
+        let dir = scratch("imports");
+        std::fs::create_dir_all(&dir).unwrap();
+        let original = dir.join("source.wav");
+        tone_wav(&original, 8000, 1, 0.1, 1000.0);
+        let bytes = std::fs::read(&original).unwrap();
+        let name = "sdroxide_radio99_2026-11-13_21-00-06Z_3.853100MHz_WEFAX_SDRPlay-RSP1.wav";
+        assert_eq!(import_recording_into(&dir, name, &bytes).unwrap(), name);
+        let duplicate = import_recording_into(&dir, name, &bytes).unwrap();
+        assert_eq!(duplicate, format!("import-1-{name}"));
+        assert_eq!(std::fs::read(dir.join(name)).unwrap(), bytes);
+        let source = PlaybackSource::open(&dir.join(&duplicate), &duplicate, 7_100_000.0).unwrap();
+        assert_eq!(source.status().stamp.unwrap().mode, Some(sdroxide_types::Mode::Wefax));
+        assert!(import_recording_into(&dir, "broken.wav", &[1, 2, 3]).is_err());
+        assert!(!dir.join("broken.wav").exists());
+        assert!(import_recording_into(&dir, "../escape.wav", &bytes).is_err());
+        assert!(import_recording_into(&dir, "empty.wav", &[]).is_err());
+        assert!(import_recording_into(&dir, "capture_IQ.wav", &bytes).is_err());
+        assert!(!dir.join("capture_IQ.wav").exists());
+        drop(source);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     /// A mono 16-bit WAV of `secs` seconds of a `hz` tone at `rate`.
     fn tone_wav(path: &Path, rate: u32, channels: u16, secs: f64, hz: f64) {

@@ -32,7 +32,10 @@ pub async fn ws_route(
     let shared = station.first();
     let signed = crate::session_cookie::from_headers(&headers, &station.auth);
     let browser = browser_of(&headers);
-    upgrade.on_upgrade(move |socket| session(socket, shared, station, signed, browser))
+    upgrade
+        .max_frame_size(sdroxide_types::playback::MAX_PLAYBACK_IMPORT_BYTES + 1024)
+        .max_message_size(sdroxide_types::playback::MAX_PLAYBACK_IMPORT_BYTES + 1024)
+        .on_upgrade(move |socket| session(socket, shared, station, signed, browser))
 }
 
 /// `/ws/<id>` — one named radio out of the station's roster. Unknown ids are
@@ -47,9 +50,10 @@ pub async fn ws_route_for(
     let signed = crate::session_cookie::from_headers(&headers, &station.auth);
     let browser = browser_of(&headers);
     match station.radio(id) {
-        Some(shared) => {
-            upgrade.on_upgrade(move |socket| session(socket, shared, station, signed, browser))
-        }
+        Some(shared) => upgrade
+            .max_frame_size(sdroxide_types::playback::MAX_PLAYBACK_IMPORT_BYTES + 1024)
+            .max_message_size(sdroxide_types::playback::MAX_PLAYBACK_IMPORT_BYTES + 1024)
+            .on_upgrade(move |socket| session(socket, shared, station, signed, browser)),
         None => {
             let known: Vec<String> = station.list().iter().map(|r| r.id.to_string()).collect();
             (

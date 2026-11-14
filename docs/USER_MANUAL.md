@@ -3471,8 +3471,13 @@ noise reduction or the auto-notch take it back to mono, exactly as on the air.
 The decoders always take the left channel — the receiver; on a recording made
 while transmitting, the right is your own transmit. Playback reads the
 recorder's own files and also WAV, OGG
-Vorbis and FLAC made elsewhere: copy one into the recordings folder and it is in
-the list. A file whose name carries no stamp plays in the mode you are in. An
+Vorbis and FLAC made elsewhere. **Open a file** selects audio from any folder
+on this computer, on desktop and in a browser (maximum 32 MiB). A copy is kept
+in the station's recordings folder; an existing file is never overwritten.
+It plays in the radio whose player you opened, regardless of which radio made
+it. You can also copy a file into the recordings folder to add it to the list.
+New WAV and MP3 names end in the recording radio's identity before the extension,
+with filename-unsafe characters replaced by hyphens. Old names remain readable. A file whose name carries no stamp plays in the mode you are in. An
 I/Q capture is listed but cannot be played here — it is spectrum, not audio, and
 plays with `--file`. A recording is played where the receiver is: from a
 browser, the list is the station's recordings folder and the engine opens the

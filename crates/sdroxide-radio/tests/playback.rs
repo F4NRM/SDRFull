@@ -232,6 +232,50 @@ fn a_recording_plays_back_and_the_radio_comes_back() {
     });
     assert_eq!(opened.load(Ordering::SeqCst), before + 1, "the radio was reopened once");
 
+    // An external file is copied to this station and played by this engine,
+    // even though its stamp says another radio recorded it.
+    let imported = "sdroxide_radio99_2026-11-13_21-00-06Z_3.853100MHz_WEFAX_SDRplay-RSP1.wav";
+    let bytes = std::fs::read(rec.join(STAMPED)).unwrap();
+    h.cmd_tx
+        .send(Command::Playback(PlaybackCommand::Import {
+            name: imported.into(),
+            bytes: bytes.clone(),
+        }))
+        .unwrap();
+    w.until(&h.event_rx, "imported WEFAX playing in this radio", |w| {
+        w.state.as_ref().is_some_and(|s| {
+            s.rx[0].mode == Mode::Wefax
+                && s.playback
+                    .as_ref()
+                    .is_some_and(|p| p.name == imported && p.stamp.is_some_and(|st| st.radio == 99))
+        })
+    });
+    assert_eq!(std::fs::read(rec.join(imported)).unwrap(), bytes);
+    h.cmd_tx
+        .send(Command::Playback(PlaybackCommand::Import {
+            name: imported.into(),
+            bytes: bytes.clone(),
+        }))
+        .unwrap();
+    let copy = format!("import-1-{imported}");
+    w.until(&h.event_rx, "duplicate import playing under a unique name", |w| {
+        w.state.as_ref().and_then(|s| s.playback.as_ref()).is_some_and(|p| p.name == copy)
+    });
+    assert_eq!(std::fs::read(rec.join(imported)).unwrap(), bytes, "original overwritten");
+    h.cmd_tx.send(Command::Playback(PlaybackCommand::Stop)).unwrap();
+    w.until(&h.event_rx, "live radio restored after import", |w| {
+        w.driver == "live" && w.state.as_ref().is_some_and(|s| s.playback.is_none())
+    });
+    let notices = w.notices.len();
+    for (name, bytes) in [("../bad.wav", vec![1]), ("broken.wav", vec![1, 2, 3])] {
+        h.cmd_tx
+            .send(Command::Playback(PlaybackCommand::Import { name: name.into(), bytes }))
+            .unwrap();
+    }
+    w.until(&h.event_rx, "invalid imports refused", |w| w.notices.len() >= notices + 2);
+    assert!(!rec.join("broken.wav").exists(), "invalid import left on disk");
+    assert_eq!(w.driver, "live", "invalid import replaced the live source");
+
     // CLEAR: a path is refused, and the files the listing offered go — the
     // capture as well as the recording — with a fresh list after each.
     let outside = cfg_dir.join("config.toml");

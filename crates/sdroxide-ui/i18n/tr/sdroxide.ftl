@@ -9804,3 +9804,15 @@ remote-cert-forget = Unut
 remote-cert-forget-hint = Normal sertifika denetimlerini geri yükle. Sunucu bu sertifikayı kullanmaya devam ederse yeniden güven onayı istenir.
 
 remote-cert-save-failed = Sertifika seçimi bu oturumda geçerli, ancak kaydedilemedi: { $error }
+
+playback-open-file = Dosya aç
+
+playback-import-hint = Bu bilgisayardan ses seçin, istasyona kopyalayın ve bu radyoda çalın (en fazla 32 MiB).
+
+playback-import-invalid = Basit adlı, boş olmayan WAV, MP3, OGG veya FLAC dosyası seçin (en fazla 32 MiB).
+
+playback-import-read-error = Seçilen ses dosyası okunamadı.
+
+playback-import-collisions = Bu ada sahip çok fazla içe aktarılan dosya var. Dosyayı yeniden adlandırıp tekrar deneyin.
+
+playback-import-failed = Ses içe aktarılamadı: { $error }
