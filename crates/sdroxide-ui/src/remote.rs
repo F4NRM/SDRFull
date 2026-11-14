@@ -635,7 +635,6 @@ impl RemoteController {
                 self.pending.push_back(RadioEvent::ModeRefused(mode, band));
             }
             ServerMsg::ClientAcks(a) => self.pending.push_back(RadioEvent::ClientAcks(a)),
-            ServerMsg::OperatorPtt(c) => self.pending.push_back(RadioEvent::OperatorPtt(c)),
             // Dropped rather than decoded while another tab holds the page's
             // single output: the work saved is the point on a browser tab
             // holding several radios.
@@ -949,10 +948,6 @@ impl RadioController for RemoteController {
 
     fn send_client_acks(&mut self, acks: sdroxide_types::ClientAcks) {
         self.send_msg(ClientMsg::SetClientAcks(acks));
-    }
-
-    fn send_operator_ptt(&mut self, cfg: sdroxide_types::PttInputsConfig) {
-        self.send_msg(ClientMsg::SetOperatorPtt(Box::new(cfg)));
     }
 
     fn send(&mut self, cmd: Command) {

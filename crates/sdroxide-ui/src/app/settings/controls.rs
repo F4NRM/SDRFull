@@ -460,7 +460,6 @@ pub(in crate::app) fn settings_controls_tab(
             apply: io.op_ptt_apply,
             rescan: io.op_ptt_rescan,
             local: true,
-            grant: crate::operator_ptt::NEEDS_GRANT.then_some(&mut *io.op_ptt_grant),
         },
     );
 }

@@ -339,7 +339,7 @@ pub use rds::{
 pub use recording::{JobAction, RecordingFormat, RecordingJob, RecordingKind};
 pub use ptt_input::{
     Debounce, LineDrive, PttHidDevice, PttHold, PttInputConfig, PttInputSource, PttInputState,
-    PttInputsConfig, PttInputsStatus, PttMidiPort, PttSlot, hid_learn, hid_pressed, level_pressed, midi_from_bytes,
+    PttInputsConfig, PttInputsStatus, PttMidiPort, PttSlot, hid_learn, hid_pressed, level_pressed,
     midi_pressed,
 };
 pub use region::{Region, region, set_region};

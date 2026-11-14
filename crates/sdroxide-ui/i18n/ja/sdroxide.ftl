@@ -9718,11 +9718,4 @@ ptt-here-heading = このコンピュータ
 
 ptt-station-heading = 局のコンピュータ
 
-
-ptt-grant-serial = シリアルポートを許可…
-
-ptt-grant-hid = USB HIDデバイスを許可…
-
-ptt-grant-midi = MIDI入力を許可…
-
-ptt-grant-hint = ブラウザはページに、許可したものだけを見せます。ブラウザ自身のウィンドウでデバイスを選ぶと、このサイトでは選択が記憶されます。Chrome と Edge のみ(シリアルとHID)。
+ptt-web-unavailable = ブラウザではまだシリアルポート、HIDデバイス、MIDIポートを読み取れません。このコンピュータのデスクトップアプリか、T/Rスイッチのページにある局側の組を使ってください。

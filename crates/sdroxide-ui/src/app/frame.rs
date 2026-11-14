@@ -1004,7 +1004,7 @@ impl eframe::App for SdroxideApp {
         //
         // The desk microphone and pedal of this computer follow the same rule:
         // the press keys the station on screen.
-        self.op_ptt.poll(self.focused, now, &self.state, &mut cmds);
+        self.op_ptt.poll(self.focused, &self.state, &mut cmds);
         if self.focused {
             // F1 toggles the manual — handled here (not in
             // `keyboard_shortcuts`) so it works even while a text field has
@@ -1104,7 +1104,7 @@ impl eframe::App for SdroxideApp {
         // Shutting down with a bound key, a footswitch or the compact layout's
         // PTT still held would otherwise leave the rig transmitting.
         if ctx.input(|i| i.viewport().close_requested()) {
-            self.op_ptt.poll(false, now, &self.state, &mut cmds);
+            self.op_ptt.poll(false, &self.state, &mut cmds);
             if self.input.any_held() {
                 self.release_held_controls(&mut cmds);
             }
@@ -4832,14 +4832,6 @@ impl SdroxideApp {
                 }
                 RadioEvent::RelayStatus(st) => self.relay_status = *st,
                 RadioEvent::PttInputsStatus(st) => self.ptt_status = *st,
-                // What the server keeps of a browser's own microphone and pedal;
-                // a native client keeps its own file and ignores it.
-                RadioEvent::OperatorPtt(c) => {
-                    if crate::operator_ptt::NEEDS_GRANT {
-                        self.op_ptt_edit = (*c).clone();
-                        self.op_ptt.adopt(&c);
-                    }
-                }
                 RadioEvent::ImageSaved(e) => match e.kind {
                     sdroxide_types::ImageKind::Sstv => self.sstv.on_saved(e, &ctx),
                     sdroxide_types::ImageKind::Wefax => self.wefax.on_saved(e, &ctx),

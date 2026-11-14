@@ -35,18 +35,19 @@ pub(in crate::app) struct PttView<'a> {
     pub rescan: &'a mut bool,
     /// The devices of the computer the operator sits at, not the station's.
     pub local: bool,
-    /// A browser only: set to the kind of device the operator asked the browser
-    /// to allow. `None` where the operating system needs no permission.
-    pub grant: Option<&'a mut Option<PttInputSource>>,
 }
 
-pub(in crate::app) fn settings_ptt_inputs_section(ui: &mut egui::Ui, mut v: PttView<'_>) {
+pub(in crate::app) fn settings_ptt_inputs_section(ui: &mut egui::Ui, v: PttView<'_>) {
     ui.add_space(10.0);
     ui.separator();
     ui.add_space(6.0);
     let heading = if v.local { tr!("ptt-here-heading") } else { tr!("ptt-station-heading") };
     ui.label(RichText::new(heading).size(11.0).strong().weak());
     ui.add_space(4.0);
+    if v.local && !crate::operator_ptt::AVAILABLE {
+        super::note(ui, &tr!("ptt-web-unavailable"));
+        return;
+    }
     if !v.seeded {
         ui.label(
             RichText::new(tr!("ptt-desk-title")).size(14.0).strong().color(crate::theme::CYAN()),
@@ -67,16 +68,7 @@ pub(in crate::app) fn settings_ptt_inputs_section(ui: &mut egui::Ui, mut v: PttV
         };
         ui.label(RichText::new(title).size(14.0).strong().color(crate::theme::CYAN()));
         ui.add_space(4.0);
-        slot_block(
-            ui,
-            slot,
-            i,
-            v.edit.slot_mut(slot),
-            v.status,
-            v.learn,
-            v.rescan,
-            v.grant.as_deref_mut(),
-        );
+        slot_block(ui, slot, i, v.edit.slot_mut(slot), v.status, v.learn, v.rescan);
     }
     ui.add_space(8.0);
     if crate::chrome::chip_accent(
@@ -101,7 +93,6 @@ fn slot_block(
     status: &PttInputsStatus,
     learn: &mut PttLearn,
     rescan: &mut bool,
-    grant: Option<&mut Option<PttInputSource>>,
 ) {
     let st = status.slot(slot);
     crate::chrome::checkbox(ui, &mut cfg.enabled, tr!("settings-controls-enable"));
@@ -156,20 +147,6 @@ fn slot_block(
         ui.horizontal(|ui| {
             if crate::chrome::chip(ui, false, tr!("settings-controls-rescan-ports")).clicked() {
                 *rescan = true;
-            }
-            // The browser lets a page see only what the person allowed to it.
-            if let Some(grant) = grant {
-                let label = match cfg.source {
-                    PttInputSource::Serial => tr!("ptt-grant-serial"),
-                    PttInputSource::UsbHid => tr!("ptt-grant-hid"),
-                    PttInputSource::UsbMidi => tr!("ptt-grant-midi"),
-                };
-                if crate::chrome::chip(ui, false, label)
-                    .on_hover_text(tr!("ptt-grant-hint"))
-                    .clicked()
-                {
-                    *grant = Some(cfg.source);
-                }
             }
             state_line(ui, st);
         });
