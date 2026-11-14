@@ -2756,6 +2756,7 @@ fn cb_paths(
 /// or timezone handling (UTC), and no external crate.
 /// Where the radio was when a playback took it over (fork discussion #10).
 struct PlaybackReturn {
+    identity: String,
     vfo_a_hz: f64,
     vfo_b_hz: f64,
     mode: Mode,
@@ -2831,7 +2832,7 @@ fn utc_civil(secs: u64) -> (i64, u32, u32, u32, u32, u32) {
     (if month <= 2 { year + 1 } else { year }, month, day, h, mi, s)
 }
 
-/// `sdroxide_<UTC date>_<UTC time>_<freq>_<mode>.<ext>`, filesystem-safe.
+/// `sdroxide_<UTC date>_<UTC time>_<freq>_<mode>_<radio identity>.<ext>`, filesystem-safe.
 ///
 /// The extension follows the chosen format, and it is the only thing that tells
 /// the two audio containers apart when the recordings are listed — MP3 and WAV
@@ -2843,6 +2844,7 @@ fn recording_filename_for(
     freq_hz: f64,
     mode: Mode,
     secs: u64,
+    identity: &str,
 ) -> String {
     let (y, mo, d, h, mi, s) = utc_civil(secs);
     let mhz = freq_hz / 1_000_000.0;
@@ -2855,8 +2857,11 @@ fn recording_filename_for(
         0 => String::new(),
         n => format!("_radio{n}"),
     };
+    let identity = sdroxide_types::playback::recording_radio_tag(identity);
     let ext = format.extension();
-    format!("sdroxide{radio}_{y:04}-{mo:02}-{d:02}_{h:02}-{mi:02}-{s:02}Z_{mhz:.6}MHz_{mode}.{ext}")
+    format!(
+        "sdroxide{radio}_{y:04}-{mo:02}-{d:02}_{h:02}-{mi:02}-{s:02}Z_{mhz:.6}MHz_{mode}_{identity}.{ext}"
+    )
 }
 
 #[cfg(test)]
@@ -2981,14 +2986,28 @@ mod recording_filename_tests {
     /// same stamp and a different tail.
     #[test]
     fn the_extension_follows_the_chosen_format() {
-        let mp3 = recording_filename_for(RecordingFormat::Mp3, 0, 14_074_000.0, Mode::Usb, SECS);
-        let wav = recording_filename_for(RecordingFormat::Wav, 0, 14_074_000.0, Mode::Usb, SECS);
-        assert_eq!(
-            mp3, "sdroxide_2026-08-23_14-32-05Z_14.074000MHz_USB.mp3",
-            "the historical MP3 name changed shape"
+        let mp3 = recording_filename_for(
+            RecordingFormat::Mp3,
+            0,
+            14_074_000.0,
+            Mode::Usb,
+            SECS,
+            "SDRplay RSP1",
+        );
+        let wav = recording_filename_for(
+            RecordingFormat::Wav,
+            0,
+            14_074_000.0,
+            Mode::Usb,
+            SECS,
+            "SDRplay RSP1",
         );
         assert_eq!(
-            wav, "sdroxide_2026-08-23_14-32-05Z_14.074000MHz_USB.wav",
+            mp3, "sdroxide_2026-08-23_14-32-05Z_14.074000MHz_USB_SDRplay-RSP1.mp3",
+            "the radio identity must precede the extension"
+        );
+        assert_eq!(
+            wav, "sdroxide_2026-08-23_14-32-05Z_14.074000MHz_USB_SDRplay-RSP1.wav",
             "a WAV must be the same name with the WAV extension"
         );
         assert_eq!(
@@ -3001,8 +3020,15 @@ mod recording_filename_tests {
     /// A second radio is named too, whatever the container.
     #[test]
     fn a_second_radio_is_marked_in_the_name() {
-        let name = recording_filename_for(RecordingFormat::Wav, 2, 27_265_000.0, Mode::Lsb, SECS);
-        assert_eq!(name, "sdroxide_radio2_2026-08-23_14-32-05Z_27.265000MHz_LSB.wav");
+        let name = recording_filename_for(
+            RecordingFormat::Wav,
+            2,
+            27_265_000.0,
+            Mode::Lsb,
+            SECS,
+            "SDRplay RSP1",
+        );
+        assert_eq!(name, "sdroxide_radio2_2026-08-23_14-32-05Z_27.265000MHz_LSB_SDRplay-RSP1.wav");
     }
 }
 
@@ -13104,6 +13130,15 @@ impl Engine {
     fn playback_command(&mut self, cmd: PlaybackCommand) {
         match cmd {
             PlaybackCommand::Open { name } => self.start_playback(&name),
+            PlaybackCommand::Import { name, bytes } => {
+                match crate::playback::import_recording(&name, &bytes) {
+                    Ok(name) => {
+                        self.start_playback(&name);
+                        let _ = self.event_tx.send(RadioEvent::Recordings(list_recordings()));
+                    }
+                    Err(e) => self.notice(&format!("Playback import: {e}")),
+                }
+            }
             PlaybackCommand::Stop => self.stop_playback(),
             PlaybackCommand::Delete { name } => {
                 if let Err(why) = self.delete_recording(&name) {
@@ -13217,6 +13252,11 @@ impl Engine {
         }
         if self.playback_return.is_none() {
             self.playback_return = Some(PlaybackReturn {
+                identity: if self.caps.label.trim().is_empty() {
+                    self.caps.driver.clone()
+                } else {
+                    self.caps.label.clone()
+                },
                 vfo_a_hz: self.state.vfo_a_hz,
                 vfo_b_hz: self.state.vfo_b_hz,
                 mode: self.state.rx[0].mode,
@@ -13467,6 +13507,9 @@ impl Engine {
             self.state.active_freq_hz(),
             self.state.rx[0].mode,
             secs,
+            self.playback_return.as_ref().map(|ret| ret.identity.as_str()).unwrap_or_else(|| {
+                if self.caps.label.trim().is_empty() { &self.caps.driver } else { &self.caps.label }
+            }),
         )
     }
 

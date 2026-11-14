@@ -9752,3 +9752,15 @@ remote-cert-forget = 削除
 remote-cert-forget-hint = 通常の証明書検証に戻します。サーバーがこの証明書を引き続き使用している場合、再び信頼の確認が必要になります。
 
 remote-cert-save-failed = 証明書の選択は今回の実行中は有効ですが、保存できませんでした: { $error }
+
+playback-open-file = ファイルを開く
+
+playback-import-hint = この端末の音声を局にコピーし、このラジオで再生します（最大32 MiB）。
+
+playback-import-invalid = 単純な名前の空でないWAV、MP3、OGG、FLACを選択してください（最大32 MiB）。
+
+playback-import-read-error = 選択した音声ファイルを読み込めませんでした。
+
+playback-import-collisions = 同名の取り込みファイルが多すぎます。名前を変更して再試行してください。
+
+playback-import-failed = 音声を取り込めませんでした：{ $error }

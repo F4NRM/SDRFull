@@ -36,7 +36,7 @@ pub fn recording_mode_tag(mode: Mode) -> String {
 }
 
 /// Read the stamp back out of a recording's name:
-/// `sdroxide[_radioN]_YYYY-MM-DD_HH-MM-SSZ_<MHz>MHz_<MODE>.<ext>`.
+/// `sdroxide[_radioN]_YYYY-MM-DD_HH-MM-SSZ_<MHz>MHz_<MODE>[_<radio identity>].<ext>`.
 ///
 /// Something in front of `sdroxide_` (a download's prefix) is ignored. Returns
 /// `None` for any other name — a file somebody copied in, or one of the I/Q
@@ -74,8 +74,20 @@ pub fn parse_recording_name(name: &str) -> Option<RecordingStamp> {
     if !mhz.is_finite() || mhz < 0.0 {
         return None;
     }
-    let mode =
-        Mode::ALL.iter().copied().find(|m| recording_mode_tag(*m).eq_ignore_ascii_case(mode_tag));
+    // Match the longest complete mode tag, then an optional radio suffix.
+    // Some mode labels themselves contain underscores.
+    let mode = Mode::ALL
+        .iter()
+        .copied()
+        .filter_map(|m| {
+            let tag = recording_mode_tag(m);
+            let head = mode_tag.get(..tag.len())?;
+            let tail = mode_tag.get(tag.len()..)?;
+            (head.eq_ignore_ascii_case(&tag) && (tail.is_empty() || tail.starts_with('_')))
+                .then_some((m, tag.len()))
+        })
+        .max_by_key(|(_, len)| *len)
+        .map(|(m, _)| m);
     Some(RecordingStamp {
         unix: days_from_civil(y, mo, da) * 86_400 + h * 3600 + mi * 60 + s,
         freq_hz: mhz * 1e6,
@@ -113,6 +125,29 @@ pub fn playable_name(name: &str) -> bool {
     }
     name.rsplit_once('.')
         .is_some_and(|(_, ext)| PLAYABLE_EXTENSIONS.iter().any(|e| e.eq_ignore_ascii_case(ext)))
+}
+
+/// Maximum imported audio size (32 MiB), below the WebSocket message ceiling.
+pub const MAX_PLAYBACK_IMPORT_BYTES: usize = 32 * 1024 * 1024;
+
+/// A radio identity safe as one filename component on every supported OS.
+pub fn recording_radio_tag(label: &str) -> String {
+    let mut tag = String::new();
+    for c in label.chars() {
+        if tag.len() + c.len_utf8() > 80 {
+            break;
+        }
+        if c.is_control() || c.is_whitespace() || "<>:\"/\\|?*".contains(c) {
+            if !tag.ends_with('-') {
+                tag.push('-');
+            }
+        } else {
+            tag.push(c);
+        }
+    }
+    let tag = tag.replace("..", "-");
+    let tag = tag.trim_matches(['.', '-', ' ']);
+    if tag.is_empty() { "radio".into() } else { tag.into() }
 }
 
 /// One file in the station's recordings directory.
@@ -168,6 +203,9 @@ pub enum PlaybackCommand {
     /// for the file playing back and for one still being written. Appended
     /// last: this enum rides the wire.
     Delete { name: String },
+    /// Copy an operator-selected file to the station and play it in this radio.
+    /// Appended last; paths are never accepted. Existing files are never replaced.
+    Import { name: String, bytes: Vec<u8> },
 }
 
 /// Where playback is, for the transport bar. `None` on the state when nothing
@@ -213,6 +251,40 @@ mod tests {
             let stamp = parse_recording_name(&name).unwrap_or_else(|| panic!("{name} unread"));
             assert_eq!(stamp.mode, Some(mode), "{name}");
         }
+    }
+
+    #[test]
+    fn radio_suffix_keeps_every_mode_and_legacy_radio_number() {
+        for mode in Mode::ALL {
+            for prefix in ["sdroxide", "copy of sdroxide_radio2"] {
+                for suffix in ["", "_SDRPlay-RSP1", "_radio_with_underscores_USB"] {
+                    let name = format!(
+                        "{prefix}_2026-11-13_21-00-06Z_3.853100MHz_{}{suffix}.wav",
+                        recording_mode_tag(mode)
+                    );
+                    let stamp = parse_recording_name(&name).expect(&name);
+                    assert_eq!(stamp.mode, Some(mode), "{name}");
+                    assert_eq!(stamp.radio, if prefix.contains("radio2") { 2 } else { 0 });
+                    assert_eq!(stamp.freq_hz, 3_853_100.0);
+                }
+            }
+        }
+        assert_eq!(
+            parse_recording_name("sdroxide_2026-11-13_21-00-06Z_3.853100MHz_USBNEW_RSP1.wav")
+                .unwrap()
+                .mode,
+            None
+        );
+    }
+
+    #[test]
+    fn radio_identity_is_portable_and_bounded() {
+        assert_eq!(recording_radio_tag("SDRPlay RSP1"), "SDRPlay-RSP1");
+        let tag = recording_radio_tag(" .SDR<>:\"/\\|?*\n radio. ");
+        assert_eq!(tag, "SDR-radio");
+        assert_eq!(recording_radio_tag(" . / "), "radio");
+        assert!(recording_radio_tag(&"é".repeat(200)).len() <= 80);
+        assert!(playable_name(&format!("sdroxide_USB_{}.wav", recording_radio_tag("a..b"))));
     }
 
     #[test]

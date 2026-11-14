@@ -157,7 +157,7 @@ libc = "0.2"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-rfd = "0.17.2"
+rfd = { version = "0.17.2", features = ["file-handle-inner"] }
 js-sys = "0.3"
 # `Request`, `RequestInit` and `RequestMode` are the sign-in cookie: the only
 # `fetch` this client makes, and the reason it exists — the station has to be
