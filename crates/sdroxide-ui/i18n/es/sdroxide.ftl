@@ -9781,3 +9781,17 @@ ptt-web-permission = Acceso denegado. Use el botón Permitir para autorizar el d
 ptt-web-not-authorized = Dispositivo no autorizado o desconectado. Permítelo y selecciónalo en la lista.
 
 ptt-web-error = Error del dispositivo: { $detail }
+
+remote-cert-untrusted = El certificado del servidor no es de confianza. Huella del certificado (SHA-256):
+
+remote-cert-compare = Compara esta huella con la del certificado de tu servidor. Confía en él solo si coinciden. Solo este certificado exacto se aceptará como excepción para este servidor.
+
+remote-cert-connect = Confiar en este certificado y conectar
+
+remote-cert-trusted = Certificados de confianza
+
+remote-cert-forget = Olvidar
+
+remote-cert-forget-hint = Restaurar la verificación normal de certificados. Si el servidor sigue usando este certificado, volverá a pedir confianza.
+
+remote-cert-save-failed = La elección del certificado se aplica en esta sesión, pero no se pudo guardar: { $error }

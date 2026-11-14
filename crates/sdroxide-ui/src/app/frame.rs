@@ -1491,12 +1491,39 @@ impl eframe::App for SdroxideApp {
             // Seconds until the redial that is already coming, so the screen
             // can say what is going to happen rather than only what went wrong.
             let due_in = self.retry_at.map(|at| (at - crate::time::now_unix_f64()).max(0.0));
+            // A `wss://` server whose certificate nothing vouches for: show it
+            // and offer to trust it, as the Wavelog settings do (issue #736).
+            let untrusted = self.ctrl.untrusted_cert();
             let mut retry = false;
+            let mut trust = false;
             ui.vertical_centered(|ui| {
                 // Roughly where `centered_and_justified` used to put the text,
                 // with the button under it rather than beside it.
-                ui.add_space(ui.available_height() * 0.4);
+                ui.add_space(ui.available_height() * if untrusted.is_some() { 0.25 } else { 0.4 });
                 ui.label(RichText::new(err).size(18.0).color(crate::theme::ALERT()));
+                if let Some(fp) = untrusted.as_deref() {
+                    ui.add_space(12.0);
+                    ui.label(RichText::new(tr!("remote-cert-untrusted")).size(13.0));
+                    ui.add_space(4.0);
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(sdroxide_types::fingerprint_display(fp))
+                                .monospace()
+                                .size(12.0)
+                                .strong(),
+                        )
+                        .selectable(true),
+                    );
+                    ui.add_space(4.0);
+                    ui.label(
+                        RichText::new(tr!("remote-cert-compare"))
+                            .size(12.0)
+                            .color(crate::theme::gray(150)),
+                    );
+                    ui.add_space(8.0);
+                    trust =
+                        ui.button(RichText::new(tr!("remote-cert-connect")).size(16.0)).clicked();
+                }
                 if offer_retry {
                     ui.add_space(10.0);
                     ui.label(
@@ -1515,7 +1542,9 @@ impl eframe::App for SdroxideApp {
                         ui.button(RichText::new(tr!("frame-reconnect-now")).size(16.0)).clicked();
                 }
             });
-            if retry {
+            if trust && let Some(fp) = untrusted {
+                self.trust_cert_and_reconnect(&fp);
+            } else if retry {
                 // Asking by hand puts the wait back to the bottom: the operator
                 // has some reason to believe the far end is up, and making them
                 // watch out a backoff they did not choose is not an answer.

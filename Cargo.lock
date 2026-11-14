@@ -1921,6 +1921,7 @@ dependencies = [
  "document-features",
  "js-sys",
  "log",
+ "rustls",
  "tungstenite 0.24.0",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -6205,8 +6206,10 @@ dependencies = [
  "naga",
  "pollster 1.0.1",
  "rfd",
+ "ring",
  "ron",
  "rust-embed",
+ "rustls",
  "sdroxide-aircraft-history",
  "sdroxide-aircraft-online",
  "sdroxide-aprs",
@@ -6227,10 +6230,12 @@ dependencies = [
  "sys-locale",
  "toml 1.1.4+spec-1.1.0",
  "tracing",
+ "tungstenite 0.24.0",
  "ureq",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "webpki-roots 1.0.9",
 ]
 
 [[package]]

@@ -322,6 +322,11 @@ pub struct SdroxideApp {
     /// this controller has no connection to redial.
     retry_at: Option<f64>,
     retry_backoff: f64,
+    /// The redial is held rather than armed: the connection was refused for a
+    /// certificate nothing trusts, and dialling again would only be refused
+    /// again. Released by the operator trusting it — here, or on another tab
+    /// of the same station — or pressing Reconnect. See [`Self::arm_retry`].
+    cert_hold: bool,
     /// Persistent, non-fatal operator notice (e.g. radio audio input
     /// unavailable / mono card selected for IQ). Shown as a warning banner.
     radio_notice: Option<String>,
@@ -2280,6 +2285,7 @@ impl SdroxideApp {
             error: None,
             retry_at: None,
             retry_backoff: RETRY_MIN_S,
+            cert_hold: false,
             radio_notice: None,
             tx_band_msg: None,
             tx_press_refused_at: None,
@@ -3315,6 +3321,13 @@ impl SdroxideApp {
         if self.retry_at.is_some() || !self.ctrl.can_reconnect() {
             return;
         }
+        // A certificate nothing vouches for is refused every time, and a tab
+        // redialling it every thirty seconds would only repaint the same
+        // refusal under the card that asks the operator about it.
+        if self.ctrl.untrusted_cert().is_some() {
+            self.cert_hold = true;
+            return;
+        }
         let stagger = 0.25 * f64::from(self.radio_id % 4);
         self.retry_at = Some(now + self.retry_backoff + stagger);
         // Charged here rather than when the attempt goes out, so the *next*
@@ -3330,6 +3343,7 @@ impl SdroxideApp {
         let now = crate::time::now_unix_f64();
         self.error = None;
         self.retry_at = None;
+        self.cert_hold = false;
         self.frame = None;
         self.wide_frame = None;
         // The new session starts on the engine's own spectrum config, not the
@@ -3345,6 +3359,18 @@ impl SdroxideApp {
         }
     }
 
+    /// Trust the certificate this connection was refused for and dial again.
+    fn trust_cert_and_reconnect(&mut self, sha256: &str) {
+        if let Err(e) = self.ctrl.trust_cert(sha256) {
+            // Still trusted for this run, only not remembered: worth saying,
+            // not worth refusing to connect over.
+            tracing::warn!("trusted certificate could not be saved: {e}");
+            self.radio_notice = Some(tr!("remote-cert-save-failed", error = e));
+        }
+        self.retry_backoff = RETRY_MIN_S;
+        self.reconnect_now();
+    }
+
     /// Redial if the wait is up. Returns whether one is still pending, so the
     /// shell knows to keep asking for frames.
     ///
@@ -3352,6 +3378,14 @@ impl SdroxideApp {
     /// are behind the one being looked at, and a radio nobody is looking at has
     /// to come back on its own — there is no button there to press.
     pub(crate) fn poll_reconnect(&mut self) -> bool {
+        // Held for a certificate that has since been trusted — on another tab
+        // of the same station, most likely, since this one's own button dials
+        // straight away. A station's tabs all meet the same certificate, and
+        // the operator should have to look at it once, not once per radio.
+        if self.cert_hold && self.ctrl.untrusted_cert().is_none() {
+            self.retry_backoff = RETRY_MIN_S;
+            self.reconnect_now();
+        }
         let Some(at) = self.retry_at else { return false };
         let now = crate::time::now_unix_f64();
         // `>=` and the step-backwards guard together: this is a wall clock, and
@@ -4176,6 +4210,66 @@ mod tests {
     #[derive(Default)]
     struct RecordingController {
         events: std::collections::VecDeque<RadioEvent>,
+    }
+
+    #[test]
+    fn an_untrusted_certificate_is_visible_and_holds_retries() {
+        use eframe::App;
+        struct Refused;
+        impl RadioController for Refused {
+            fn send(&mut self, _: Command) {}
+            fn poll_event(&mut self) -> Option<RadioEvent> {
+                None
+            }
+            fn can_reconnect(&self) -> bool {
+                true
+            }
+            fn untrusted_cert(&self) -> Option<String> {
+                Some("ab".repeat(32))
+            }
+        }
+        let _guard = crate::multi::frame_test_lock();
+        let dir =
+            std::env::temp_dir().join(format!("sdroxide-cert-preview-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        unsafe { std::env::set_var("SDROXIDE_CONFIG_DIR", &dir) };
+        let ctx = egui::Context::default();
+        let mut app = SdroxideApp::new_tab(&ctx, None, None, Box::new(Refused), 0, true);
+        app.error = Some("TLS: invalid peer certificate".into());
+        app.arm_retry(10.0);
+        assert!(app.cert_hold);
+        assert!(app.retry_at.is_none());
+        let size = egui::vec2(1100.0, 760.0);
+        let mut textures = crate::test_raster::Textures::default();
+        let mut last = None;
+        for _ in 0..3 {
+            let mut full = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+                    ..Default::default()
+                },
+                |ui| app.ui(ui, &mut eframe::Frame::_new_kittest()),
+            );
+            textures.apply(&full.textures_delta);
+            full.textures_delta.clear();
+            last = Some(full);
+        }
+        let full = last.unwrap();
+        let text: Vec<_> = full
+            .shapes
+            .iter()
+            .filter_map(|s| match &s.shape {
+                egui::Shape::Text(t) => Some(t.galley.text()),
+                _ => None,
+            })
+            .collect();
+        assert!(text.iter().any(|t| t.contains("Trust this certificate and connect")), "{text:?}");
+        assert!(text.iter().any(|t| t.contains("AB:AB:AB")), "{text:?}");
+        if let Ok(path) = std::env::var("WSS_PREVIEW") {
+            crate::test_raster::rasterize(&ctx, full, &textures, size, crate::theme::BG_DEEP())
+                .save(path)
+                .unwrap();
+        }
     }
 
     impl RadioController for RecordingController {

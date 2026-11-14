@@ -9728,3 +9728,17 @@ ptt-web-permission = 访问被拒绝。请点击允许按钮为设备授权。
 ptt-web-not-authorized = 设备未授权或已断开。请允许该设备，然后从列表选择。
 
 ptt-web-error = 设备错误：{ $detail }
+
+remote-cert-untrusted = 服务器证书不受信任。证书指纹 (SHA-256)：
+
+remote-cert-compare = 请将此指纹与您服务器的证书进行比较。仅在一致时信任。此服务器仅将这个确切的证书作为例外接受。
+
+remote-cert-connect = 信任此证书并连接
+
+remote-cert-trusted = 受信任的证书
+
+remote-cert-forget = 忘记
+
+remote-cert-forget-hint = 恢复正常的证书验证。如果服务器仍使用此证书，将再次请求信任。
+
+remote-cert-save-failed = 证书选择在本次运行中有效，但无法保存：{ $error }
