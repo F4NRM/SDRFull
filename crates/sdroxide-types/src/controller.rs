@@ -538,6 +538,11 @@ pub enum RadioEvent {
     ///
     /// Appended last, for the usual reason.
     PttInputsStatus(Box<crate::PttInputsStatus>),
+    /// The browser's own desk microphone and pedal, as the server keeps them for
+    /// this login (issue #636). Client-local: it rides `ServerMsg::OperatorPtt`,
+    /// not the engine. Only a browser acts on it; a native client keeps its own
+    /// in `operator_ptt.json`.
+    OperatorPtt(Box<crate::PttInputsConfig>),
 }
 
 /// Snapshot of the frontend's switchable sound devices (native clients).
@@ -575,6 +580,11 @@ pub trait RadioController {
     /// against its profile. Defaulted to nothing: the in-process engine has no
     /// server, and its answers live in its own `config.toml`.
     fn send_client_acks(&mut self, _acks: crate::ClientAcks) {}
+
+    /// Hand a remote server the browser's microphone and pedal to keep against
+    /// this login (issue #636). Defaulted to nothing: a native client keeps its
+    /// own file.
+    fn send_operator_ptt(&mut self, _cfg: crate::PttInputsConfig) {}
 
     /// Non-blocking; the UI drains this each frame until `None`.
     fn poll_event(&mut self) -> Option<RadioEvent>;

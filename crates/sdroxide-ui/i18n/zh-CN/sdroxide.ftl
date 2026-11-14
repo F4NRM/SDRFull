@@ -9708,4 +9708,23 @@ ptt-here-heading = 本机
 
 ptt-station-heading = 电台的计算机
 
-ptt-web-unavailable = 浏览器目前还不能在此读取串口、HID设备或MIDI端口。请在本机使用桌面应用,或使用“收发切换”页面中接到电台的那一组。
+
+ptt-grant-serial = 允许串口…
+
+ptt-grant-hid = 允许USB HID设备…
+
+ptt-grant-midi = 允许MIDI输入…
+
+ptt-grant-hint = 浏览器只让页面看到您允许的设备。请在浏览器自己的窗口中选择设备,它会为此网站记住您的选择。仅限Chrome和Edge(串口和HID)。
+
+ptt-web-no-device = 未选择设备。
+
+ptt-web-lost = 设备已断开。
+
+ptt-web-no-api = 此浏览器无法使用 { $api }。请通过HTTPS或localhost使用兼容的浏览器。
+
+ptt-web-permission = 访问被拒绝。请点击允许按钮为设备授权。
+
+ptt-web-not-authorized = 设备未授权或已断开。请允许该设备，然后从列表选择。
+
+ptt-web-error = 设备错误：{ $detail }

@@ -9799,4 +9799,23 @@ ptt-here-heading = ON THIS COMPUTER
 
 ptt-station-heading = ON THE STATION'S COMPUTER
 
-ptt-web-unavailable = The browser cannot read a serial port, a HID device or a MIDI port here yet. Use the desktop app on this computer, or the pair wired to the station on the T/R switch page.
+
+ptt-grant-serial = Allow a serial port…
+
+ptt-grant-hid = Allow a USB HID device…
+
+ptt-grant-midi = Allow MIDI inputs…
+
+ptt-grant-hint = The browser lets a page see only what you allow. Pick the device in the browser's own window; it remembers your choice for this site. Chrome and Edge only (Serial and HID).
+
+ptt-web-no-device = No device selected.
+
+ptt-web-lost = The device was disconnected.
+
+ptt-web-no-api = This browser cannot use { $api }. Use a compatible browser over HTTPS or localhost.
+
+ptt-web-permission = Access refused. Use the Allow button to authorize the device.
+
+ptt-web-not-authorized = Device not authorized or disconnected. Allow it, then select it in the list.
+
+ptt-web-error = Device error: { $detail }

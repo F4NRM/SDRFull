@@ -375,6 +375,10 @@ async fn run_session(
                 .await;
         }
     }
+    // The browser's own microphone and pedal (issue #636), kept per login.
+    if let Some(cfg) = config::load_client_settings().operator_ptt_for(login) {
+        let _ = socket.send(msg(&ServerMsg::OperatorPtt(Box::new(cfg)))).await;
+    }
     // The operator config, which the engine announced once at startup. Without
     // this replay the client's callsign and grid come up empty and greyed out.
     if let Some(d) = digi {
@@ -746,6 +750,26 @@ async fn run_session(
                         let _ = s.reliable.try_send(ServerMsg::ClientAcks(merged.clone()));
                     }
                     report(shared, done.map(|r| r.map(|_| ())), "saving the client's answers");
+                }
+                // The browser's microphone and pedal: the choices only, kept per
+                // login and echoed back so every tab of that login agrees.
+                Ok(ClientMsg::SetOperatorPtt(cfg)) => {
+                    let who = login.to_string();
+                    let cfg = *cfg;
+                    let done = tokio::task::spawn_blocking(move || {
+                        let mut store = config::load_client_settings();
+                        store.set_operator_ptt(&who, cfg.clone());
+                        config::save_client_settings(&store)
+                            .map(|()| cfg)
+                            .map_err(|e| e.to_string())
+                    })
+                    .await;
+                    if let Ok(Ok(kept)) = &done
+                        && let Some(s) = shared.session.lock().unwrap().as_ref()
+                    {
+                        let _ = s.reliable.try_send(ServerMsg::OperatorPtt(Box::new(kept.clone())));
+                    }
+                    report(shared, done.map(|r| r.map(|_| ())), "saving the microphone and pedal");
                 }
                 Ok(ClientMsg::Ping(t)) => {
                     if let Some(s) = shared.session.lock().unwrap().as_ref() {

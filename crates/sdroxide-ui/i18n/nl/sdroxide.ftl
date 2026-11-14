@@ -9770,4 +9770,23 @@ ptt-here-heading = OP DEZE COMPUTER
 
 ptt-station-heading = OP DE COMPUTER VAN HET STATION
 
-ptt-web-unavailable = De browser kan hier nog geen seriële poort, HID-apparaat of MIDI-poort lezen. Gebruik de desktop-app op deze computer, of het paar dat op het station is aangesloten op de pagina van de T/R-schakelaar.
+
+ptt-grant-serial = Seriële poort toestaan…
+
+ptt-grant-hid = USB-HID-apparaat toestaan…
+
+ptt-grant-midi = MIDI-ingangen toestaan…
+
+ptt-grant-hint = De browser toont een pagina alleen wat u toestaat. Kies het apparaat in het venster van de browser; die onthoudt uw keuze voor deze site. Alleen Chrome en Edge (serieel en HID).
+
+ptt-web-no-device = Geen apparaat geselecteerd.
+
+ptt-web-lost = Het apparaat is losgekoppeld.
+
+ptt-web-no-api = Deze browser kan { $api } niet gebruiken. Gebruik een geschikte browser via HTTPS of localhost.
+
+ptt-web-permission = Toegang geweigerd. Gebruik de knop Toestaan om het apparaat toe te staan.
+
+ptt-web-not-authorized = Apparaat niet toegestaan of losgekoppeld. Sta het toe en kies het in de lijst.
+
+ptt-web-error = Apparaatfout: { $detail }

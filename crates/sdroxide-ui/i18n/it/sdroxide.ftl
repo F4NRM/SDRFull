@@ -9779,4 +9779,23 @@ ptt-here-heading = SU QUESTO COMPUTER
 
 ptt-station-heading = SUL COMPUTER DELLA STAZIONE
 
-ptt-web-unavailable = Il browser non può ancora leggere qui una porta seriale, un dispositivo HID o una porta MIDI. Usa l'app desktop su questo computer, oppure la coppia cablata alla stazione nella pagina del commutatore T/R.
+
+ptt-grant-serial = Consenti una porta seriale…
+
+ptt-grant-hid = Consenti un dispositivo USB HID…
+
+ptt-grant-midi = Consenti gli ingressi MIDI…
+
+ptt-grant-hint = Il browser mostra a una pagina solo ciò che consenti. Scegli il dispositivo nella finestra del browser; ricorderà la scelta per questo sito. Solo Chrome ed Edge (seriale e HID).
+
+ptt-web-no-device = Nessun dispositivo selezionato.
+
+ptt-web-lost = Il dispositivo è stato scollegato.
+
+ptt-web-no-api = Questo browser non può usare { $api }. Usa un browser compatibile tramite HTTPS o localhost.
+
+ptt-web-permission = Accesso negato. Usa il pulsante Consenti per autorizzare il dispositivo.
+
+ptt-web-not-authorized = Dispositivo non autorizzato o scollegato. Autorizzalo, poi sceglilo nell'elenco.
+
+ptt-web-error = Errore del dispositivo: { $detail }

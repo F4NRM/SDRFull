@@ -9761,4 +9761,23 @@ ptt-here-heading = EN ESTE ORDENADOR
 
 ptt-station-heading = EN EL ORDENADOR DE LA ESTACIÓN
 
-ptt-web-unavailable = El navegador aún no puede leer aquí un puerto serie, un dispositivo HID ni un puerto MIDI. Use la aplicación de escritorio en este ordenador, o el par conectado a la estación en la página del conmutador T/R.
+
+ptt-grant-serial = Permitir un puerto serie…
+
+ptt-grant-hid = Permitir un dispositivo USB HID…
+
+ptt-grant-midi = Permitir entradas MIDI…
+
+ptt-grant-hint = El navegador solo muestra a una página lo que usted permite. Elija el dispositivo en la ventana del navegador; recordará su elección para este sitio. Solo Chrome y Edge (serie y HID).
+
+ptt-web-no-device = Ningún dispositivo seleccionado.
+
+ptt-web-lost = El dispositivo se ha desconectado.
+
+ptt-web-no-api = Este navegador no puede usar { $api }. Use un navegador compatible mediante HTTPS o localhost.
+
+ptt-web-permission = Acceso denegado. Use el botón Permitir para autorizar el dispositivo.
+
+ptt-web-not-authorized = Dispositivo no autorizado o desconectado. Permítelo y selecciónalo en la lista.
+
+ptt-web-error = Error del dispositivo: { $detail }

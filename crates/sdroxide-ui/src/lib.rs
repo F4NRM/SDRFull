@@ -46,6 +46,8 @@ mod sonde_online;
 mod i18n;
 mod input;
 mod operator_ptt;
+#[cfg(target_arch = "wasm32")]
+mod operator_ptt_web;
 /// Which layout the window wears — desktop strip, tablet menus, or the compact
 /// phone strip — and the metrics that follow from it.
 pub mod layout;

@@ -17,15 +17,15 @@
 
 mod aircraft;
 mod auth;
+mod broadcast_schedule;
 mod history;
 mod probe;
+mod programs_state;
 mod session;
 mod session_cookie;
 mod signin;
 mod solar;
 mod sonde_online;
-mod broadcast_schedule;
-mod programs_state;
 mod watchlist;
 
 use std::net::SocketAddr;
@@ -765,16 +765,17 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         .route("/aircraft-export", get(history::export_route))
         .route("/aircraft-watch", get(watchlist::get_route).post(watchlist::post_route))
         .route("/programs-state", get(programs_state::get_route).post(programs_state::post_route))
-.route(
-    "/broadcast-schedule",
-    get(broadcast_schedule::get_route).post(broadcast_schedule::post_import_route)
-        .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
-)
-.route(
-    "/broadcast-schedule/import",
-    axum::routing::post(broadcast_schedule::post_import_route)
-        .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
-)
+        .route(
+            "/broadcast-schedule",
+            get(broadcast_schedule::get_route)
+                .post(broadcast_schedule::post_import_route)
+                .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
+        )
+        .route(
+            "/broadcast-schedule/import",
+            axum::routing::post(broadcast_schedule::post_import_route)
+                .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
+        )
         // Where a browser trades its password for a signed cookie, and gives
         // it back. Both are plain HTTP because a cookie is a response header
         // and the socket handshake's headers are spent before the sign-in
@@ -859,14 +860,10 @@ fn is_root_route(path: &str) -> bool {
 /// * An **endpoint** is recognised by name. Anything ending in one of
 ///   [`is_root_route`]'s paths is that endpoint reached through a prefix, so
 ///   the prefix is dropped: `/sdroxide/ws/1` is `/ws/1`.
-/// * Everything else is a **file**, and the client's `dist` is flat — no
-///   subdirectories at all — so a path with a directory in it can only be a
-///   prefix, and the last segment is the file: `/sdroxide/app.wasm` is
-///   `/app.wasm`. A path that ends in `/` names a directory, which is the
-///   client's own page, so it becomes `/`.
-///
-/// Neither can collide with a real request, because there is nothing real
-/// underneath: a station serves four endpoints and one flat directory.
+/// * A wasm-bindgen **snippet** keeps its directory: a path below /snippets/
+///   is a real module import. Only the proxy prefix before it is removed.
+/// * Other **files** are flat: /sdroxide/app.wasm becomes /app.wasm.
+///   A path ending in / names the client's page and becomes /.
 fn strip_proxy_prefix(path: &str) -> Option<String> {
     if is_root_route(path) {
         return None;
@@ -879,7 +876,12 @@ fn strip_proxy_prefix(path: &str) -> Option<String> {
             return Some(path[i..].to_string());
         }
     }
-    // A file under a prefix — or a directory, which is the page itself.
+    // wasm-bindgen's inline JavaScript lives under snippets/. Flattening
+    // this suffix to /inline0.js returned 404 before WASM started (#736/#738).
+    if let Some((prefix, _)) = path.rsplit_once("/snippets/") {
+        return if prefix.is_empty() { None } else { Some(path[prefix.len()..].to_string()) };
+    }
+    // Other files are flat; a directory names the page.
     let rest = path.trim_start_matches('/');
     if rest.is_empty() || !rest.contains('/') {
         // Already at the top: `/`, or a single name the static handler
@@ -1472,6 +1474,7 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             RadioEvent::ClientBindings { .. } => None,
             // And the "do not ask me again" answers.
             RadioEvent::ClientAcks(_) => None,
+            RadioEvent::OperatorPtt(_) => None,
             // The engine's answer to a client's question, so it is relayed like
             // any other engine event: the hash table being asked about is the
             // server's, and a client asking is asking about this station.
@@ -1699,6 +1702,53 @@ fn add_embedded_or_placeholder(app: Router) -> Router {
 #[cfg(test)]
 mod proxy_prefix_tests {
     use super::strip_proxy_prefix;
+
+    /// #736 added a static JS import below snippets/. Flattening it to
+    /// /inline0.js makes module evaluation fail before WASM starts.
+    #[test]
+    fn wasm_bindgen_snippets_keep_their_directory() {
+        for prefix in ["", "/sdroxide", "/shack/sdr", "/snippets/proxy"] {
+            let asset = "/snippets/sdroxide-ui-deadbeef/inline0.js";
+            let path = format!("{prefix}{asset}");
+            let resolved = strip_proxy_prefix(&path).unwrap_or_else(|| path.clone());
+            assert_eq!(resolved, asset, "{path}");
+        }
+    }
+
+    /// Exercise the actual middleware and file response, not only the string
+    /// helper. The JS body must arrive, including through a proxy prefix.
+    #[tokio::test]
+    async fn a_snippet_import_reaches_the_static_handler() {
+        use axum::{
+            Router,
+            body::{Body, to_bytes},
+            http::{Request, StatusCode},
+        };
+        use tower::{Layer, ServiceExt};
+
+        let root = std::env::temp_dir().join(format!("sdroxide-snippets-{}", std::process::id()));
+        let folder = root.join("snippets/sdroxide-ui-regression");
+        std::fs::create_dir_all(&folder).unwrap();
+        let script = b"export const ready = true;";
+        std::fs::write(folder.join("inline0.js"), script).unwrap();
+        let app = super::add_static_routes(Router::new(), Some(root.clone()));
+        let app = axum::middleware::from_fn(super::strip_prefix_layer).layer(app);
+        for prefix in ["", "/sdroxide", "/shack/sdr", "/snippets/proxy"] {
+            let path = format!("{prefix}/snippets/sdroxide-ui-regression/inline0.js?version=1");
+            let response = app
+                .clone()
+                .oneshot(Request::builder().uri(&path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK, "{path}");
+            assert!(response.headers()["content-type"].to_str().unwrap().contains("javascript"));
+            assert_eq!(to_bytes(response.into_body(), 1024).await.unwrap().as_ref(), script);
+        }
+        std::fs::remove_file(folder.join("inline0.js")).unwrap();
+        std::fs::remove_dir(folder).unwrap();
+        std::fs::remove_dir(root.join("snippets")).unwrap();
+        std::fs::remove_dir(root).unwrap();
+    }
 
     /// A station reached directly is left entirely alone: every path it can be
     /// asked for already means what it says.
