@@ -308,7 +308,7 @@ WEFAX, FT8, RDS, HackRF, PlutoSDR, CAT) is his — report faults as PRs. SDRuno 
 
 - `main` at crate 2.3.0, PROTO_VERSION 301 (0x79), after revert #738. Latest release
   v2.3.0.4.1 (pre-release).
-- Open issues: 1 (#632). Open PRs: 0 before the web PTT startup correction
+- Open issues: 1 (#632). Open PRs: 1 - #741 web PTT startup correction
   (re-measured 2026-11-14).
 - STANAG 4285 finished (Mark proved decode with video; coded payload not
   implemented — legal restriction). Olivia proven by user (RX+TX). Grey-line
