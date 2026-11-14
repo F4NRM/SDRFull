@@ -759,7 +759,9 @@ async fn run_session(
                     let done = tokio::task::spawn_blocking(move || {
                         let mut store = config::load_client_settings();
                         store.set_operator_ptt(&who, cfg.clone());
-                        config::save_client_settings(&store).map(|()| cfg).map_err(|e| e.to_string())
+                        config::save_client_settings(&store)
+                            .map(|()| cfg)
+                            .map_err(|e| e.to_string())
                     })
                     .await;
                     if let Ok(Ok(kept)) = &done

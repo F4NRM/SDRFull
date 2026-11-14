@@ -9770,3 +9770,15 @@ ptt-grant-hid = USB-HID-Gerät freigeben…
 ptt-grant-midi = MIDI-Eingänge freigeben…
 
 ptt-grant-hint = Der Browser zeigt einer Seite nur, was Sie freigeben. Wählen Sie das Gerät im Fenster des Browsers; er merkt sich Ihre Wahl für diese Seite. Nur Chrome und Edge (seriell und HID).
+
+ptt-web-no-device = Kein Gerät ausgewählt.
+
+ptt-web-lost = Das Gerät wurde getrennt.
+
+ptt-web-no-api = Dieser Browser kann { $api } nicht verwenden. Nutzen Sie einen kompatiblen Browser über HTTPS oder localhost.
+
+ptt-web-permission = Zugriff verweigert. Geben Sie das Gerät mit der Schaltfläche Freigeben frei.
+
+ptt-web-not-authorized = Gerät nicht freigegeben oder getrennt. Geben Sie es frei und wählen Sie es in der Liste.
+
+ptt-web-error = Gerätefehler: { $detail }

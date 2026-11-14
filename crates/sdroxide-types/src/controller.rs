@@ -437,11 +437,6 @@ pub enum RadioEvent {
     /// profile — sent on connect, and echoed after a change. Client-local: it
     /// rides `ServerMsg::ClientAcks`, not the engine.
     ClientAcks(crate::ClientAcks),
-    /// The browser's own desk microphone and pedal, as the server keeps them for
-    /// this login (issue #636). Client-local: it rides `ServerMsg::OperatorPtt`,
-    /// not the engine. Only a browser acts on it; a native client keeps its own
-    /// in `operator_ptt.json`.
-    OperatorPtt(Box<crate::PttInputsConfig>),
     /// The answer to a [`crate::Command::GetKnownCalls`]: the callsigns the
     /// digital decoder's hash table can currently resolve, newest first — or
     /// `None` when there is no such table to ask, or the worker did not answer
@@ -543,6 +538,11 @@ pub enum RadioEvent {
     ///
     /// Appended last, for the usual reason.
     PttInputsStatus(Box<crate::PttInputsStatus>),
+    /// The browser's own desk microphone and pedal, as the server keeps them for
+    /// this login (issue #636). Client-local: it rides `ServerMsg::OperatorPtt`,
+    /// not the engine. Only a browser acts on it; a native client keeps its own
+    /// in `operator_ptt.json`.
+    OperatorPtt(Box<crate::PttInputsConfig>),
 }
 
 /// Snapshot of the frontend's switchable sound devices (native clients).

@@ -4266,9 +4266,7 @@ mod tests {
         assert_ne!(s.theme, sdroxide_types::UiTheme::AmberPhosphor);
     }
 
-    /// The opt-in bindings sit beside the screen, with the same profile/default
-    /// fallback, and are absent until a client actually sends some — an older
-    /// `clientsettings.json` has neither key and still loads.
+    /// Browser PTT choices are isolated by login and survive a JSON round trip.
     #[test]
     fn a_browsers_microphone_and_pedal_are_kept_per_login() {
         let mut store = ClientSettingsStore::default();
@@ -4287,6 +4285,9 @@ mod tests {
         assert_eq!(back.operator_ptt_for("ana"), Some(cfg));
     }
 
+    /// The opt-in bindings sit beside the screen, with the same profile/default
+    /// fallback, and are absent until a client actually sends some — an older
+    /// `clientsettings.json` has neither key and still loads.
     #[test]
     fn the_client_settings_store_holds_bindings_only_when_given() {
         let mut store = ClientSettingsStore::default();

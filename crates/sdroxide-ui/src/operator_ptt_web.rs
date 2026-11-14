@@ -15,6 +15,7 @@
 //! so a switch behaves here as it does on the station. One task per slot reads
 //! what the browser reports and publishes one fact: "this slot says transmit".
 
+use crate::i18n::tr;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -43,15 +44,15 @@ const serialAll = async () =>
   });
 const hidAll = async () =>
   dedupe(await navigator.hid.getDevices(), (d) => 'hid:' + hex(d.vendorId) + ':' + hex(d.productId));
-const midiAccess = async () => {
-  if (!S.access) S.access = await navigator.requestMIDIAccess();
-  return S.access;
-};
+// Only the explicit Allow button may ask for MIDI permission. A restored
+// setup or a device-list refresh must never raise a prompt during startup.
+const midiAccess = () => S.access;
 const msg = (e) => String((e && (e.message || e.name)) || e);
 
 export function pttSupport() {
-  return (('serial' in navigator) ? 1 : 0) | (('hid' in navigator) ? 2 : 0) |
-    (('requestMIDIAccess' in navigator) ? 4 : 0);
+  return ((typeof navigator.serial?.getPorts === 'function') ? 1 : 0) |
+    ((typeof navigator.hid?.getDevices === 'function') ? 2 : 0) |
+    ((typeof navigator.requestMIDIAccess === 'function') ? 4 : 0);
 }
 export function pttSleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
@@ -68,7 +69,7 @@ export async function pttSerialClose(slot, gen) {
 }
 export async function pttSerialOpen(slot, gen, id, rts, dtr) {
   const e = (await serialAll()).find((x) => x[0] === id);
-  if (!e) return 'this port is not allowed here, or not plugged in';
+  if (!e) return '@not-authorized';
   const port = e[1];
   try {
     await port.open({ baudRate: 9600 });
@@ -93,7 +94,7 @@ export async function pttSerialRead(slot, gen) {
 }
 
 export async function pttHidList() {
-  return (await hidAll()).map((x) => [x[0], x[1].productName || 'HID device', x[1].vendorId, x[1].productId]);
+  return (await hidAll()).map((x) => [x[0], x[1].productName || '', x[1].vendorId, x[1].productId]);
 }
 export async function pttHidRequest() {
   try { await navigator.hid.requestDevice({ filters: [] }); } catch (e) { return msg(e); }
@@ -108,7 +109,7 @@ export async function pttHidClose(slot, gen) {
 }
 export async function pttHidOpen(slot, gen, key) {
   const e = (await hidAll()).find((x) => x[0] === key);
-  if (!e) return 'this device is not allowed here, or not plugged in';
+  if (!e) return '@not-authorized';
   const dev = e[1];
   try { if (!dev.opened) await dev.open(); } catch (err) { return msg(err); }
   const st = { dev, gen, q: [] };
@@ -132,8 +133,13 @@ export function pttHidAlive(slot, gen) {
   return !!s && s.gen === gen && s.dev.opened;
 }
 
+export async function pttMidiRequest() {
+  try { S.access = await navigator.requestMIDIAccess(); return ''; }
+  catch (e) { return msg(e); }
+}
 export async function pttMidiList() {
-  try { return [...(await midiAccess()).inputs.values()].map((i) => [i.id, i.name || i.id]); }
+  if (!S.access) return [];
+  try { return [...midiAccess().inputs.values()].map((i) => [i.id, i.name || i.id]); }
   catch (e) { return []; }
 }
 export async function pttMidiClose(slot, gen) {
@@ -144,9 +150,10 @@ export async function pttMidiClose(slot, gen) {
 }
 export async function pttMidiOpen(slot, gen, id) {
   let a;
-  try { a = await midiAccess(); } catch (e) { return msg(e); }
+  a = midiAccess();
+  if (!a) return 'NotAllowedError';
   const inp = a.inputs.get(id);
-  if (!inp) return 'this MIDI input is not plugged in';
+  if (!inp) return '@lost';
   const st = { inp, gen, q: [] };
   st.fn = (ev) => { if (st.q.length < 256) st.q.push(Array.from(ev.data)); };
   inp.addEventListener('midimessage', st.fn);
@@ -195,6 +202,8 @@ extern "C" {
     #[wasm_bindgen(js_name = pttHidClose)]
     fn js_hid_close(slot: u32, generation: u32) -> js_sys::Promise;
 
+    #[wasm_bindgen(js_name = pttMidiRequest)]
+    fn js_midi_request() -> js_sys::Promise;
     #[wasm_bindgen(js_name = pttMidiList)]
     fn js_midi_list() -> js_sys::Promise;
     #[wasm_bindgen(js_name = pttMidiOpen)]
@@ -222,7 +231,10 @@ pub fn support() -> Support {
 
 /// A call that returns nothing but an error text (empty is success).
 async fn text(p: js_sys::Promise) -> String {
-    JsFuture::from(p).await.ok().and_then(|v| v.as_string()).unwrap_or_default()
+    match JsFuture::from(p).await {
+        Ok(v) => v.as_string().unwrap_or_default(),
+        Err(e) => e.as_string().unwrap_or_else(|| format!("{e:?}")),
+    }
 }
 
 async fn sleep(ms: u32) {
@@ -264,7 +276,17 @@ fn publish(
 }
 
 fn fail(shared: &RefCell<Shared>, wake: &Wake, what: &str, e: &str) {
-    let text = if what.is_empty() { e.to_string() } else { format!("{what}: {e}") };
+    let translated = match e {
+        "@no-device" => tr!("ptt-web-no-device"),
+        "@lost" => tr!("ptt-web-lost"),
+        "@not-authorized" => tr!("ptt-web-not-authorized"),
+        "NotAllowedError" => tr!("ptt-web-permission"),
+        "@serial" => tr!("ptt-web-no-api", api = "Web Serial"),
+        "@hid" => tr!("ptt-web-no-api", api = "WebHID"),
+        "@midi" => tr!("ptt-web-no-api", api = "Web MIDI"),
+        _ => tr!("ptt-web-error", detail = e),
+    };
+    let text = if what.is_empty() { translated } else { format!("{what}: {translated}") };
     publish(shared, wake, Some(false), |s| {
         s.open = false;
         s.pressed = false;
@@ -319,7 +341,6 @@ pub fn hub(wake: Wake) -> WebHub {
         return h;
     }
     let hub = WebHub { inner: Rc::new(RefCell::new(Inner::default())), wake };
-    hub.rescan();
     HUB.with(|h| *h.borrow_mut() = Some(hub.clone()));
     hub
 }
@@ -380,7 +401,11 @@ impl WebHub {
                     let r = js_sys::Array::from(&row);
                     lists.hid.push(PttHidDevice {
                         key: r.get(0).as_string().unwrap_or_default(),
-                        name: r.get(1).as_string().unwrap_or_default(),
+                        name: r
+                            .get(1)
+                            .as_string()
+                            .filter(|s| !s.is_empty())
+                            .unwrap_or_else(|| tr!("ptt-source-hid")),
                         vendor: r.get(2).as_f64().unwrap_or(0.0) as u16,
                         product: r.get(3).as_f64().unwrap_or(0.0) as u16,
                     });
@@ -411,6 +436,7 @@ impl WebHub {
         let request = match kind {
             PttInputSource::Serial if sup.serial => Some(js_serial_request()),
             PttInputSource::UsbHid if sup.hid => Some(js_hid_request()),
+            PttInputSource::UsbMidi if sup.midi => Some(js_midi_request()),
             _ => None,
         };
         spawn_local(async move {
@@ -456,11 +482,9 @@ fn array_strings(v: Option<JsValue>) -> Vec<String> {
 fn unsupported(source: PttInputSource) -> Option<&'static str> {
     let s = support();
     match source {
-        PttInputSource::Serial if !s.serial => {
-            Some("this browser has no Web Serial (use Chrome or Edge)")
-        }
-        PttInputSource::UsbHid if !s.hid => Some("this browser has no WebHID (use Chrome or Edge)"),
-        PttInputSource::UsbMidi if !s.midi => Some("this browser has no Web MIDI"),
+        PttInputSource::Serial if !s.serial => Some("@serial"),
+        PttInputSource::UsbHid if !s.hid => Some("@hid"),
+        PttInputSource::UsbMidi if !s.midi => Some("@midi"),
         _ => None,
     }
 }
@@ -492,7 +516,7 @@ async fn serial_task(
         }
         if !open {
             if cfg.port.trim().is_empty() {
-                fail(&shared, &wake, "", "no serial port chosen");
+                fail(&shared, &wake, "", "@no-device");
                 sleep(200).await;
                 continue;
             }
@@ -523,7 +547,7 @@ async fn serial_task(
             .and_then(|v| v.as_f64())
             .unwrap_or(-1.0);
         if v < 0.0 {
-            fail(&shared, &wake, &cfg.port, "the port was lost");
+            fail(&shared, &wake, &cfg.port, "@lost");
             let _ = JsFuture::from(js_serial_close(slot, generation)).await;
             open = false;
             deb.reset();
@@ -576,7 +600,7 @@ async fn hid_task(
         }
         if !open {
             if cfg.hid_key.trim().is_empty() {
-                fail(&shared, &wake, "", "no USB HID device chosen");
+                fail(&shared, &wake, "", "@no-device");
                 sleep(200).await;
                 continue;
             }
@@ -596,7 +620,7 @@ async fn hid_task(
             continue;
         }
         if !js_hid_alive(slot, generation) {
-            fail(&shared, &wake, &cfg.hid_name, "the device was lost");
+            fail(&shared, &wake, &cfg.hid_name, "@lost");
             let _ = JsFuture::from(js_hid_close(slot, generation)).await;
             open = false;
             sleep(RETRY_MS).await;
@@ -644,7 +668,7 @@ async fn midi_task(
         }
         if !open {
             if cfg.midi_port_id.trim().is_empty() {
-                fail(&shared, &wake, "", "no MIDI input chosen");
+                fail(&shared, &wake, "", "@no-device");
                 sleep(200).await;
                 continue;
             }
@@ -667,7 +691,7 @@ async fn midi_task(
             // A port that goes while the switch is down releases it.
             raw = None;
             deb.reset();
-            fail(&shared, &wake, &cfg.midi_port_name, "the MIDI input was lost");
+            fail(&shared, &wake, &cfg.midi_port_name, "@lost");
             let _ = JsFuture::from(js_midi_close(slot, generation)).await;
             open = false;
             sleep(RETRY_MS).await;

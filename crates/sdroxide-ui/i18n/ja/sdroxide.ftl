@@ -9726,3 +9726,15 @@ ptt-grant-hid = USB HIDデバイスを許可…
 ptt-grant-midi = MIDI入力を許可…
 
 ptt-grant-hint = ブラウザはページに、許可したものだけを見せます。ブラウザ自身のウィンドウでデバイスを選ぶと、このサイトでは選択が記憶されます。Chrome と Edge のみ(シリアルとHID)。
+
+ptt-web-no-device = デバイスが選択されていません。
+
+ptt-web-lost = デバイスが切断されました。
+
+ptt-web-no-api = このブラウザは { $api } を利用できません。HTTPSまたはlocalhostで対応ブラウザを使用してください。
+
+ptt-web-permission = アクセスが拒否されました。許可ボタンでデバイスを許可してください。
+
+ptt-web-not-authorized = デバイスが未許可または切断されています。許可してから一覧で選んでください。
+
+ptt-web-error = デバイスエラー: { $detail }

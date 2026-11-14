@@ -9769,3 +9769,15 @@ ptt-grant-hid = Permitir un dispositivo USB HID…
 ptt-grant-midi = Permitir entradas MIDI…
 
 ptt-grant-hint = El navegador solo muestra a una página lo que usted permite. Elija el dispositivo en la ventana del navegador; recordará su elección para este sitio. Solo Chrome y Edge (serie y HID).
+
+ptt-web-no-device = Ningún dispositivo seleccionado.
+
+ptt-web-lost = El dispositivo se ha desconectado.
+
+ptt-web-no-api = Este navegador no puede usar { $api }. Use un navegador compatible mediante HTTPS o localhost.
+
+ptt-web-permission = Acceso denegado. Use el botón Permitir para autorizar el dispositivo.
+
+ptt-web-not-authorized = Dispositivo no autorizado o desconectado. Permítelo y selecciónalo en la lista.
+
+ptt-web-error = Error del dispositivo: { $detail }

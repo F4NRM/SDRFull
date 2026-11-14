@@ -9778,3 +9778,15 @@ ptt-grant-hid = Bir USB HID cihazına izin ver…
 ptt-grant-midi = MIDI girişlerine izin ver…
 
 ptt-grant-hint = Tarayıcı bir sayfaya yalnızca izin verdiklerinizi gösterir. Cihazı tarayıcının kendi penceresinde seçin; bu site için seçiminizi hatırlar. Yalnızca Chrome ve Edge (seri ve HID).
+
+ptt-web-no-device = Cihaz seçilmedi.
+
+ptt-web-lost = Cihaz bağlantısı kesildi.
+
+ptt-web-no-api = Bu tarayıcı { $api } kullanamıyor. HTTPS veya localhost üzerinden uyumlu bir tarayıcı kullanın.
+
+ptt-web-permission = Erişim reddedildi. Cihazi yetkilendirmek için İzin ver düğmesini kullanın.
+
+ptt-web-not-authorized = Cihaz yetkilendirilmedi veya bağlantısı kesildi. İzin verip listeden seçin.
+
+ptt-web-error = Cihaz hatası: { $detail }
