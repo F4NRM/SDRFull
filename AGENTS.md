@@ -237,8 +237,7 @@ one entry per work item.
 ## The wire
 
 `PROTO_VERSION` and `VERSION_BYTE` live in `crates/sdroxide-proto/src/lib.rs`,
-the only register kept current. Current on main: **301 / `0x79`** after revert #738; the web PTT
-startup correction restores **302 / `0x7A`** (AGENTS.md
+the only register kept current. Current on main: **302 / `0x7A`**, restored by #741 (AGENTS.md
 may lag; verify in code). Append last, always. A variant inserted mid-enum
 shifts every discriminant below it. Two people work this repository — the
 maintainer's agent and F4NRM's sessions — and `PROTO_VERSION` is one counter
@@ -308,7 +307,7 @@ WEFAX, FT8, RDS, HackRF, PlutoSDR, CAT) is his — report faults as PRs. SDRuno 
 
 - `main` at crate 2.3.0, PROTO_VERSION 302 (0x7A). Latest release
   v2.3.0.4.1 (pre-release).
-- Open issues: 1 (#632). Open PRs: 0, before the WSS certificate port PR
+- Open issues: 1 (#632). Open PRs: 1 - #742 WSS certificate trust
   (re-measured 2026-11-14).
 - STANAG 4285 finished (Mark proved decode with video; coded payload not
   implemented — legal restriction). Olivia proven by user (RX+TX). Grey-line
