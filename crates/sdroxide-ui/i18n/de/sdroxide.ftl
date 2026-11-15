@@ -9151,7 +9151,7 @@ settings-audio-radio-in-level = RX-Mixer-Pegel
 settings-audio-radio-in-level-hint = ALSA-Aufnahmepegel des Audioeingabegerats des Funkgerats. Nur Linux.
 sonde-online = Online (SondeHub)
 
-sonde-online-hover = Zeigt auch Sonden, die andere Stationen gehört haben, aus der öffentlichen Liste von SondeHub. Nur lesend: Ihr Locator auf 0,1° gerundet und ein Radius von 400 km werden gesendet; nichts wird hochgeladen. Aus, bis Sie es einschalten.
+sonde-online-hover = Zeigt auch Sonden, die andere Stationen gehört haben, aus SondeHub's Live-Feed. Nur Lesen: die Station hält ein Abonnement und filtert selbst in deiner Nähe, dein Standort wird also nicht gesendet, solange der Feed läuft. Nichts wird hochgeladen. Aus, bis du es einschaltest.
 
 sonde-online-count = { $n } online
 

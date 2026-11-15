@@ -25,7 +25,21 @@ mod session;
 mod session_cookie;
 mod signin;
 mod solar;
+mod sonde_live;
 mod sonde_online;
+
+/// The parts of the live feed the committed probe
+/// (`examples/sonde_live_probe.rs`) drives: the same code the station runs, so
+/// what it prints is what the station's clients would be told.
+#[doc(hidden)]
+pub mod sonde_live_probe {
+    pub use crate::sonde_live::Live;
+
+    /// How many sondes the feed is holding, through a private accessor.
+    pub fn held(live: &Live) -> usize {
+        live.held_len()
+    }
+}
 mod watchlist;
 
 use std::net::SocketAddr;
@@ -340,6 +354,11 @@ pub(crate) struct Station {
     pub aircraft: Arc<aircraft::AircraftHub>,
     /// The relay behind `/sonde-online`: SondeHub's list, asked once for all clients.
     pub(crate) sonde: Arc<sonde_online::SondeRelay>,
+    /// **SondeHub's live feed** (`sonde_live.rs`): one MQTT-over-websocket
+    /// subscription, kept while a client is looking, that `/sonde-online` is
+    /// answered from. Replaces the per-minute API question SondeHub asked us to
+    /// stop making (issue #745).
+    pub(crate) sonde_live: Arc<sonde_live::Live>,
     /// What the station remembers of each aircraft for a day, fed by every
     /// radio and served on `/aircraft-history`. Off unless the operator
     /// switched it on.
@@ -697,6 +716,7 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         auth: Arc::new(auth::AuthGate::new(params.access)),
         aircraft: Arc::new(aircraft::AircraftHub::start(params.aircraft_online)),
         sonde: Arc::new(sonde_online::SondeRelay::default()),
+        sonde_live: Arc::new(sonde_live::Live::default()),
         history: Arc::new(history::HistoryHub::start()),
         watch: Arc::new(watchlist::WatchHub::start()),
         programs: Arc::new(programs_state::ProgramsHub::start()),

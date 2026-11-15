@@ -9097,7 +9097,7 @@ settings-audio-radio-in-level = RX混音器电平
 settings-audio-radio-in-level-hint = 无线电音频输入设备的ALSA采集电平。仅Linux。
 sonde-online = 在线（SondeHub）
 
-sonde-online-hover = 同时显示其他电台收到的探空仪，来自 SondeHub 的公开列表。只读：发送四舍五入到 0.1° 的网格位置和 400 公里半径，不上传任何内容。在您开启之前保持关闭。
+sonde-online-hover = 同时显示其他电台收到的探空仪，来自 SondeHub 的实时推送。只读：电台保持一个订阅并自行筛选附近的探空仪，推送正常时不会发送你的网格位置。不上传任何内容。开启前为关闭。
 
 sonde-online-count = 在线 { $n } 个
 

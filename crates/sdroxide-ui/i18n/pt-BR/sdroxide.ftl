@@ -9159,7 +9159,7 @@ settings-audio-radio-in-level = Nivel do mixer RX
 settings-audio-radio-in-level-hint = Nivel de captura ALSA do dispositivo de entrada de audio do radio. Somente Linux.
 sonde-online = Online (SondeHub)
 
-sonde-online-hover = Mostra também as sondas ouvidas por outras estações, da lista pública do SondeHub. Apenas leitura: seu locator arredondado a 0,1° e um raio de 400 km são enviados; nada é publicado. Desligado até você ativar.
+sonde-online-hover = Mostra também as sondas ouvidas por outras estações, do feed ao vivo do SondeHub. Somente leitura: a estação mantém uma assinatura e filtra perto de você, então seu locator não é enviado enquanto o feed funciona. Nada é enviado. Desligado até você ativar.
 
 sonde-online-count = { $n } online
 

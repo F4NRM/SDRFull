@@ -9107,7 +9107,7 @@ settings-audio-radio-in-level = RXミキサーレベル
 settings-audio-radio-in-level-hint = ラジオの音声入力デバイスのALSAキャプチャレベル。Linuxのみ。
 sonde-online = オンライン（SondeHub）
 
-sonde-online-hover = 他の局が受信したゾンデも SondeHub の公開リストから表示します。読み取りのみ：0.1° に丸めたロケーターと半径 400 km を送信し、何もアップロードしません。オンにするまでオフです。
+sonde-online-hover = 他の局が受信したゾンデも SondeHub のライブフィードから表示します。読み取りのみ：局が購読を 1 つ保持し、近隣のものを自分で絞り込むため、フィードが動いている間はロケーターを送りません。何もアップロードしません。オンにするまでオフです。
 
 sonde-online-count = オンライン { $n } 件
 
