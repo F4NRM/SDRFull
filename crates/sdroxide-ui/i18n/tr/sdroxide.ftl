@@ -9159,7 +9159,7 @@ settings-audio-radio-in-level = RX mikser seviyesi
 settings-audio-radio-in-level-hint = Radionun ses giris cihazinin ALSA yakalama seviyesi. Sadece Linux.
 sonde-online = Çevrimiçi (SondeHub)
 
-sonde-online-hover = Diğer istasyonların duyduğu sondaları da SondeHub'ın herkese açık listesinden gösterir. Yalnızca okur: 0,1°'ye yuvarlanmış konumunuz ve 400 km yarıçap gönderilir; hiçbir şey yüklenmez. Siz açana kadar kapalıdır.
+sonde-online-hover = Diğer istasyonların duyduğu sondaları da SondeHub'ın canlı akışından gösterir. Yalnızca okuma: istasyon tek bir abonelik tutar ve yakınınızdakileri kendisi süzer, akış çalıştığı sürece konumunuz gönderilmez. Hiçbir şey yüklenmez. Siz açana kadar kapalı.
 
 sonde-online-count = { $n } çevrimiçi
 

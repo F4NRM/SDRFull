@@ -6280,9 +6280,12 @@ speed, channel, battery, air temperature, humidity and pressure (when the model 
 distance from your station. *Export flight* under the table saves the selected sonde's
 flight (the newest if none is selected) as a **KML** track for Google Earth or a **CSV**
 table for a spreadsheet (with the air temperature, humidity and pressure heard at each point, empty when the sonde sent none). The *Online (SondeHub)* box, off until you tick it, also
-shows the sondes other stations have heard within 400 km (hollow blue diamonds): it only
-reads SondeHub's public list, sending your locator rounded to 0.1° and the radius, and
-uploads nothing; it needs the locator set in the digital-mode setup. The *Scan* box looks across the whole sample window for sonde
+shows the sondes other stations have heard within 400 km (hollow blue diamonds): the
+station keeps **one** subscription to SondeHub's live feed (MQTT over a websocket, as
+SondeHub ask of their clients) and filters near you on this machine, so your locator is
+not sent at all while that works; only if the feed is unreachable does it ask their list
+once, with the locator rounded to 0.1°. Nothing is uploaded, and it needs the locator set
+in the digital-mode setup. The *Scan* box looks across the whole sample window for sonde The *Scan* box looks across the whole sample window for sonde
 carriers instead of listening on one channel, and decodes up to four sondes at once, one
 lane per carrier (a lane is dropped two minutes after its carrier goes; what it heard
 stays listed). The window has to cover the sondes: centre the radio with the *Channel*

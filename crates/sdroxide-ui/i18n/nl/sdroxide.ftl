@@ -9159,7 +9159,7 @@ settings-audio-radio-in-level = RX-mixerniveau
 settings-audio-radio-in-level-hint = ALSA-opnameniveau van het audio-invoerapparaat van de radio. Alleen Linux.
 sonde-online = Online (SondeHub)
 
-sonde-online-hover = Toont ook sondes die andere stations hebben ontvangen, uit de openbare lijst van SondeHub. Alleen lezen: uw locator op 0,1° afgerond en een straal van 400 km worden verstuurd; er wordt niets geüpload. Uit tot u het inschakelt.
+sonde-online-hover = Toont ook sondes die andere stations hebben ontvangen, uit SondeHub's live-feed. Alleen lezen: het station houdt één abonnement aan en filtert zelf bij jou in de buurt, dus je locator wordt niet verstuurd zolang de feed werkt. Er wordt niets geüpload. Uit tot je het aanzet.
 
 sonde-online-count = { $n } online
 

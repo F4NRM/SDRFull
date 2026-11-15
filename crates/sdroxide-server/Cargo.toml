@@ -38,6 +38,11 @@ serde = { workspace = true }
 serde_json = "1.0.151"
 thiserror.workspace = true
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "time", "sync"] }
+# The SondeHub live feed (`sonde_live.rs`): one MQTT-over-websocket subscription
+# instead of asking their API every minute, which is what SondeHub themselves ask
+# for (issue #745). rustls and webpki roots: no system TLS to find, and nothing
+# new in the download — rustls is already in the tree for the remote client.
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-webpki-roots"] }
 # For the one layer that has to run *before* routing rather than after it: the
 # reverse-proxy prefix strip (`strip_proxy_prefix`). `Router::layer` is applied
 # to matched routes, so it is too late to change which route matches.
@@ -54,13 +59,15 @@ sdroxide-config = { path = "../sdroxide-config" }
 ureq = "3.4.0"
 
 [dev-dependencies]
+# The live-feed probe prints what it hears; the station itself initialises its
+# own subscriber in the binary.
+tracing-subscriber.workspace = true
 # Only to POST to /signin in the end-to-end cookie test — the one thing here
 # that speaks plain HTTP. Already in the tree at this version.
 ureq = "3.4.0"
 # The server only uses the engine, not SoapySDR device handling — leave
 # `soapy` for the top-level binary to decide.
 sdroxide-radio = { path = "../sdroxide-radio", default-features = false }
-tokio-tungstenite = "0.30.0"
 # `start_paused` clocks, so the sign-in gate's three-second lockout is asserted
 # rather than waited out — the tests would otherwise take longer than the rest
 # of the suite put together.

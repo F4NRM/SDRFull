@@ -5,6 +5,8 @@
 //! client (which draws them, and asks SondeHub itself only when it runs next to
 //! the radio with no station in between).
 
+use std::collections::BTreeMap;
+
 /// The query radius, metres.
 pub const RADIUS_M: u32 = 400_000;
 
@@ -97,56 +99,76 @@ fn parse_time(s: &str) -> Option<i64> {
 /// The reply: an object keyed by serial, each value the sonde's latest frame.
 /// An entry without a serial, a place on Earth or a time is left out.
 pub fn parse(json: &str) -> Vec<OnlineSonde> {
-    let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(json)
+    let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(json) else {
+        return Vec::new();
+    };
+    let mut out: Vec<OnlineSonde> = map.values().filter_map(one).collect();
+    // Newest first, so a crowded map keeps the live ones.
+    out.sort_by(|a, b| b.unix.cmp(&a.unix));
+    out
+}
+
+/// One frame, as both SondeHub's REST reply and its live feed send it.
+fn one(v: &serde_json::Value) -> Option<OnlineSonde> {
+    let serial = v.get("serial")?.as_str()?.trim().to_string();
+    let lat = v.get("lat")?.as_f64()?;
+    let lon = v.get("lon")?.as_f64()?;
+    if serial.is_empty() || lat.abs() > 90.0 || lon.abs() > 180.0 {
+        return None;
+    }
+    Some(OnlineSonde {
+        serial,
+        model: v.get("type").and_then(|t| t.as_str()).unwrap_or("").to_string(),
+        lat,
+        lon,
+        alt_m: v.get("alt").and_then(|x| x.as_f64()),
+        climb_ms: v.get("vel_v").and_then(|x| x.as_f64()),
+        speed_ms: v.get("vel_h").and_then(|x| x.as_f64()),
+        freq_mhz: v.get("frequency").and_then(|x| x.as_f64()),
+        unix: parse_time(v.get("datetime")?.as_str()?)?,
+        manufacturer: text(v, "manufacturer"),
+        subtype: text(v, "subtype"),
+        heading_deg: v.get("heading").and_then(|x| x.as_f64()),
+        temp_c: v.get("temp").and_then(|x| x.as_f64()),
+        humidity_pct: v.get("humidity").and_then(|x| x.as_f64()),
+        pressure_hpa: v.get("pressure").and_then(|x| x.as_f64()),
+        battery_v: v.get("batt").and_then(|x| x.as_f64()),
+        sats: v.get("sats").and_then(|x| x.as_u64()).and_then(|n| u32::try_from(n).ok()),
+        snr_db: v.get("snr").and_then(|x| x.as_f64()),
+        station: text(v, "uploader_callsign"),
+        station_pos: v.get("uploader_position").and_then(|p| p.as_str()).and_then(parse_place),
+        antenna: text(v, "uploader_antenna"),
+        software: text(v, "software_name").map(|n| match text(v, "software_version") {
+            Some(ver) => format!("{n} {ver}"),
+            None => n,
+        }),
+        received_unix: v.get("time_received").and_then(|t| t.as_str()).and_then(parse_time),
+    })
+}
+
+/// **A batch of frames from the live feed**, as the MQTT `batch` topic carries
+/// it: a JSON array of the same frames the REST reply holds, one per sonde per
+/// transmission.
+///
+/// Several frames of one sonde can arrive in one batch, and batches arrive
+/// seconds apart; the newest frame of each serial wins, and the list comes back
+/// newest first. A batch that is not an array, or not JSON at all, is empty —
+/// the feed has other topics on it and this only reads the one it subscribed to.
+pub fn parse_frames(json: &str) -> Vec<OnlineSonde> {
+    let Ok(serde_json::Value::Array(frames)) = serde_json::from_str::<serde_json::Value>(json)
     else {
         return Vec::new();
     };
-    let mut out: Vec<OnlineSonde> = map
-        .values()
-        .filter_map(|v| {
-            let serial = v.get("serial")?.as_str()?.trim().to_string();
-            let lat = v.get("lat")?.as_f64()?;
-            let lon = v.get("lon")?.as_f64()?;
-            if serial.is_empty() || lat.abs() > 90.0 || lon.abs() > 180.0 {
-                return None;
+    let mut newest: BTreeMap<String, OnlineSonde> = BTreeMap::new();
+    for frame in frames.iter().filter_map(one) {
+        match newest.get(&frame.serial) {
+            Some(have) if have.unix >= frame.unix => {}
+            _ => {
+                newest.insert(frame.serial.clone(), frame);
             }
-            Some(OnlineSonde {
-                serial,
-                model: v.get("type").and_then(|t| t.as_str()).unwrap_or("").to_string(),
-                lat,
-                lon,
-                alt_m: v.get("alt").and_then(|x| x.as_f64()),
-                climb_ms: v.get("vel_v").and_then(|x| x.as_f64()),
-                speed_ms: v.get("vel_h").and_then(|x| x.as_f64()),
-                freq_mhz: v.get("frequency").and_then(|x| x.as_f64()),
-                unix: parse_time(v.get("datetime")?.as_str()?)?,
-                manufacturer: text(v, "manufacturer"),
-                subtype: text(v, "subtype"),
-                heading_deg: v.get("heading").and_then(|x| x.as_f64()),
-                temp_c: v.get("temp").and_then(|x| x.as_f64()),
-                humidity_pct: v.get("humidity").and_then(|x| x.as_f64()),
-                pressure_hpa: v.get("pressure").and_then(|x| x.as_f64()),
-                battery_v: v.get("batt").and_then(|x| x.as_f64()),
-                sats: v.get("sats").and_then(|x| x.as_u64()).and_then(|n| u32::try_from(n).ok()),
-                snr_db: v.get("snr").and_then(|x| x.as_f64()),
-                station: text(v, "uploader_callsign"),
-                station_pos: v
-                    .get("uploader_position")
-                    .and_then(|p| p.as_str())
-                    .and_then(parse_place),
-                antenna: text(v, "uploader_antenna"),
-                software: text(v, "software_name").map(|n| match text(v, "software_version") {
-                    Some(ver) => format!("{n} {ver}"),
-                    None => n,
-                }),
-                received_unix: v
-                    .get("time_received")
-                    .and_then(|t| t.as_str())
-                    .and_then(parse_time),
-            })
-        })
-        .collect();
-    // Newest first, so a crowded map keeps the live ones.
+        }
+    }
+    let mut out: Vec<OnlineSonde> = newest.into_values().collect();
     out.sort_by(|a, b| b.unix.cmp(&a.unix));
     out
 }
@@ -224,6 +246,28 @@ mod tests {
       "x": {"datetime": "2026-11-05T23:48:43Z", "lat": 1.0, "lon": 2.0}
     }"#;
 
+    /// **The live feed carries the same frames as the REST reply**, in batches:
+    /// an array, several frames of one sonde per batch, newest wins. This is the
+    /// parser for the MQTT `batch` topic, and it has to leave the other topics
+    /// (and anything that is not an array) alone.
+    #[test]
+    fn a_batch_keeps_the_newest_frame_of_each_sonde() {
+        let batch = r#"[
+            {"serial":"S1234567","datetime":"2026-11-15T10:00:00Z","lat":52.0,"lon":4.0,"alt":100},
+            {"serial":"S1234567","datetime":"2026-11-15T10:00:30Z","lat":52.1,"lon":4.1,"alt":200},
+            {"serial":"T7654321","datetime":"2026-11-15T10:00:10Z","lat":51.0,"lon":5.0},
+            {"serial":"","datetime":"2026-11-15T10:00:10Z","lat":51.0,"lon":5.0},
+            {"serial":"BADLAT","datetime":"2026-11-15T10:00:10Z","lat":91.0,"lon":5.0}
+        ]"#;
+        let got = parse_frames(batch);
+        assert_eq!(got.len(), 2, "two serials, the junk left out: {got:?}");
+        assert_eq!(got[0].serial, "S1234567", "newest first");
+        assert_eq!(got[0].alt_m, Some(200.0), "the later frame of that serial won");
+        assert_eq!(got[1].serial, "T7654321");
+        assert!(parse_frames("{\"serial\":\"S1\"}").is_empty(), "not a batch");
+        assert!(parse_frames("not json").is_empty());
+    }
+
     #[test]
     fn a_reply_becomes_sondes_and_an_entry_without_a_serial_is_left_out() {
         let v = parse(SAMPLE);
@@ -246,7 +290,10 @@ mod tests {
         assert!(parse("").is_empty());
         assert!(parse("[]").is_empty());
         assert!(parse("<html>").is_empty());
-        assert!(parse(r#"{"a": {"serial": "A", "lat": 95.0, "lon": 0.0, "datetime": "2026-01-01T00:00:00Z"}}"#).is_empty());
+        assert!(parse(
+            r#"{"a": {"serial": "A", "lat": 95.0, "lon": 0.0, "datetime": "2026-01-01T00:00:00Z"}}"#
+        )
+        .is_empty());
     }
 
     #[test]

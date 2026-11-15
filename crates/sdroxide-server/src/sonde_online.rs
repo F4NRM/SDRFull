@@ -27,7 +27,12 @@ use sdroxide_types::sonde_online::{
 use crate::Station;
 
 /// How long an answer is served again without asking SondeHub.
-pub(crate) const HOLD: Duration = Duration::from_secs(60);
+///
+/// **Ten minutes, not one**: the live feed (`sonde_live.rs`) is what answers while
+/// it has anything to say, and this question is a cold start only — the feed has
+/// not connected yet, or the operator has just switched the layer on. SondeHub
+/// asked us to stop asking so often (issue #745).
+pub(crate) const HOLD: Duration = Duration::from_secs(10 * 60);
 /// How long a flight is served again without asking SondeHub.
 const FLIGHT_HOLD: Duration = Duration::from_secs(120);
 /// Cells kept at once; the oldest goes first.
@@ -263,6 +268,25 @@ pub(crate) async fn route(
         Ok(c) => c,
         Err(status) => return plain(status),
     };
+    // **The live feed answers, and the API is only the cold start.** The feed
+    // keeps one websocket open while anyone is looking (`sonde_live.rs`) and
+    // holds the newest frame of every sonde it hears about; SondeHub's own
+    // guidance is to use it rather than poll (issue #745).
+    let live = station.sonde_live.clone();
+    live.touch();
+    live.start();
+    if let (Some(lat), Some(lon)) = (
+        query.get("lat").and_then(|v| v.trim().parse::<f64>().ok()),
+        query.get("lon").and_then(|v| v.trim().parse::<f64>().ok()),
+    ) && let Some(body) = live.answer(lat, lon, Instant::now())
+    {
+        return (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "application/json"), (header::CACHE_CONTROL, "no-store")],
+            body,
+        )
+            .into_response();
+    }
     let relay = station.sonde.clone();
     let got = tokio::task::spawn_blocking(move || relay.get_at(Instant::now(), cell, ask_sondehub))
         .await
@@ -313,7 +337,7 @@ mod tests {
     }
 
     #[test]
-    fn one_question_serves_every_client_of_a_cell_for_a_minute() {
+    fn one_question_serves_every_client_of_a_cell_for_ten_minutes() {
         let relay = SondeRelay::default();
         let t0 = Instant::now();
         let asked = Cell::new(0);
@@ -323,10 +347,12 @@ mod tests {
             Ok("[]".to_string())
         };
         assert!(matches!(relay.get_at(t0, (489, 24), fetch), Answer::Held(_)));
-        let soon = t0 + Duration::from_secs(59);
+        let soon = t0 + HOLD - Duration::from_secs(1);
         assert!(matches!(relay.get_at(soon, (489, 24), fetch), Answer::Held(_)));
         assert_eq!(asked.get(), 1);
-        let later = t0 + Duration::from_secs(61);
+        // The live feed answers while it has anything; this question is the cold
+        // start, so its answer is kept ten minutes rather than one.
+        let later = t0 + HOLD + Duration::from_secs(1);
         assert!(matches!(relay.get_at(later, (489, 24), fetch), Answer::Held(_)));
         assert_eq!(asked.get(), 2);
     }
