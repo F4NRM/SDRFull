@@ -9764,3 +9764,9 @@ playback-import-read-error = 選択した音声ファイルを読み込めませ
 playback-import-collisions = 同名の取り込みファイルが多すぎます。名前を変更して再試行してください。
 
 playback-import-failed = 音声を取り込めませんでした：{ $error }
+
+topbar-group-audio = 音声
+
+topbar-show-audio-spectrum = 音声スペクトラムを表示
+
+topbar-draw-receiver-s-own-audio = ウォーターフォールの下に受信機自身の音声を 50 Hz から 16 kHz まで表示します。電源のハムや充電器のホイッスルはバンドではなくここに出ます

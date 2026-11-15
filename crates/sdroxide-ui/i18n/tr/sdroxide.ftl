@@ -9816,3 +9816,9 @@ playback-import-read-error = Seçilen ses dosyası okunamadı.
 playback-import-collisions = Bu ada sahip çok fazla içe aktarılan dosya var. Dosyayı yeniden adlandırıp tekrar deneyin.
 
 playback-import-failed = Ses içe aktarılamadı: { $error }
+
+topbar-group-audio = SES
+
+topbar-show-audio-spectrum = SES SPEKTRUMUNU GÖSTER
+
+topbar-draw-receiver-s-own-audio = Şelalenin altında alıcının kendi sesi, 50 Hz ile 16 kHz arası — bir güç kaynağının uğultusu ya da şarj cihazının ıslığı burada görünür, bantta değil

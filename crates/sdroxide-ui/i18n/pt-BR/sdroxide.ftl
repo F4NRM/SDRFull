@@ -9816,3 +9816,9 @@ playback-import-read-error = Não foi possível ler o arquivo de áudio selecion
 playback-import-collisions = Muitos arquivos importados com este nome. Renomeie e tente novamente.
 
 playback-import-failed = Não foi possível importar o áudio: { $error }
+
+topbar-group-audio = ÁUDIO
+
+topbar-show-audio-spectrum = MOSTRAR ESPECTRO DE ÁUDIO
+
+topbar-draw-receiver-s-own-audio = Uma faixa abaixo do waterfall com o áudio do próprio receptor, de 50 Hz a 16 kHz — o zumbido de uma fonte ou o assobio de um carregador aparecem aqui, não na faixa

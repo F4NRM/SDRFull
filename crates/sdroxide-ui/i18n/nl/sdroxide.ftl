@@ -9816,3 +9816,9 @@ playback-import-read-error = Het gekozen audiobestand kan niet worden gelezen.
 playback-import-collisions = Te veel geïmporteerde bestanden met deze naam. Hernoem het bestand en probeer opnieuw.
 
 playback-import-failed = Audio importeren mislukt: { $error }
+
+topbar-group-audio = AUDIO
+
+topbar-show-audio-spectrum = AUDIOSPECTRUM TONEN
+
+topbar-draw-receiver-s-own-audio = Een strip onder de waterval met het geluid van de ontvanger zelf, 50 Hz tot 16 kHz — de brom van een voeding of het fluitje van een lader zie je hier, niet op de band

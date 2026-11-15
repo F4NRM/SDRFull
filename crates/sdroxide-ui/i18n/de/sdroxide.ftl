@@ -9808,3 +9808,9 @@ playback-import-read-error = Die gewählte Audiodatei konnte nicht gelesen werde
 playback-import-collisions = Zu viele importierte Dateien mit diesem Namen. Datei umbenennen und erneut versuchen.
 
 playback-import-failed = Audio konnte nicht importiert werden: { $error }
+
+topbar-group-audio = AUDIO
+
+topbar-show-audio-spectrum = AUDIOSPEKTRUM ZEIGEN
+
+topbar-draw-receiver-s-own-audio = Ein Streifen unter dem Wasserfall mit dem eigenen Audio des Empfängers, 50 Hz bis 16 kHz — das Brummen eines Netzteils oder das Pfeifen eines Ladegeräts zeigt sich hier, nicht im Band

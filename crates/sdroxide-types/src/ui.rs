@@ -1084,6 +1084,16 @@ pub struct UiSettings {
     #[serde(default)]
     pub band_dock_open: std::collections::BTreeMap<u32, bool>,
 
+    /// **The audio spectrum under the waterfall**: what the receiver's own audio
+    /// looks like, 50 Hz to 16 kHz, drawn from the same bands the level meter
+    /// already sends (`AudioLevel::bands`).
+    ///
+    /// Presentation only, and this screen's own: a phone with no room for it
+    /// keeps it off. Asked for by an operator on 2026-11-15, beside the SPEC
+    /// chip where the other display choices live.
+    #[serde(default)]
+    pub audio_spectrum: bool,
+
     /// Public SDRs the operator starred, by **address**.
     ///
     /// The address and not the name: it is what a connection is made to and
@@ -1964,6 +1974,7 @@ impl Default for UiSettings {
         UiSettings {
             theme_file: None,
             band_dock_open: Default::default(),
+            audio_spectrum: false,
             public_sdr_favourites: Vec::new(),
             // Off: the dial is what every other radio shows, and an operator
             // who has not asked for the change should not find their readout
@@ -2389,6 +2400,9 @@ pub struct ClientScreen {
     /// place that can read the file — and `None` here in [`Self::from_settings`]
     /// for that reason. Appended last: this struct rides the wire positionally.
     pub theme_file: Option<ScreenThemeFile>,
+    /// **The audio spectrum under the waterfall**, this screen's own display
+    /// choice. Appended at the tail, for the same reason.
+    pub audio_spectrum: bool,
 }
 
 impl Default for ClientScreen {
@@ -2442,6 +2456,7 @@ impl ClientScreen {
             // is not something this crate can do, and a browser has none to
             // read. `apply_to` takes the name back out of it.
             theme_file: None,
+            audio_spectrum: s.audio_spectrum,
         }
     }
 
@@ -2472,6 +2487,7 @@ impl ClientScreen {
         s.smeter_style = self.smeter_style;
         s.map_cities = self.map_cities;
         s.simple_ui = self.simple_ui;
+        s.audio_spectrum = self.audio_spectrum;
         s.tune_step_round_first = self.tune_step_round_first;
         s.sound_welcome = self.sound_welcome;
         s.keep_screen_on = self.keep_screen_on;

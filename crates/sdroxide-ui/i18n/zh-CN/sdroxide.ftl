@@ -9754,3 +9754,9 @@ playback-import-read-error = 无法读取所选音频文件。
 playback-import-collisions = 同名导入文件过多。请重命名后重试。
 
 playback-import-failed = 无法导入音频：{ $error }
+
+topbar-group-audio = 音频
+
+topbar-show-audio-spectrum = 显示音频频谱
+
+topbar-draw-receiver-s-own-audio = 瀑布图下方显示接收机自身的声音，50 Hz 至 16 kHz——电源的嗡声或充电器的啸叫在这里，而不是在波段上

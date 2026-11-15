@@ -1382,6 +1382,10 @@ pub struct SdroxideApp {
     /// The main receiver's speaker-feed level, as last sent, with the wall-clock
     /// second it arrived (`Instant` panics in the browser build). The Radio Classic panel's VU and bars; `None` until the first.
     audio_level: Option<(f64, sdroxide_types::AudioLevel)>,
+    /// When the audio spectrum's strip last renewed its `WantAudioLevel` lease
+    /// (wall clock): one lease is three seconds, so it is renewed about once a
+    /// second, as the classic panel's meter does.
+    audio_strip_lease_at: f64,
     /// The station's logo, as the station broadcasts it.
     dab_logo: Option<egui::TextureHandle>,
     /// The station list shows each station's programme type.
@@ -2711,6 +2715,7 @@ impl SdroxideApp {
             dab_hidden: Vec::new(),
             dab_slide: None,
             audio_level: None,
+            audio_strip_lease_at: 0.0,
             dab_logo: None,
             dab_show_pty: false,
             auto_last_activity: 0.0,

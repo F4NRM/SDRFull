@@ -1,3 +1,4 @@
+pub mod audio_spectrum;
 pub mod bandplan;
 pub mod freq_display;
 pub mod level_slider;
