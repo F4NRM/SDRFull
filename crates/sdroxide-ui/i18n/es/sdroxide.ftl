@@ -9807,3 +9807,9 @@ playback-import-read-error = No se pudo leer el archivo de audio seleccionado.
 playback-import-collisions = Demasiados archivos importados con este nombre. Cambie el nombre e inténtelo de nuevo.
 
 playback-import-failed = No se pudo importar el audio: { $error }
+
+topbar-group-audio = AUDIO
+
+topbar-show-audio-spectrum = MOSTRAR ESPECTRO DE AUDIO
+
+topbar-draw-receiver-s-own-audio = Una banda bajo la cascada con el audio del propio receptor, de 50 Hz a 16 kHz — el zumbido de una fuente o el silbido de un cargador se ven aquí, no en la banda

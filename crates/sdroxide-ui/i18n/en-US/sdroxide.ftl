@@ -9845,3 +9845,9 @@ playback-import-read-error = Could not read the selected audio file.
 playback-import-collisions = Too many imported files with this name. Rename the file and try again.
 
 playback-import-failed = Could not import audio: { $error }
+
+topbar-group-audio = AUDIO
+
+topbar-show-audio-spectrum = SHOW AUDIO SPECTRUM
+
+topbar-draw-receiver-s-own-audio = A strip under the waterfall with the receiver's own audio, 50 Hz to 16 kHz — the hum of a supply or the whistle of a charger shows up here, not on the band

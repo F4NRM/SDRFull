@@ -9819,3 +9819,9 @@ playback-import-read-error = Impossible de lire le fichier audio sélectionné.
 playback-import-collisions = Trop de fichiers importés portent ce nom. Renommer le fichier et réessayer.
 
 playback-import-failed = Impossible d’importer le fichier audio : { $error }
+
+topbar-group-audio = AUDIO
+
+topbar-show-audio-spectrum = AFFICHER LE SPECTRE AUDIO
+
+topbar-draw-receiver-s-own-audio = Une bande sous la cascade avec l'audio du récepteur lui-même, de 50 Hz à 16 kHz — le ronflement d'une alimentation ou le sifflement d'un chargeur se voient ici, pas sur la bande

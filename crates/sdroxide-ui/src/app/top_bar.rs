@@ -6495,6 +6495,18 @@ impl SdroxideApp {
             self.detail_row(ui, &mut cfg);
             fill_style_row(ui, &mut cfg);
         });
+        // **The audio spectrum**, its own group beside the two layers it sits
+        // between: it is neither, and a switch in either group would read as one
+        // of them. Off by default; it needs the room of a strip under the
+        // waterfall, so a pane too short for both leaves it off.
+        crate::chrome::menu_group(ui, &tr!("topbar-group-audio"), w, |ui| {
+            if crate::chrome::chip(ui, cfg.audio_spectrum, tr!("topbar-show-audio-spectrum"))
+                .on_hover_text(tr!("topbar-draw-receiver-s-own-audio"))
+                .clicked()
+            {
+                cfg.audio_spectrum = !cfg.audio_spectrum;
+            }
+        });
         crate::chrome::menu_group(ui, &tr!("topbar-group-waterfall"), w, |ui| {
             let on = self.view.waterfall_visible();
             if crate::chrome::chip(ui, on, tr!("topbar-show-waterfall"))

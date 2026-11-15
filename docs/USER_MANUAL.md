@@ -1128,6 +1128,14 @@ them all at once.
   The two SHOW switches are independent, so all four displays are available —
   spectrum only, waterfall only, both, or neither.
 
+  - **AUDIO → SHOW AUDIO SPECTRUM** adds a strip under the waterfall with the
+    receiver's *own* audio, 50 Hz to 16 kHz on a log scale, drawn from the same
+    bands the level meter uses. It is the one picture here that is not the band:
+    a hum from the sound card, a whistle from a switched-mode supply or the
+    skirt of the filter shows up in it and nowhere on the panadapter. Off by
+    default, and it needs about 200 points of height — a pane too short for both
+    keeps the panadapter and leaves the strip off.
+
   - With one of them off the other takes the full height, with the frequency
     scale still along its edge; dragging that scale brings the hidden layer
     back at the split you drag to. Skimmer and spot boxes move onto the

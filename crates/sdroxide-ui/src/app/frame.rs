@@ -2733,6 +2733,21 @@ impl SdroxideApp {
                 Some((s, l)) => (s, Some(l)),
                 None => (area, None),
             };
+            // **The audio spectrum takes a strip off the bottom** when the
+            // operator has switched it on (the SPEC popup). Taken before the
+            // panadapter is drawn, so the waterfall ends above it rather than
+            // under it; a pane with no room for both keeps the panadapter and
+            // leaves the strip off.
+            let (spec_area, audio_strip) = if self.ui_settings.audio_spectrum
+                && spec_area.height() > crate::widgets::audio_spectrum::STRIP_H + 140.0
+            {
+                let (top, bottom) = spec_area.split_top_bottom_at_y(
+                    spec_area.max.y - crate::widgets::audio_spectrum::STRIP_H,
+                );
+                (top, Some(bottom))
+            } else {
+                (spec_area, None)
+            };
             // Reserve the panadapter's whole height in this layout before
             // drawing into a child: `new_child`'s allocations are invisible to
             // `allocate_ui`'s space accounting, so without this the split handle
@@ -2849,6 +2864,22 @@ impl SdroxideApp {
             // rather than under a dial the radio has not reached.
             if self.atsmini_tuning && self.atsmini_active() {
                 centred_waterfall_note(&spec_ui, spec_area, &tr!("frame-tuning-catching-up"));
+            }
+            if let Some(strip) = audio_strip {
+                // The station measures these bands for the meter that draws
+                // them; the strip is the same reading as a shape. Renewed about
+                // once a second, like the meter: one lease is three.
+                let wall = crate::time::now_unix_f64();
+                if wall - self.audio_strip_lease_at >= 1.0 || wall < self.audio_strip_lease_at {
+                    self.audio_strip_lease_at = wall;
+                    cmds.push(Command::WantAudioLevel);
+                }
+                let bands = self.audio_level.as_ref().and_then(|(at, level)| {
+                    // A reading older than a second and a half is not the radio
+                    // any more: the station stopped answering.
+                    (crate::time::now_unix_f64() - at < 1.5).then_some(level.bands.as_slice())
+                });
+                crate::widgets::audio_spectrum::show(ui, strip, bands);
             }
             if let Some(l) = level
                 && crate::widgets::level_slider::show(ui, l, &mut self.view)
