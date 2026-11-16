@@ -303,7 +303,7 @@ settings-receiver-s-maidenhead-locator-jn88ec =
     On top of cal_offset_db in config.toml, which is one figure for the whole station.
 settings-antenna-somewhere-else-no-locator = Антенна находится в другом месте, и локатор не задан, поэтому ничто из того, что слышит это радио, не сообщается в PSK Reporter, WSPRnet или FreeDV Reporter. Введите локатор приёмника выше, чтобы сообщать отсюда.
 settings-ranges-are-mhz-low-high = Диапазоны задаются в МГц, нижняя-верхняя, через запятую: 144-146, 430-440 — то есть 144000000-146000000 Гц и 430000000-440000000 Гц. Это частоты шкалы: смещение конвертера их не сдвигает. Смещение конвертера выше — поле в герцах. Оставьте диапазон пустым, чтобы использовать то, что устройство сообщает о себе; устройство, которое ничего не сообщает, принимается на слово.
-settings-careful-rtl-sdr-blog-v4 = Осторожно с RTL-SDR: Blog V4 сам поднимает частоту ниже 28,8 МГц, поэтому отрицательное смещение, которое приводит аппаратуру туда, сдвигает сигнал дважды.
+settings-careful-rtl-sdr-blog-v4 = Осторожно с RTL-SDR: Blog V4/V4L сам поднимает частоту ниже 28,8 МГц, поэтому отрицательное смещение, которое приводит аппаратуру туда, сдвигает сигнал дважды.
 settings-pick-radio-interface-above-configuration = Выберите интерфейс радио выше (эта конфигурация использовала удалённый режим автоопределения).
 settings-configuration-used-removed-auto-detect = Эта конфигурация использовала удалённый режим автоопределения. Выберите интерфейс выше, когда машина, к которой подключено радио, ответит.
 settings-radio-has-no-interface-yet = У этого радио пока нет интерфейса — выберите его выше и нажмите «Применить / переподключить».
@@ -1316,7 +1316,7 @@ settings-radio-applies-immediately-no-reconnect-tuner = Применяется �
 settings-radio-crystal-error-parts-per-million = Погрешность кварца в миллионных долях. Запустите с RUST_LOG=sdroxide_rtlsdr=debug, и журнал выведет измеренную погрешность тактового генератора примерно через 20 секунд — это число и нужно ввести. Применяется сразу.
 settings-radio-hf-reception = Приём на КВ
 settings-radio-tuner-itself-starts-24-mhz =
-    Сам тюнер начинается с 24 МГц. RTL-SDR Blog V4 поднимает частоту ниже этого аппаратно; остальные донглы достигают КВ, только сэмплируя АЦП напрямую, через КВ-порт V3. «Автоматически» отдаёт всё ниже 24 МГц АЦП, а всё выше — тюнеру.
+    Сам тюнер начинается с 24 МГц. RTL-SDR Blog V4/V4L поднимает частоту ниже этого аппаратно; остальные донглы достигают КВ, только сэмплируя АЦП напрямую, через КВ-порт V3. «Автоматически» отдаёт всё ниже 24 МГц АЦП, а всё выше — тюнеру.
 
     Direct sampling covers every HF band, 17 m and 15 m included — they arrive in the ADC's second Nyquist zone, the right way up. Nothing filters the ADC's input, though, so whatever is at 28.8 MHz minus the dial comes with them: 10.7 MHz under 17 m, 7.726 MHz under 15 m.
 

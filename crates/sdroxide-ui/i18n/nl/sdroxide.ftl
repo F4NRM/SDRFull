@@ -298,7 +298,7 @@ settings-receiver-s-maidenhead-locator-jn88ec =
     Bovenop cal_offset_db in config.toml, dat één getal voor het hele station is.
 settings-antenna-somewhere-else-no-locator = De antenne staat elders en er is geen locator ingesteld, dus niets wat deze radio hoort wordt gerapporteerd aan PSK Reporter, WSPRnet of FreeDV Reporter. Typ hierboven de locator van de ontvanger om daarvandaan te rapporteren.
 settings-ranges-are-mhz-low-high = Bereiken zijn in MHz, laag-hoog, gescheiden door komma's: 144-146, 430-440 — dat is 144000000-146000000 Hz en 430000000-440000000 Hz. Het zijn afstemfrequenties: een converteroffset verschuift ze niet. De converteroffset hierboven is het veld in hertz. Laat een bereik leeg om te gebruiken wat het apparaat over zichzelf meldt; een apparaat dat niets meldt wordt op zijn woord geloofd.
-settings-careful-rtl-sdr-blog-v4 = Pas op bij een RTL-SDR: de Blog V4 upconverteert zelf onder 28,8 MHz, dus een negatieve offset die de hardware daar laat uitkomen verschuift twee keer.
+settings-careful-rtl-sdr-blog-v4 = Pas op bij een RTL-SDR: de Blog V4/V4L upconverteert zelf onder 28,8 MHz, dus een negatieve offset die de hardware daar laat uitkomen verschuift twee keer.
 settings-pick-radio-interface-above-configuration = Kies hierboven een radio-interface (deze configuratie gebruikte de verwijderde automatische detectie).
 settings-configuration-used-removed-auto-detect = Deze configuratie gebruikte de verwijderde automatische detectie. Kies hierboven een interface zodra de machine waaraan de radio hangt heeft geantwoord.
 settings-radio-has-no-interface-yet = Deze radio heeft nog geen interface — kies er hierboven een en druk op Toepassen / opnieuw verbinden.
@@ -1307,7 +1307,7 @@ settings-radio-applies-immediately-no-reconnect-tuner = Werkt direct — zonder 
 settings-radio-crystal-error-parts-per-million = Kristalfout in parts per million. Draai met RUST_LOG=sdroxide_rtlsdr=debug en het log toont na ongeveer 20 seconden de gemeten klokfout — dat is het getal om in te voeren. Wordt direct toegepast.
 settings-radio-hf-reception = HF-ontvangst
 settings-radio-tuner-itself-starts-24-mhz =
-    De tuner zelf begint bij 24 MHz. Een RTL-SDR Blog V4 upconverteert daaronder in hardware; andere dongles bereiken HF alleen door de ADC rechtstreeks te samplen, via de HF-poort van de V3. Automatisch geeft alles onder 24 MHz aan de ADC en alles erboven aan de tuner.
+    De tuner zelf begint bij 24 MHz. Een RTL-SDR Blog V4/V4L upconverteert daaronder in hardware; andere dongles bereiken HF alleen door de ADC rechtstreeks te samplen, via de HF-poort van de V3. Automatisch geeft alles onder 24 MHz aan de ADC en alles erboven aan de tuner.
 
     Directe sampling dekt elke HF-band, 17 m en 15 m inbegrepen — ze komen aan in de tweede Nyquist-zone van de ADC, de goede kant op. Niets filtert de ingang van de ADC echter, dus wat er op 28,8 MHz min de afstemming zit, komt mee: 10,7 MHz onder 17 m, 7,726 MHz onder 15 m.
 

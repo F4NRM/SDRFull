@@ -298,7 +298,7 @@ settings-receiver-s-maidenhead-locator-jn88ec =
     Zusätzlich zu cal_offset_db in config.toml, das ein einziger Wert für die ganze Station ist.
 settings-antenna-somewhere-else-no-locator = Die Antenne steht woanders und es ist kein Locator gesetzt, daher wird nichts, was dieses Funkgerät hört, an PSK Reporter, WSPRnet oder FreeDV Reporter gemeldet. Geben Sie oben den Locator des Empfängers ein, um von dort aus zu melden.
 settings-ranges-are-mhz-low-high = Bereiche sind in MHz angegeben, untere-obere Grenze, durch Kommas getrennt: 144-146, 430-440 — das sind 144000000-146000000 Hz und 430000000-440000000 Hz. Es sind Skalenfrequenzen: Ein Konverter-Versatz verschiebt sie nicht. Der Konverter-Versatz oben ist das Feld in Hertz. Einen Bereich leer lassen, um zu verwenden, was das Gerät über sich selbst meldet; ein Gerät, das nichts meldet, wird beim Wort genommen.
-settings-careful-rtl-sdr-blog-v4 = Vorsicht bei einem RTL-SDR: Der Blog V4 setzt unterhalb von 28,8 MHz selbst aufwärts um, daher wird ein negativer Versatz, der die Hardware dorthin bringt, zweimal verschoben.
+settings-careful-rtl-sdr-blog-v4 = Vorsicht bei einem RTL-SDR: Der Blog V4/V4L setzt unterhalb von 28,8 MHz selbst aufwärts um, daher wird ein negativer Versatz, der die Hardware dorthin bringt, zweimal verschoben.
 settings-pick-radio-interface-above-configuration = Oben eine Funkschnittstelle wählen (diese Konfiguration nutzte den entfernten Automatik-Modus).
 settings-configuration-used-removed-auto-detect = Diese Konfiguration nutzte den entfernten Automatik-Modus. Wählen Sie oben eine Schnittstelle, sobald der Rechner, an dem das Funkgerät angeschlossen ist, geantwortet hat.
 settings-radio-has-no-interface-yet = Dieses Funkgerät hat noch keine Schnittstelle — oben eine wählen und Übernehmen / erneut verbinden drücken.
@@ -1303,7 +1303,7 @@ settings-radio-applies-immediately-no-reconnect-tuner = Wirkt sofort — ohne er
 settings-radio-crystal-error-parts-per-million = Quarzfehler in Teilen pro Million. Mit RUST_LOG=sdroxide_rtlsdr=debug starten, dann gibt das Protokoll nach etwa 20 Sekunden den gemessenen Takt-Fehler aus — das ist die Zahl, die man eingibt. Wirkt sofort.
 settings-radio-hf-reception = KW-Empfang
 settings-radio-tuner-itself-starts-24-mhz =
-    Der Tuner selbst beginnt bei 24 MHz. Ein RTL-SDR Blog V4 setzt darunter in der Hardware aufwärts um; andere Sticks erreichen KW nur, indem sie den ADC direkt abtasten, über den KW-Anschluss des V3. Automatisch gibt alles unter 24 MHz an den ADC und alles darüber an den Tuner.
+    Der Tuner selbst beginnt bei 24 MHz. Ein RTL-SDR Blog V4/V4L setzt darunter in der Hardware aufwärts um; andere Sticks erreichen KW nur, indem sie den ADC direkt abtasten, über den KW-Anschluss des V3. Automatisch gibt alles unter 24 MHz an den ADC und alles darüber an den Tuner.
 
     Die Direktabtastung deckt jedes KW-Band ab, einschließlich 17 m und 15 m — sie kommen in der zweiten Nyquist-Zone des ADC an, richtig herum. Am Eingang des ADC wird jedoch nichts gefiltert, daher kommt alles mit, was bei 28,8 MHz minus der Skala liegt: 10,7 MHz unter 17 m, 7,726 MHz unter 15 m.
 
