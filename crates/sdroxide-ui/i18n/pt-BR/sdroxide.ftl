@@ -303,7 +303,7 @@ settings-receiver-s-maidenhead-locator-jn88ec =
     On top of cal_offset_db in config.toml, which is one figure for the whole station.
 settings-antenna-somewhere-else-no-locator = A antena está em outro lugar e nenhum locator está definido, então nada que este rádio ouve é informado ao PSK Reporter, WSPRnet ou FreeDV Reporter. Digite o locator do receptor acima para informar a partir dele.
 settings-ranges-are-mhz-low-high = Os intervalos estão em MHz, inicial-final, separados por vírgulas: 144-146, 430-440 — ou seja, 144000000-146000000 Hz e 430000000-440000000 Hz. São frequências de dial: um deslocamento de conversor não as move. O deslocamento de conversor acima é o campo em hertz. Deixe um intervalo vazio para usar o que o dispositivo informa sobre si mesmo; um dispositivo que não informa nada é aceito pela palavra.
-settings-careful-rtl-sdr-blog-v4 = Cuidado com um RTL-SDR: o Blog V4 faz upconversão por conta própria abaixo de 28,8 MHz, então um deslocamento negativo que leve o hardware para lá desloca duas vezes.
+settings-careful-rtl-sdr-blog-v4 = Cuidado com um RTL-SDR: o Blog V4/V4L faz upconversão por conta própria abaixo de 28,8 MHz, então um deslocamento negativo que leve o hardware para lá desloca duas vezes.
 settings-pick-radio-interface-above-configuration = Escolha uma interface de rádio acima (esta configuração usava o modo de detecção automática, que foi removido).
 settings-configuration-used-removed-auto-detect = Esta configuração usava o modo de detecção automática, que foi removido. Escolha uma interface acima quando a máquina à qual o rádio está conectado tiver respondido.
 settings-radio-has-no-interface-yet = Este rádio ainda não tem interface — escolha uma acima e pressione Aplicar / reconectar.
@@ -1309,7 +1309,7 @@ settings-radio-applies-immediately-no-reconnect-tuner = Vale imediatamente — s
 settings-radio-crystal-error-parts-per-million = Erro do cristal em partes por milhão. Rode com RUST_LOG=sdroxide_rtlsdr=debug e o log imprime o erro de clock medido após cerca de 20 segundos — esse é o número a informar. Vale imediatamente.
 settings-radio-hf-reception = Recepção de HF
 settings-radio-tuner-itself-starts-24-mhz =
-    O próprio sintonizador começa em 24 MHz. Um RTL-SDR Blog V4 faz upconversão abaixo disso por hardware; outros dongles alcançam HF apenas amostrando o ADC diretamente, pela porta HF do V3. Automático entrega tudo abaixo de 24 MHz ao ADC e tudo acima dele ao sintonizador.
+    O próprio sintonizador começa em 24 MHz. Um RTL-SDR Blog V4/V4L faz upconversão abaixo disso por hardware; outros dongles alcançam HF apenas amostrando o ADC diretamente, pela porta HF do V3. Automático entrega tudo abaixo de 24 MHz ao ADC e tudo acima dele ao sintonizador.
 
     Direct sampling covers every HF band, 17 m and 15 m included — they arrive in the ADC's second Nyquist zone, the right way up. Nothing filters the ADC's input, though, so whatever is at 28.8 MHz minus the dial comes with them: 10.7 MHz under 17 m, 7.726 MHz under 15 m.
 

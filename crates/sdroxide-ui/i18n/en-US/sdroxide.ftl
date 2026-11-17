@@ -303,7 +303,7 @@ settings-receiver-s-maidenhead-locator-jn88ec =
     On top of cal_offset_db in config.toml, which is one figure for the whole station.
 settings-antenna-somewhere-else-no-locator = The antenna is somewhere else and no locator is set, so nothing this radio hears is reported to PSK Reporter, WSPRnet or FreeDV Reporter. Type the receiver's locator above to report from it.
 settings-ranges-are-mhz-low-high = Ranges are in MHz, low-high, separated by commas: 144-146, 430-440 — that is 144000000-146000000 Hz and 430000000-440000000 Hz. They are dial frequencies: a converter offset does not move them. The converter offset above is the field in hertz. Leave a range empty to use whatever the device reports about itself; a device that reports nothing is taken at its word.
-settings-careful-rtl-sdr-blog-v4 = Careful on an RTL-SDR: the Blog V4 upconverts on its own below 28.8 MHz, so a negative offset that lands the hardware there shifts twice.
+settings-careful-rtl-sdr-blog-v4 = Careful on an RTL-SDR: the Blog V4/V4L upconverts on its own below 28.8 MHz, so a negative offset that lands the hardware there shifts twice.
 settings-pick-radio-interface-above-configuration = Pick a radio interface above (this configuration used the removed auto-detect mode).
 settings-configuration-used-removed-auto-detect = This configuration used the removed auto-detect mode. Pick an interface above once the machine the radio is attached to has answered.
 settings-radio-has-no-interface-yet = This radio has no interface yet — pick one above and press Apply / reconnect.
@@ -1309,7 +1309,7 @@ settings-radio-applies-immediately-no-reconnect-tuner = Applies immediately — 
 settings-radio-crystal-error-parts-per-million = Crystal error in parts per million. Run with RUST_LOG=sdroxide_rtlsdr=debug and the log prints the measured clock error after about 20 seconds — that is the number to enter. Applies immediately.
 settings-radio-hf-reception = HF reception
 settings-radio-tuner-itself-starts-24-mhz =
-    The tuner itself starts at 24 MHz. An RTL-SDR Blog V4 upconverts below that in hardware; other dongles reach HF only by sampling the ADC directly, through the V3's HF port. Automatic hands everything below 24 MHz to the ADC and everything above it to the tuner.
+    The tuner itself starts at 24 MHz. An RTL-SDR Blog V4/V4L upconverts below that in hardware; other dongles reach HF only by sampling the ADC directly, through the V3's HF port. Automatic hands everything below 24 MHz to the ADC and everything above it to the tuner.
 
     Direct sampling covers every HF band, 17 m and 15 m included — they arrive in the ADC's second Nyquist zone, the right way up. Nothing filters the ADC's input, though, so whatever is at 28.8 MHz minus the dial comes with them: 10.7 MHz under 17 m, 7.726 MHz under 15 m.
 
